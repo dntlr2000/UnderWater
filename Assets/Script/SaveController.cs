@@ -48,6 +48,15 @@ public class SaveController : MonoBehaviour
     private Transform PlayerTransform;
     private string playerId;
 
+    [Serializable]
+    public class WorldProgress
+    {
+        public int QuestID;
+        public int Difficulty;
+
+        public int SubmarinePowerLevel; //이런 식으로 잠수함 별 능력치 레벨을 올려도 될 듯
+    }
+
     void Start()
     {
         //saveFilePath = Path.Combine(Application.persistentDataPath, "saveData.json");
@@ -56,6 +65,7 @@ public class SaveController : MonoBehaviour
         //Photon으로 구현하는지, Unity6 자체 제공 패키지로 구현하는지에 따라 다른 플레이어에 대한 정보를 받아오는 방식이 달라서 다른 플레이어에 대한 저장을 알아보는건 보류
     }
 
+    // ~SavePosition ~ LoadPositionButton : 위치 저장 테스트용
     private void SavePosition(Transform playerTransform, string playerId)
     {
         PlayerData data = new PlayerData();
@@ -94,6 +104,7 @@ public class SaveController : MonoBehaviour
     {
         LoadPosition(PlayerTransform, playerId);
     }
+
 
     
 }
