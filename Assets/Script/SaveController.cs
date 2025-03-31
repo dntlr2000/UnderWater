@@ -24,10 +24,24 @@ public class SaveController : MonoBehaviour
     [Serializable]
     public class PlayerData
     {
+        //Photon으로 구현하는지, Unity6 자체 제공 패키지로 구현하는지에 따라 다른 플레이어에 대한 정보를 받아오는 방식이 달라서 다른 플레이어에 대한 저장을 알아보는건 보류
         public string playerId;
         public PlayerLocation position;
+
+        //public Item[] items;
+        //public float PlayetHealth;
+        //public float PlayerStamina;
+        //public int PlayerMoney;
+
     }
 
+    [Serializable]
+    public class Item
+    {
+        //public string name;
+        public int amount;
+        public int ItemId; //ID로 다른 곳에서 이름이나 기능을 가져오는게 낫지 않나 ex: 마인크래프트
+    }
 
     //private string saveFilePath;
     public GameObject PlayerObject;
@@ -57,17 +71,6 @@ public class SaveController : MonoBehaviour
 
     private bool LoadPosition(Transform playerTransform, string playerId)
     {
-        /*
-        if (File.Exists(saveFilePath))
-        {
-
-        }
-        else
-        {
-            Debug.LogWarning("저장된 파일이 없습니다.");
-            return false;
-        }
-        */
         string path = Application.persistentDataPath + $"/player_{playerId}_position.json";
         if (!File.Exists(path))
         {
