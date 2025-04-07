@@ -3,6 +3,8 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     public float movementSpeed = 0.1f;
+    //private float multiInputSpeed = 1.4f;
+    //private int keyInput = 0;
     void Start()
     {
         

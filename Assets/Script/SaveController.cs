@@ -27,11 +27,9 @@ public class SaveController : MonoBehaviour
         public string playerId;
         public PlayerLocation position;
 
-        //public Item[] items;
+        public Item[] items;
         //public float PlayetHealth;
         //public float PlayerStamina;
-        //public int PlayerMoney;
-
     }
 
     [Serializable]
@@ -55,6 +53,7 @@ public class SaveController : MonoBehaviour
         public int Difficulty;
 
         public int SubmarinePowerLevel; //이런 식으로 잠수함 별 능력치 레벨을 올려도 될 듯
+        //public int PlayerMoney;
     }
 
     void Start()
@@ -65,7 +64,10 @@ public class SaveController : MonoBehaviour
         //Photon으로 구현하는지, Unity6 자체 제공 패키지로 구현하는지에 따라 다른 플레이어에 대한 정보를 받아오는 방식이 달라서 다른 플레이어에 대한 저장을 알아보는건 보류
     }
 
+
     // ~SavePosition ~ LoadPositionButton : 위치 저장 테스트용
+    //PunRPC: 다른 클라이언트에서 호출이 가능
+    //[PunRPC] //Photon에서 다른 플레이어 저장 방식, Photon은 서버 내 사람들끼리 동기화만 시켜줄 뿐, 데이터를 관리하지 않으므로 클라이언트가 세이브 파일 전부 떠안음
     private void SavePosition(Transform playerTransform, string playerId)
     {
         PlayerData data = new PlayerData();
@@ -105,6 +107,4 @@ public class SaveController : MonoBehaviour
         LoadPosition(PlayerTransform, playerId);
     }
 
-
-    
 }
