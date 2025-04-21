@@ -56,6 +56,18 @@ public class SaveController : MonoBehaviour
         //public int PlayerMoney;
     }
 
+    [Serializable]
+    public class Options
+    {
+        public float ViewRotationX; //X축 감도
+        public float ViewRotationY; //Y축 감도
+
+        public float BGMVolume; //배경음 크기
+        public float SFXVolume; //효과음 크기
+
+        public bool isWindowMode; //창모드 여부
+    }
+
     void Start()
     {
         //saveFilePath = Path.Combine(Application.persistentDataPath, "saveData.json");
