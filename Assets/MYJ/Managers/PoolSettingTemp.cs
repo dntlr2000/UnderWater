@@ -11,13 +11,6 @@ public class PoolSettingTemp : MonoBehaviour
         StartCoroutine(SpawnLoop());
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-
     void SpawnItem(Vector3 location)
     {
         GameObject item = PoolManager.Instance.GetFromPool("Item");
