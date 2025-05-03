@@ -15,11 +15,12 @@ public class FirstViewCamera : MonoBehaviour
     public float MouseSensitivityY
     {
         get { return mouseSensitivityY; }
-        set { mouseSensitivityX = value; }
+        set { mouseSensitivityY = value; }
     }
 
     float xRotation = 0f;
 
+    float sensivityMultiply = 20f; //감도가 너무 낮은 것 같아서 배율 적용
 
     void Start()
     {
@@ -31,8 +32,8 @@ public class FirstViewCamera : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        float mouseX = Input.GetAxis("Mouse X") * MouseSensitivityX * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * MouseSensitivityY * Time.deltaTime;
+        float mouseX = Input.GetAxis("Mouse X") * MouseSensitivityX * Time.deltaTime * sensivityMultiply;
+        float mouseY = Input.GetAxis("Mouse Y") * MouseSensitivityY * Time.deltaTime * sensivityMultiply;
 
         xRotation -= mouseY; //X축으로 회전 : 위 아래로 쳐다보는 것으로 y축 입력을 받음
         xRotation = Mathf.Clamp(xRotation, -80f, 80f);
@@ -41,7 +42,7 @@ public class FirstViewCamera : MonoBehaviour
         YAxisTransform.Rotate(Vector3.up * mouseX); 
     }
 
-    public void SwitchCursor(bool state)
+    public void LockCursor(bool state)
     {
         if (state)
         {
@@ -55,4 +56,14 @@ public class FirstViewCamera : MonoBehaviour
             Cursor.visible= true;
         }
     }
+    /*
+    //public GameObject 
+    public void ChangeView(bool player)
+    {
+        if (player)
+        {
+
+        }
+    }
+    */
 }

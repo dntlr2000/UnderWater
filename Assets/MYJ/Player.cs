@@ -3,7 +3,11 @@ using UnityEngine;
 
 public class Player : Character
 {
-    public Animator anim { get; private set; }
+    [Header("플레이어 애니메이터")]
+    //public Animator anim{ get; private set; }
+    public Animator anim; //1인칭과 3인칭이 구별되고 하위 프리팹에 존재하기 때문에, 프리팹 차원에서 할당하기 위하여 getter/setter 접근 제한자 삭제
+    //public Animator anim3rdView;
+
     public Rigidbody rb { get; private set; }
 
     [Header("플레이어 상태")]

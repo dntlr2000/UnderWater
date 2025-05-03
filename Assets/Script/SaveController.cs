@@ -59,8 +59,8 @@ public class SaveController : MonoBehaviour
     [Serializable]
     public class Options
     {
-        public float ViewRotationX; //X축 감도
-        public float ViewRotationY; //Y축 감도
+        public float SensivityX; //X축 감도
+        public float SensivityY; //Y축 감도
 
         public float BGMVolume; //배경음 크기
         public float SFXVolume; //효과음 크기
@@ -74,6 +74,7 @@ public class SaveController : MonoBehaviour
         PlayerTransform = PlayerObject.transform;
         playerId = "Player001";//gameObject.name;
         //Photon으로 구현하는지, Unity6 자체 제공 패키지로 구현하는지에 따라 다른 플레이어에 대한 정보를 받아오는 방식이 달라서 다른 플레이어에 대한 저장을 알아보는건 보류
+        
     }
 
 
@@ -118,5 +119,40 @@ public class SaveController : MonoBehaviour
     {
         LoadPosition(PlayerTransform, playerId);
     }
+
+    //설정 관련
+    //public OptionManager optionManager;
+
+    public Options LoadOptions()
+    {
+        string path = Application.persistentDataPath + $"/options.json";
+
+        if (!File.Exists(path))
+        {
+            Debug.LogWarning("저장된 설정 정보가 없습니다.");
+            return null;
+        }
+
+        string json = File.ReadAllText(path);
+        Options data = JsonUtility.FromJson<Options>(json);
+
+        return data;
+    }
+    public void SaveOptions(float x, float y, float bgm, float sfx)
+    {
+        string path = Application.persistentDataPath + $"/options.json";
+        Options data = new Options();
+
+        data.SensivityX = x;
+        data.SensivityY = y;
+        data.BGMVolume = bgm;
+        data.SFXVolume = sfx;
+
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(path, json);
+
+        Debug.Log($"설정 저장 경로: {path}");
+    }
+
 
 }
