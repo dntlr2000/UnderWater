@@ -17,6 +17,21 @@ public class Player : Character
     public float fatigue;   //피로도
     public float stamina;   //스테미너
 
+    [Header("각 상태에 대응되는 바UI")]
+    public StateUIManager healthBar;
+    public StateUIManager hungerBar;    
+    public StateUIManager thirstBar;    
+    public StateUIManager oxygenBar;  
+    public StateUIManager fatigueBar;    
+    public StateUIManager staminaBar;
+    //아예 UI 창에서 직접 생성하게 하여 관리하는 방법도 괜찮을듯
+    //각 상태 별로 최대 수치는 정해져있는가?
+
+    [Header("수중 이동용 카메라 할당")]
+    public Transform X_AxisCamera;
+
+    
+
     #region States 상태들관리
     public PlayerStateMachine stateMachine { get; private set; }
 
@@ -32,6 +47,7 @@ public class Player : Character
         idleState = new PlayerIdleState(this, stateMachine, "Idle");
         //똑같이 상태 추가
         moveState = new PlayerMoveState(this, stateMachine, "Move");
+        
     }
     private void Start()
     {
@@ -40,6 +56,10 @@ public class Player : Character
 
         // 게임 시작 시 초기 상태를 대기 상태(idleState)로 설정
         stateMachine.Initialize(idleState); //애니메이션을 넣어주어야 함
+
+        //UI 설정 (초기)
+        SetBarUI();
+        
     }
 
     private void Update()
@@ -66,5 +86,15 @@ public class Player : Character
     protected override void Death()
     {
         Debug.Log("플레이어 사망");
+    }
+
+    public void SetBarUI()
+    {
+        healthBar.SetBarUI(health);
+        hungerBar.SetBarUI(hunger);
+        thirstBar.SetBarUI(thirst);
+        oxygenBar.SetBarUI(oxygen);
+        fatigueBar.SetBarUI(fatigue);
+        staminaBar.SetBarUI(stamina);
     }
 }

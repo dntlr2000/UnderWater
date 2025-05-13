@@ -22,6 +22,8 @@ public class PlayerState
         this.player = _player;
         this.stateMachine = _stateMachine;
         this.animBoolName = _animBoolName;
+
+        //this.CameraTransform = _player.Y_AxisCamera.transform;
     }
 
     public virtual void Enter()
@@ -45,10 +47,20 @@ public class PlayerState
         //playerRight.y = 0f;
         playerRight.Normalize();
 
-        moveDirection = (playerForward * zInput + playerRight * xInput).normalized;
+        //Vector3 CameraForward = CameraTransform.forward;
+        Vector3 CameraForward = player.X_AxisCamera.forward;
+        CameraForward.Normalize();
+
+        Vector3 CameraRight = player.X_AxisCamera.transform.right;
+        CameraRight.Normalize();
+
+        //수평 이동 (지상)
+        //moveDirection = (playerForward * zInput + playerRight * xInput).normalized;
+        //카메라가 바라보는 방향으로 이동 (수중)
+        moveDirection = ((CameraForward) * zInput + CameraRight * xInput).normalized;
 
 
-        //수직(y축)의 속도를 의미(jump, fall등에서 사용)
+        //수직(y축)의 속도를 의미(jump, fall등에서 사용) //지상에서 사용
         float yVelocity = player.rb.linearVelocity.y;
         player.anim.SetFloat("yVelocity", yVelocity);
 
@@ -65,9 +77,13 @@ public class PlayerState
         triggerCalled = true;
     }
 
-    protected virtual void HandleMovement()
+    protected virtual void HandleMovement() //현재 이동은 PlayerMoveState에서 오버라이딩하고 있으므로 수정할 때는 그쪽도 수정할 것.
     {
         Vector3 move = moveDirection * player.moveSpeed;
-        player.rb.linearVelocity = new Vector3(move.x, player.rb.linearVelocity.y, move.z);
+        //지상 상태일 때
+        //player.rb.linearVelocity = new Vector3(move.x, player.rb.linearVelocity.y, move.z);
+        //수중 상태일 때
+        player.rb.linearVelocity = new Vector3(move.x, move.y, move.z);
     }
+
 }
