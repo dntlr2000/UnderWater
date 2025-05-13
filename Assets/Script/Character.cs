@@ -7,9 +7,6 @@ public abstract class Character : MonoBehaviour
     public float health;    //체력
     public float atkPower;  //공격력
 
-    //이동 메서드
-    protected abstract void Move(Vector3 direction);
-
     //공격 메서드
     public virtual void Attack()
     {

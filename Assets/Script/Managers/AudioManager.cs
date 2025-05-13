@@ -24,7 +24,8 @@ public class AudioManager : MonoBehaviour
     public AudioSource sfxSource;
 
     [Header("Sound List")]
-    public List<Sound> sounds;
+    public List<Sound> bgmSounds;
+    public List<Sound> sfxSounds;
 
     private Dictionary<string, Sound> soundDict = new Dictionary<string, Sound>();
 
@@ -57,8 +58,16 @@ public class AudioManager : MonoBehaviour
             sfxSource = gameObject.AddComponent<AudioSource>();
         }
 
-        foreach (Sound s in sounds)
+        foreach (Sound s in bgmSounds)
         {
+            s.type = SoundType.BGM; // 타입 강제 지정
+            if (!soundDict.ContainsKey(s.name))
+                soundDict[s.name] = s;
+        }
+
+        foreach (Sound s in sfxSounds)
+        {
+            s.type = SoundType.SFX;
             if (!soundDict.ContainsKey(s.name))
                 soundDict[s.name] = s;
         }
@@ -109,7 +118,7 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    void PlaySFX(Sound sound)
+    public void PlaySFX(Sound sound)
     {
         if (sfxSourcePool.Count > 0)
         {

@@ -36,7 +36,8 @@ public class Monster : Character
         health = 100; // 초기 체력 등
         target = GameObject.FindWithTag("Player")?.transform;
     }
-    protected override void Move(Vector3 direction)
+
+    private void Move(Vector3 direction)
     {
         Vector3 moveVector = direction * moveSpeed * Time.fixedDeltaTime;
         mrb.MovePosition(transform.position + moveVector);
