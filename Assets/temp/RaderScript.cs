@@ -16,7 +16,7 @@ public class RaderScript : MonoBehaviour
     void Start()
     {
         // 초기화: 레이더에 표시할 오브젝트를 찾습니다.
-        GameObject[] objects = GameObject.FindGameObjectsWithTag("RadarObject");
+        GameObject[] objects = GameObject.FindGameObjectsWithTag("Ping");
         foreach (var obj in objects)
         {
             trackedObjects.Add(obj.transform);

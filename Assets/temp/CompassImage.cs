@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class CompassImage : MonoBehaviour
@@ -9,22 +11,25 @@ public class CompassImage : MonoBehaviour
     public float visibleAngle = 200f; // 화면에 보이는 각도 범위
 
     public GameObject pingPrefab;    // 핑 UI Prefab (작은 아이콘)
-    public Transform[] targets;     // 핑으로 표시할 오브젝트 리스트
 
+    /*
+    public Transform[] targets;     // 핑으로 표시할 오브젝트 리스트
     private RectTransform[] pings;   // 생성된 핑 UI 배열
+    */
+
+    private List<Transform> targets = new List<Transform>(); // 핑으로 표시할 대상 리스트
+    private List<RectTransform> pings = new List<RectTransform>(); // 핑 UI 리스트
+
 
     private void Start()
     {
-        pings = new RectTransform[targets.Length];
-        for (int i = 0; i < targets.Length; i++)
-        {
-            GameObject ping = Instantiate(pingPrefab, compassBar); // CompassBar에 핑 추가
-            pings[i] = ping.GetComponent<RectTransform>();
-        }
+        
 
     }
     void Update()
     {
+        FindAndSetTargets();
+
         // 플레이어의 방향 (Y축 기준)
         float angle = player.eulerAngles.y;
 
@@ -42,7 +47,7 @@ public class CompassImage : MonoBehaviour
             compassBarCopy.localPosition += new Vector3(compassWidth * 2, 0, 0);
         }
 
-        for (int i = 0; i < targets.Length; i++)
+        for (int i = 0; i < targets.Count; i++)
         {
             UpdatePingPosition(targets[i], pings[i], angle, position);
         }
@@ -54,7 +59,7 @@ public class CompassImage : MonoBehaviour
         Vector3 direction = target.position - player.position;
         //Vector3 targetAngle = new Vector3(direction.x, 0, direction.z).normalized;
         float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
-        float relativeAngle = (targetAngle - playerAngle + 360f) % 360f; //음수를 나누는 일이 없도록 + 360을 한듯
+        float relativeAngle = (targetAngle - playerAngle + 360f) % 360f; //음수를 나누는 일이 없도록 + 360
         float temp = relativeAngle / 360f * compassWidth - c_position;
         //이걸로 방향은 구했다. -> 핑의 위치를 계산해야 한다!
         
@@ -65,8 +70,36 @@ public class CompassImage : MonoBehaviour
         //ping.anchoredPosition = new Vector2(0, 10);
         ping.localPosition = new Vector2(temp, 10);
         ping.gameObject.SetActive(true);
-        
 
+    }
+
+    void FindAndSetTargets()
+    {
+        GameObject[] Pings = GameObject.FindGameObjectsWithTag("Ping");
+
+        List<Transform> newTargets = new List<Transform>();
+
+        foreach (GameObject target in Pings)
+        {
+            newTargets.Add(target.transform);
+
+            if (!targets.Contains(target.transform))
+            {
+                targets.Add(target.transform);
+                GameObject ping = Instantiate(pingPrefab, compassBar);
+                pings.Add(ping.GetComponent<RectTransform>());
+            }
+        }
+
+        for (int i = targets.Count - 1; i >= 0; i--)
+        {
+            if (!newTargets.Contains(targets[i])) // 사라진 오브젝트가 있는 경우
+            {
+                Destroy(pings[i].gameObject); // 핑 UI 제거
+                pings.RemoveAt(i); // 리스트에서 핑 제거
+                targets.RemoveAt(i); // 리스트에서 대상 오브젝트 제거
+            }
+        }
     }
 
 }

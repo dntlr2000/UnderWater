@@ -13,7 +13,10 @@ public class OptionManager : MonoBehaviour
     float BgmValue = 50f;
     float SFXValue = 50f;
 
-    public FirstViewCamera playerCamera; //플레이어 마우스 감도 조정용
+    public float sensitivityMultiplyValue = 10; // 감도 배율
+
+    //public FirstViewCamera playerCamera; //플레이어 마우스 감도 조정용
+    public Player player;
     public AudioManager audioScript; //오디오 매니저의 볼륨 조정용. 현재 본인 컴퓨터에는 해당 스크립트가 존재하지 않아 연동 불가
 
     public SaveController saveController;
@@ -27,7 +30,8 @@ public class OptionManager : MonoBehaviour
 
     void Start()
     {
-        
+        //LockCursor(true);
+        OptionScreen.SetActive(false);
     }
 
     // Update is called once per frame
@@ -40,7 +44,7 @@ public class OptionManager : MonoBehaviour
                 ifOptionActive = true;
                 OptionScreen.SetActive(true);
                 //audioManager.PlaySFX(0)//여는 효과음 추가
-                playerCamera.LockCursor(false);
+                LockCursor(false);
                 LoadOptions();
             }
 
@@ -57,7 +61,7 @@ public class OptionManager : MonoBehaviour
         //LoadOptions();
         if(ifOptionActive == false)
         {
-            playerCamera.LockCursor(true);
+            LockCursor(true);
         }
     }
 
@@ -97,7 +101,7 @@ public class OptionManager : MonoBehaviour
 
     public void ExitOptions()
     {
-        playerCamera.LockCursor(true);
+        LockCursor(true);
         SaveOptions();
         ApplyOptions();
         ifOptionActive = false;
@@ -129,11 +133,26 @@ public class OptionManager : MonoBehaviour
 
     private void ApplyOptions() //전체 적용
     {
-        playerCamera.MouseSensitivityX = xValue;
-        playerCamera.MouseSensitivityY = yValue;
+        player.mouseSensitivityX = xValue * sensitivityMultiplyValue;
+        player.mouseSensitivityY = yValue * sensitivityMultiplyValue;
         //audioScript.ChangeVolume_BGM(BGMValue);
         //audioScript.ChangeVolume_SFX(SFXValue);
         audioScript.SetVolume(SoundType.BGM, BgmValue);
         audioScript.SetVolume(SoundType.SFX, SFXValue);
+    }
+
+    public void LockCursor(bool state)
+    {
+        if (state)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+
+        else
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
     }
 }
