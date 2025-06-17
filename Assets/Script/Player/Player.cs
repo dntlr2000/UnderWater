@@ -70,7 +70,7 @@ public class Player : MonoBehaviour
         stateMachine.Initialize(new PlayerIdleState(this, stateMachine, "Idle"));
         SetBarUI();
         StartCoroutine(getHungry());
-        //changeWaterState(true); //산소 메커니즘을 테스트하기 위해 임시로 Start에 배치
+        changeWaterState(true); //산소 메커니즘을 테스트하기 위해 임시로 Start에 배치
     }
 
     private void Update()
@@ -215,7 +215,7 @@ public class Player : MonoBehaviour
         oxygen += amount;
         oxygenBar.SetBarUI(oxygen);
     }
-    public void changeWaterState(bool ifWater)
+    public void changeWaterState(bool ifWater) //지상에서 계속 루프 돌리면 부담 가해질 것 같아서 이렇게 구현했었는데 그냥 원시적인 방법으로 구현할까?
     {
         if (ifWater)
         {
@@ -250,6 +250,7 @@ public class Player : MonoBehaviour
         {
             stamina += 0.01f;
             Running = false;
+            staminaBar.SetBarUI(stamina);
             return; //뛸 수 없는 상태
         }
 

@@ -15,7 +15,7 @@ public class ItemTest : MonoBehaviour
 
     private void OnDisable()
     {
-        Debug.Log("Disabled Item.");
+        //Debug.Log("Disabled Item.");
         PoolManager.Instance.ReturnToPool("Item", gameObject);
 
     }
