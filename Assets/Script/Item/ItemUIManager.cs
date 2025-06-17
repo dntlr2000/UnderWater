@@ -8,6 +8,8 @@ public class ItemUIManager : MonoBehaviour
 
     public RawImage[] ItemSlots;
 
+    //public Texture defaultSlotTexture;
+
     public void SwitchInventoryState()
     {
         if (InventoryScreen == null)
@@ -42,10 +44,17 @@ public class ItemUIManager : MonoBehaviour
             return;
         }
 
+
+
         ItemSlots[index].texture = spriteImage.texture;
 
         ItemSlots[index].gameObject.SetActive(true);
 
-        Debug.Log($"added Item on slot {index}");
+        Debug.Log($"added item icon on slot {index}");
+    }
+
+    public void ResetIcons(int index)
+    {
+        ItemSlots[index].gameObject.SetActive(false);
     }
 }

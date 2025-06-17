@@ -34,6 +34,42 @@ public class Inventory : MonoBehaviour
         {
             GetItem(0, 1);
         }
+
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+            RemoveAllItem(index);
+        }
+
+        if (Input.GetKeyDown(KeyCode.WheelUp))
+        {
+            index += 1;
+        }
+        if (Input.GetKeyDown(KeyCode.WheelUp))
+        {
+            index -= 1;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            index = 0;
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            index = 1;
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            index = 2;
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha4))
+        {
+            index = 3;
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha5))
+        {
+            index = 4;
+        }
+
     }
 
     private void FixedUpdate()
@@ -47,8 +83,9 @@ public class Inventory : MonoBehaviour
         for (int i = 0; i < inventoryData.id.Length; i++)
         {
             if (inventoryData.id[i] == id)
-            {
+            {            
                 inventoryData.quantity[i] += quantitiy;
+                Debug.Log($"Item added in slot{i}. current quantity = {inventoryData.quantity[i]}");
                 return;
             }
         }
@@ -90,6 +127,8 @@ public class Inventory : MonoBehaviour
         {
             inventoryData.id[index] = -1;
             inventoryData.quantity[index] = 0;
+            Debug.Log($"Removed Item in slot {index}");
+            ItemUI.ResetIcons(index);
         }
     }
 

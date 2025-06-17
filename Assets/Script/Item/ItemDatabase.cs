@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstract로 구현?
 {
     public ItemData[] items = new ItemData[30];
-    private Sprite[] ItemIcons;// = new Sprite[30];
+    private Sprite[] ItemIcons = new Sprite[30];
 
 
     public void GenerateData()
@@ -28,7 +28,7 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
         items[0].weight = 0; 
         items[0].durability = 99;
 
-        LoadIcons();
+        LoadIcons(); //아이템 아이콘들을 먼저 전부 로딩
 
         //DebugListAllSprites("Item");
         Debug.Log("ItemDatabase data generated");
@@ -37,7 +37,7 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
 
     public void LoadIcons()
     {
-        ItemIcons = new Sprite[30];
+        //ItemIcons = new Sprite[30];
         //아이템 아이콘은 Resources/Item 폴더에 넣어두기
         //sprites = Resources.LoadAll<Sprite>("ItemIcons"); 전부 불러오기
         string path = "Item";
@@ -49,7 +49,7 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
             {
                 ItemIcons[i] = Resources.Load<Sprite>($"{path}/Item0");
             }
-            if (ItemIcons[i] != null) Debug.Log($"Item ID = {i} Icon Load Complete");
+            //if (ItemIcons[i] != null) Debug.Log($"Item ID = {i} Icon Load Complete");
         }
         //.png 확장자 생략
         //이후 db에 매칭되는 아이템 아이콘을 이렇게 불러오면 될듯
@@ -69,7 +69,7 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
 
     }
 
-    void DebugListAllSprites(string folder)
+    void DebugListAllSprites(string folder) //경로에 파일들 확인용
     {
         var all = Resources.LoadAll<Sprite>(folder);
         Debug.Log($"[{folder}]에서 찾은 스프라이트 개수: {all.Length}");
@@ -95,7 +95,8 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
 
         if (itemId == 0)
         {
-
+            //임시용 아이템. 사용 불가.
+            Debug.Log("Item Used!");
         }
 
         else if (itemId == 1)
