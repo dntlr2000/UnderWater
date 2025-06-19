@@ -7,7 +7,9 @@ public class Inventory : MonoBehaviour
     public int index; //현재 들고 있는 아이템
     private InventoryData inventoryData;
     public ItemUIManager ItemUI;
+    public Transform IndexLine;
 
+    //private bool showInventory = false; //ItemUI에서 일단 가져와봄 Update 부하를 줄이기 위해 ItemUI의 메서드를 여기로 옮길 수 있음
 
     void Start()
     {
@@ -30,44 +32,73 @@ public class Inventory : MonoBehaviour
 
     void Update()
     {
+        /*
         if (Input.GetKeyDown(KeyCode.I))
+        {
+            if (showInventory)
+            {
+                showInventory = false;
+            }
+            else
+            {
+                showInventory = true;
+            }
+        }
+        */
+
+
+        if (Input.GetKeyDown(KeyCode.N))
         {
             GetItem(0, 1);
         }
 
-        if (Input.GetKeyDown(KeyCode.O))
+        if (Input.GetKeyDown(KeyCode.B)) {
+            GetItem(1, 3);
+        }
+
+        if (Input.GetKeyDown(KeyCode.M))
         {
             RemoveAllItem(index);
         }
-
-        if (Input.GetKeyDown(KeyCode.WheelUp))
+        /*
+        if (Input.GetKeyDown(KeyCode.WheelUp)) //이거 휠 굴리는 명령어가 아니었음;
         {
             index += 1;
+            if (index > 4) index = 4;
+            IndexSetter();
         }
         if (Input.GetKeyDown(KeyCode.WheelUp))
         {
             index -= 1;
+            if (index < 0) index = 0;
+            IndexSetter();
         }
+        */
 
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             index = 0;
+            IndexSetter();
         }
         if (Input.GetKeyDown(KeyCode.Alpha2))
         {
             index = 1;
+            IndexSetter();
         }
         if (Input.GetKeyDown(KeyCode.Alpha3))
         {
             index = 2;
+            IndexSetter();
         }
         if (Input.GetKeyDown(KeyCode.Alpha4))
         {
             index = 3;
+            IndexSetter();
         }
         if (Input.GetKeyDown(KeyCode.Alpha5))
         {
             index = 4;
+            IndexSetter();
         }
 
     }
@@ -75,6 +106,11 @@ public class Inventory : MonoBehaviour
     private void FixedUpdate()
     {
         
+    }
+
+    private void IndexSetter()
+    {
+        IndexLine.localPosition = new Vector2(-140 + 70 * index, 0);
     }
 
     public void GetItem(int id, int quantitiy = 1)
@@ -86,6 +122,7 @@ public class Inventory : MonoBehaviour
             {            
                 inventoryData.quantity[i] += quantitiy;
                 Debug.Log($"Item added in slot{i}. current quantity = {inventoryData.quantity[i]}");
+                ItemUI.SetQuantity(i, inventoryData.quantity[i]);
                 return;
             }
         }
@@ -112,6 +149,7 @@ public class Inventory : MonoBehaviour
                 }
 
                 ItemUI.LoadIcons(i, ItemSprite);
+                ItemUI.SetQuantity(i, quantitiy);
                 return;
             }
         }

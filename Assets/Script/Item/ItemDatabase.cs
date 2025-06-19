@@ -137,5 +137,4 @@ public struct ItemData
     public float durability; //내구도. 아직 상세 부분은 미구현
 
     //public string itemFileName;
-
 }

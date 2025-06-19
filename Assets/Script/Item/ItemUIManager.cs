@@ -4,11 +4,35 @@ using UnityEngine.UI;
 public class ItemUIManager : MonoBehaviour
 {
     private bool showInventory = false;
+    
     public GameObject InventoryScreen;
-
-    public RawImage[] ItemSlots;
+    //public RawImage[] itemSlots;
+    public ItemSlot[] itemSlots;
+    
 
     //public Texture defaultSlotTexture;
+
+    private void Start()
+    {
+        SetSlotIDs();
+    }
+
+    public void SetSlotIDs()
+    {
+        for (int i = 0; i < itemSlots.Length; i++)
+        {
+            itemSlots[i].SlotID = i;
+        }
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            SwitchInventoryState();
+        }
+        
+    }
 
     public void SwitchInventoryState()
     {
@@ -22,18 +46,23 @@ public class ItemUIManager : MonoBehaviour
         {
             showInventory = false;
             InventoryScreen.SetActive(false);
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
         else
         {
             showInventory= true;
             InventoryScreen.SetActive(true);
+            Cursor.lockState = CursorLockMode.None; //Option이랑 충돌나지 않게 조정 예정
+            Cursor.visible = true;
+            
         }
     }
 
 
     public void LoadIcons(int index, Sprite spriteImage)
     {
-        if (index < 0 || index >= ItemSlots.Length)
+        if (index < 0 || index >= itemSlots.Length)
         {
             Debug.LogError("존재하지 않는 슬롯입니다.");
             return;
@@ -46,15 +75,30 @@ public class ItemUIManager : MonoBehaviour
 
 
 
-        ItemSlots[index].texture = spriteImage.texture;
-
-        ItemSlots[index].gameObject.SetActive(true);
+        itemSlots[index].itemSlotIcon.texture = spriteImage.texture;
+        //itemSlots[index].quatitiy.text = quantity.ToString();
+        itemSlots[index].itemSlotIcon.gameObject.SetActive(true);
+        //itemSlots[index].quatitiy.gameObject.SetActive(true);
 
         Debug.Log($"added item icon on slot {index}");
     }
 
+    public void SetQuantity(int index, int quantity)
+    {
+        if (index < 0 || index >= itemSlots.Length)
+        {
+            Debug.LogError("존재하지 않는 슬롯입니다.");
+            return;
+        }
+        itemSlots[index].quatitiy.text = quantity.ToString();
+        itemSlots[index].quatitiy.gameObject.SetActive(true);
+    }
+
+
+
     public void ResetIcons(int index)
     {
-        ItemSlots[index].gameObject.SetActive(false);
+        itemSlots[index].itemSlotIcon.gameObject.SetActive(false);
+        itemSlots[index].quatitiy.gameObject.SetActive(false);
     }
 }
