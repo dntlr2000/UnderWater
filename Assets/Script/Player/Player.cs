@@ -1,8 +1,9 @@
 using System.Collections;
+using Photon.Pun;
 using Unity.IO.LowLevel.Unsafe;
 using UnityEngine;
 
-public class Player : MonoBehaviour
+public class Player : MonoBehaviourPun
 {
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
@@ -31,13 +32,13 @@ public class Player : MonoBehaviour
     private float verticalAngle;
     private float horizontalAngle;
 
-    [Header("Condition")]
-    public float health;    //체력
-    public float hunger;    //허기
-    public float thirst;    //수분
-    public float oxygen;    //산소
-    public float fatigue;   //피로도
-    public float stamina;   //스테미너
+    //[Header("Condition")]
+    //public float health;    //체력
+    //public float hunger;    //허기
+    //public float thirst;    //수분
+    //public float oxygen;    //산소
+    //public float fatigue;   //피로도
+    //public float stamina;   //스테미너
 
     private bool isSleep = false;
     private bool isMoving = false; //뛰는 로직 구현하기 위해 필요
@@ -68,13 +69,15 @@ public class Player : MonoBehaviour
             cameraTransform = Camera.main.transform;
 
         stateMachine.Initialize(new PlayerIdleState(this, stateMachine, "Idle"));
-        SetBarUI();
-        StartCoroutine(getHungry());
+        //SetBarUI();
+        //StartCoroutine(getHungry());
         //changeWaterState(true); //산소 메커니즘을 테스트하기 위해 임시로 Start에 배치
     }
 
     private void Update()
     {
+        if (!photonView.IsMine) return;
+
         stateMachine.currentState.Update();
 
         RotateView();
@@ -84,7 +87,7 @@ public class Player : MonoBehaviour
             Animate();
         }
 
-        Run();
+        //Run();
 
     }
     private void FixedUpdate()
@@ -160,113 +163,113 @@ public class Player : MonoBehaviour
         //animator.SetFloat("Speed", speed);
         //animator.SetBool("Underwater", isUnderwater);
     }
-    public void SetBarUI()
-    {
-        healthBar.SetBarUI(health);
-        hungerBar.SetBarUI(hunger);
-        thirstBar.SetBarUI(thirst);
-        oxygenBar.SetBarUI(oxygen);
-        fatigueBar.SetBarUI(fatigue);
-        staminaBar.SetBarUI(stamina);
-    }
+    //public void SetBarUI()
+    //{
+    //    healthBar.SetBarUI(health);
+    //    hungerBar.SetBarUI(hunger);
+    //    thirstBar.SetBarUI(thirst);
+    //    oxygenBar.SetBarUI(oxygen);
+    //    fatigueBar.SetBarUI(fatigue);
+    //    staminaBar.SetBarUI(stamina);
+    //}
 
-    public void Damaged(float value)
-    {
-        health -= value;
-        healthBar.SetBarUI(health);
-    }
+    //public void Damaged(float value)
+    //{
+    //    health -= value;
+    //    healthBar.SetBarUI(health);
+    //}
 
-    public IEnumerator getHungry()
-    {
-        while (true)
-        {
-            hunger -= 1f;
-            thirst -= 1f; //일단 허기, 목마름, 피로 증가 매커니즘이 아예 동일할 것으로 생각되어 하나의 메서드 안에 통합
-            fatigue += 0.5f;
-            SetBarUI();
-            yield return new WaitForSeconds(5f);
-        }
-    }
+    //public IEnumerator getHungry()
+    //{
+    //    while (true)
+    //    {
+    //        hunger -= 1f;
+    //        thirst -= 1f; //일단 허기, 목마름, 피로 증가 매커니즘이 아예 동일할 것으로 생각되어 하나의 메서드 안에 통합
+    //        fatigue += 0.5f;
+    //        SetBarUI();
+    //        yield return new WaitForSeconds(5f);
+    //    }
+    //}
 
-    public void getFood(float thirst, float hunger)
-    {
-        this.thirst += thirst;
-        this.hunger += hunger;
-        SetBarUI();
-    }
+    //public void getFood(float thirst, float hunger)
+    //{
+    //    this.thirst += thirst;
+    //    this.hunger += hunger;
+    //    SetBarUI();
+    //}
 
-    public IEnumerator useOxygen()
-    {
-        /* //산소 관련 주석을 남겨둔 이유: 좀 더 비효율적인 방법이나 현재 구조로 문제가 발생할 경우 이전 구조로 되돌리기 쉽게 남겨둠. 이후에도 작동에 문제 없으면 삭제 예정
-        oxygen -= 0.1f;
-        yield return new WaitForSeconds(0.1f);
-        */
-        while (isUnderwater )
-        {
-            oxygen -= 0.1f;
-            yield return new WaitForSeconds(0.1f);
-            oxygenBar.SetBarUI(oxygen);
+    //public IEnumerator useOxygen()
+    //{
+    //    /* //산소 관련 주석을 남겨둔 이유: 좀 더 비효율적인 방법이나 현재 구조로 문제가 발생할 경우 이전 구조로 되돌리기 쉽게 남겨둠. 이후에도 작동에 문제 없으면 삭제 예정
+    //    oxygen -= 0.1f;
+    //    yield return new WaitForSeconds(0.1f);
+    //    */
+    //    while (isUnderwater )
+    //    {
+    //        oxygen -= 0.1f;
+    //        yield return new WaitForSeconds(0.1f);
+    //        oxygenBar.SetBarUI(oxygen);
 
-            if (oxygen <= 0) break; //사?망
-        }
-    }
-    public void chargeOxygen(float amount)
-    {
-        oxygen += amount;
-        oxygenBar.SetBarUI(oxygen);
-    }
-    public void changeWaterState(bool ifWater)
-    {
-        if (ifWater)
-        {
-            isUnderwater = true;
-            //UseOxygen = useOxygen();
-            //StartCoroutine(UseOxygen);
-            StartCoroutine(useOxygen());
-        }
-        else
-        {
-            isUnderwater= false;
-            //StopCoroutine(UseOxygen);
-        }
-    } 
+    //        if (oxygen <= 0) break; //사?망
+    //    }
+    //}
+    //public void chargeOxygen(float amount)
+    //{
+    //    oxygen += amount;
+    //    oxygenBar.SetBarUI(oxygen);
+    //}
+    //public void changeWaterState(bool ifWater)
+    //{
+    //    if (ifWater)
+    //    {
+    //        isUnderwater = true;
+    //        //UseOxygen = useOxygen();
+    //        //StartCoroutine(UseOxygen);
+    //        StartCoroutine(useOxygen());
+    //    }
+    //    else
+    //    {
+    //        isUnderwater= false;
+    //        //StopCoroutine(UseOxygen);
+    //    }
+    //} 
 
-    public IEnumerator getSleepCoroutine()
-    {
-        while (isSleep)
-        {
-            yield return new WaitForSeconds(1f);
-            if (isSleep)
-            {
-                fatigue -= 1f;
-                fatigueBar.SetBarUI(fatigue);
-            }
-        }
-    }
+    //public IEnumerator getSleepCoroutine()
+    //{
+    //    while (isSleep)
+    //    {
+    //        yield return new WaitForSeconds(1f);
+    //        if (isSleep)
+    //        {
+    //            fatigue -= 1f;
+    //            fatigueBar.SetBarUI(fatigue);
+    //        }
+    //    }
+    //}
 
-    public void Run()
-    {
-        if (stamina < 5f && Running == false)
-        {
-            stamina += 0.01f;
-            Running = false;
-            return; //뛸 수 없는 상태
-        }
+    //public void Run()
+    //{
+    //    if (stamina < 5f && Running == false)
+    //    {
+    //        stamina += 0.01f;
+    //        Running = false;
+    //        return; //뛸 수 없는 상태
+    //    }
 
-        if (Input.GetKey(KeyCode.LeftShift) && isMoving == true)
-        {
-            Running = true;
-            stamina -= 0.1f;
-            if (stamina < 0.1f) Running = false;
-        }
-        else
-        {
-            if (stamina >= 100f) stamina = 100f;
-            else stamina += 0.05f;
-            Running = false;
+    //    if (Input.GetKey(KeyCode.LeftShift) && isMoving == true)
+    //    {
+    //        Running = true;
+    //        stamina -= 0.1f;
+    //        if (stamina < 0.1f) Running = false;
+    //    }
+    //    else
+    //    {
+    //        if (stamina >= 100f) stamina = 100f;
+    //        else stamina += 0.05f;
+    //        Running = false;
             
-        }
-        staminaBar.SetBarUI(stamina);
-        return;
-    }
+    //    }
+    //    staminaBar.SetBarUI(stamina);
+    //    return;
+    //}
 }
