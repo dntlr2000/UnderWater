@@ -16,6 +16,7 @@ public class Player : MonoBehaviour
     public Transform cameraPivot;
     public float mouseSensitivityX = 500f;
     public float mouseSensitivityY = 500f;
+    public bool canMoveCamera = true;
 
     [Header("Animation")]
     public Animator animator;
@@ -77,7 +78,7 @@ public class Player : MonoBehaviour
     {
         stateMachine.currentState.Update();
 
-        RotateView();
+        if (canMoveCamera) RotateView();
 
         if (!isBusy)
         {

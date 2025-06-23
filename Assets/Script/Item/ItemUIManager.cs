@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 public class ItemUIManager : MonoBehaviour
 {
-    private bool showInventory = false;
+    public bool showInventory = false;
     
     public GameObject InventoryScreen;
     //public RawImage[] itemSlots;
@@ -24,7 +24,7 @@ public class ItemUIManager : MonoBehaviour
             itemSlots[i].SlotID = i;
         }
     }
-
+    /*
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.I))
@@ -33,6 +33,7 @@ public class ItemUIManager : MonoBehaviour
         }
         
     }
+    */
 
     public void SwitchInventoryState()
     {
