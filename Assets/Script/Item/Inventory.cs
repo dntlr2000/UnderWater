@@ -46,34 +46,35 @@ public class Inventory : MonoBehaviour
         }
         */
 
-
-        if (Input.GetKeyDown(KeyCode.N))
+        //임시로 설정
+        if (Input.GetKeyDown(KeyCode.B))
         {
             GetItem(0, 1);
         }
 
-        if (Input.GetKeyDown(KeyCode.B)) {
+        if (Input.GetKeyDown(KeyCode.N)) {
             GetItem(1, 3);
         }
 
-        if (Input.GetKeyDown(KeyCode.M))
+        if (Input.GetKeyDown(KeyCode.Q))
         {
-            RemoveAllItem(index);
+            //RemoveAllItem(index);
+            RemoveItem(index, 1);
         }
-        /*
-        if (Input.GetKeyDown(KeyCode.WheelUp)) //이거 휠 굴리는 명령어가 아니었음;
+
+        Vector2 delta = Input.mouseScrollDelta;
+        if (delta.y > 0f)
         {
             index += 1;
             if (index > 4) index = 4;
             IndexSetter();
         }
-        if (Input.GetKeyDown(KeyCode.WheelUp))
+        else if (delta.y < 0f)
         {
             index -= 1;
             if (index < 0) index = 0;
             IndexSetter();
         }
-        */
 
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
@@ -113,7 +114,7 @@ public class Inventory : MonoBehaviour
         IndexLine.localPosition = new Vector2(-140 + 70 * index, 0);
     }
 
-    public void GetItem(int id, int quantitiy = 1)
+    public void GetItem(int id, int quantitiy = 1, int durability = -1)
     {
         //같은 아이템이 이미 존재하는지 확인 먼저 한 후 빈 슬롯을 찾기
         for (int i = 0; i < inventoryData.id.Length; i++)
@@ -127,7 +128,7 @@ public class Inventory : MonoBehaviour
             }
         }
 
-        for (int i = 0; i < inventoryData.id.Length; i++) //비어있는 경우. 임시로 -1로 설정
+        for (int i = 0; i < inventoryData.id.Length; i++) //비어있는 경우. 임시로 -1로 설정c
         {
             if (inventoryData.id[i] == -1)
             {
@@ -166,7 +167,27 @@ public class Inventory : MonoBehaviour
             inventoryData.id[index] = -1;
             inventoryData.quantity[index] = 0;
             Debug.Log($"Removed Item in slot {index}");
+
             ItemUI.ResetIcons(index);
+        }
+    }
+
+    public void RemoveItem(int index, int amount)
+    {
+        if (inventoryData.id[index] == -1)
+        {
+            return;
+        }
+        else
+        {
+            inventoryData.quantity[index] -= amount;
+            ItemUI.SetQuantity(index, inventoryData.quantity[index]);
+
+            if (inventoryData.quantity[index] <= 0)
+            {
+                inventoryData.id[index] = -1;
+                ItemUI.ResetIcons(index);
+            }
         }
     }
 

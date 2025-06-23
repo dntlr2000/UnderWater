@@ -21,7 +21,7 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
         /*양식
         items[0].itemName = "이름";
         items[0].weight = 1; //무게
-        items[0].durability = 99; //내구도
+        items[0].durability = 99; //최대 내구도
 
         */
         items[0].itemName = "NullItem";
