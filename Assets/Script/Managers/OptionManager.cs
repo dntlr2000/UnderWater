@@ -110,16 +110,16 @@ public class OptionManager : MonoBehaviour
     }
 
 
-    /* 여긴 설정창을 종료한 후에 반영해도 문제가 없음, 부하를 줄이기 위해 슬라이더 별로 적용 메서드를 나눔
+
     public void OnXSliderChanged(float value) 
     {
-        //playerCamera.MouseSensitivityX = value;
+        playerCamera.MouseSensitivityX = value;
     }
     public void OnYSliderChanged(float value) 
     {
-        //playerCamera.MouseSensitivityY = value;
+        playerCamera.MouseSensitivityY = value;
     }
-     */
+     
     public void OnBGMChanged(float value) //슬라이더 변경 시 실시간 반영을 위해
     {
         //audioScript.ChangeVolume_BGM(value);
