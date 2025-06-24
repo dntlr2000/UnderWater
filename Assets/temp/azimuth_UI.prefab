@@ -395,7 +395,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 7656113855277951579}
         m_TargetAssemblyTypeName: OptionManager, Assembly-CSharp
         m_MethodName: ExitOptions
         m_Mode: 1
@@ -2584,9 +2584,6 @@ MonoBehaviour:
   compassWidth: 200
   visibleAngle: 200
   pingPrefab: {fileID: 4846565370681298755, guid: b203850c528c0f94fa43b8cc05edde7c, type: 3}
-  targets:
-  - {fileID: 0}
-  - {fileID: 0}
 --- !u!114 &4866486440899964338
 MonoBehaviour:
   m_ObjectHideFlags: 0
