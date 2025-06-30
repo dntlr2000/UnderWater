@@ -16,7 +16,7 @@ public class PoolSettingTemp : MonoBehaviour
         GameObject item = PoolManager.Instance.GetFromPool("Item");
         item.transform.position = location;
         item.SetActive(true);
-        Debug.Log($"Spawned Item at {location.x}, {location.y}, {location.z}.");
+        //Debug.Log($"Spawned Item at {location.x}, {location.y}, {location.z}.");
     }
 
     IEnumerator SpawnLoop()

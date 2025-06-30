@@ -25,7 +25,7 @@ public class OptionManager : MonoBehaviour
     //일단 테스트용으로 여기다가 임시로 구현, 이후 적절한 곳에 옮기면서 설정창 활성화 로직을 수정할 수 있음
     //이후 일시정지창을 구현한 후에 옮기는 것이 좋아보임
     public GameObject OptionScreen;
-    private bool ifOptionActive = false;
+    public bool ifOptionActive = false;
 
 
     void Start()
@@ -35,26 +35,24 @@ public class OptionManager : MonoBehaviour
     }
 
     // Update is called once per frame
+    /*
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (ifOptionActive == false) //옵션 활성화
             {
-                ifOptionActive = true;
-                OptionScreen.SetActive(true);
-                //audioManager.PlaySFX(0)//여는 효과음 추가
-                LockCursor(false);
-                LoadOptions();
+                TurnOptions(true);
             }
 
             else //옵션 비활성화
             {
-                ExitOptions();
+                TurnOptions(false);
             }
 
         }
     }
+    */
 
     private void Awake()
     {
@@ -99,27 +97,40 @@ public class OptionManager : MonoBehaviour
 
     }
 
-    public void ExitOptions()
+    public void TurnOptions(bool state)
     {
-        LockCursor(true);
-        SaveOptions();
-        ApplyOptions();
-        ifOptionActive = false;
-        OptionScreen.SetActive(false);
+        if (!state)
+        {
+            LockCursor(true);
+            SaveOptions();
+            ApplyOptions();
+            ifOptionActive = false;
+            OptionScreen.SetActive(false);
+            player.canMoveCamera = true;
+        }
+
+        else
+        {
+            ifOptionActive = true;
+            OptionScreen.SetActive(true);
+            //audioManager.PlaySFX(0)//여는 효과음 추가
+            LockCursor(false);
+            LoadOptions();   
+        }
         //audioManager.PlaySFX(1)//닫는 효과음 추가
     }
 
 
-
+    /* 여긴 설정창을 종료한 후에 반영해도 문제가 없음, 부하를 줄이기 위해 슬라이더 별로 적용 메서드를 나눔
     public void OnXSliderChanged(float value) 
     {
-        playerCamera.MouseSensitivityX = value;
+        //playerCamera.MouseSensitivityX = value;
     }
     public void OnYSliderChanged(float value) 
     {
-        playerCamera.MouseSensitivityY = value;
+        //playerCamera.MouseSensitivityY = value;
     }
-     
+     */
     public void OnBGMChanged(float value) //슬라이더 변경 시 실시간 반영을 위해
     {
         //audioScript.ChangeVolume_BGM(value);
@@ -155,4 +166,5 @@ public class OptionManager : MonoBehaviour
             Cursor.visible = true;
         }
     }
+
 }

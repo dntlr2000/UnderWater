@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class PlayerState
 {
+    //MYJ 폴더 안에 있는 PlayerState 스크립트는 삭제 대신 전부 주석처리함
     protected Player player;
     protected PlayerStateMachine stateMachine;
     protected string animationBoolName;
