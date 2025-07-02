@@ -73,7 +73,6 @@ public class Player : MonoBehaviourPun
 
         stateMachine.Initialize(new PlayerIdleState(this, stateMachine, "Idle"));
         SetStateBar();
-        SetBarUI();
         StartCoroutine(getHungry());
         changeWaterState(true); //산소 메커니즘을 테스트하기 위해 임시로 Start에 배치
     }
@@ -81,7 +80,7 @@ public class Player : MonoBehaviourPun
     private void Update()
     {
         //if (photonView == null) Debug.LogError("photonView가 비어있습니다.");
-        //if (!photonView.IsMine) return;
+        if (!photonView.IsMine) return;
 
         stateMachine.currentState.Update();
 
@@ -174,16 +173,21 @@ public class Player : MonoBehaviourPun
     void SetStateBar()
     {
         stateUICollection = FindAnyObjectByType<StateUICollection>();
-        if (stateUICollection != null)
-        {
-            healthBar = stateUICollection.healthBar;
-            hungerBar = stateUICollection.hungerBar;
-            thirstBar = stateUICollection.thirstBar;
-            oxygenBar = stateUICollection.oxygenBar;
-            fatigueBar = stateUICollection.fatigueBar;
-            staminaBar = stateUICollection.staminaBar;
-        }
+        if (stateUICollection == null) return;
+        
+        healthBar = stateUICollection.healthBar;
+        hungerBar = stateUICollection.hungerBar;
+        thirstBar = stateUICollection.thirstBar;
+        oxygenBar = stateUICollection.oxygenBar;
+        fatigueBar = stateUICollection.fatigueBar;
+        staminaBar = stateUICollection.staminaBar;
+        
+        UIController uIController = FindAnyObjectByType<UIController>();
+        OptionManager optionScript = FindAnyObjectByType<OptionManager>();
+        if (uIController != null) uIController.playerScript = this;
+        if (optionScript != null) optionScript.player = this;
 
+        SetBarUI();
     }
 
     public void SetBarUI()

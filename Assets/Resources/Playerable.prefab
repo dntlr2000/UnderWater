@@ -45,6 +45,7 @@ GameObject:
   - component: {fileID: 6452693719272879464}
   - component: {fileID: 7411697451129402638}
   - component: {fileID: 8175924925092543015}
+  - component: {fileID: 3974807859545433685}
   m_Layer: 0
   m_Name: Playerable
   m_TagString: Player
@@ -134,20 +135,22 @@ MonoBehaviour:
   rotationSpeed: 10
   gravity: -9.8
   swimUpForce: 5
-  cameraTransform: {fileID: 1690134849494874969}
-  cameraPivot: {fileID: 6171832865811880693}
+  cameraTransform: {fileID: 6171832865811880693}
+  cameraPivot: {fileID: 1690134849494874969}
   mouseSensitivityX: 500
   mouseSensitivityY: 500
+  canMoveCamera: 1
   animator: {fileID: 7748892893612311456}
   isBusy: 0
   isUnderwater: 1
   runSpeedMultiply: 3
-  healthBar: {fileID: 0}
-  hungerBar: {fileID: 0}
-  thirstBar: {fileID: 0}
-  oxygenBar: {fileID: 0}
-  fatigueBar: {fileID: 0}
-  staminaBar: {fileID: 0}
+  health: 100
+  hunger: 100
+  thirst: 100
+  oxygen: 100
+  fatigue: 0
+  stamina: 100
+  stateUICollection: {fileID: 0}
 --- !u!114 &8175924925092543015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -170,6 +173,24 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &3974807859545433685
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5368671032790062748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af06c504d7934ea4087a893bddcbc1be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerCamera: {fileID: 7872861872906566718}
+  distance: 10
+  interactLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  inventory: {fileID: 0}
 --- !u!1 &5413072857066087420
 GameObject:
   m_ObjectHideFlags: 0
