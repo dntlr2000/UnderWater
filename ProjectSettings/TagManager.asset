@@ -6,6 +6,8 @@ TagManager:
   tags:
   - RadarObject
   - Ping
+  - Bullet
+  - Water
   layers:
   - Default
   - TransparentFX
@@ -14,10 +16,10 @@ TagManager:
   - Water
   - UI
   - ShadowOnly
+  - Ground
+  - Player
   - 
-  - 
-  - 
-  - 
+  - Interactable
   - 
   - 
   - 

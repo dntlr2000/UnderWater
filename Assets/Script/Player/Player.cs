@@ -33,6 +33,11 @@ public class Player : MonoBehaviourPun
     private float verticalAngle;
     private float horizontalAngle;
 
+    public LayerMask groundLayer;
+    public LayerMask waterLayer;
+    public float checkDistance = 2f;
+    [SerializeField] private float waterSurfaceY = 7f;
+
     [Header("Condition")]
     public float health = 100f;    //체력
     public float hunger = 100f;    //허기
@@ -61,6 +66,7 @@ public class Player : MonoBehaviourPun
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        animator = GetComponent<Animator>();
         rb.useGravity = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
 
@@ -71,7 +77,31 @@ public class Player : MonoBehaviourPun
         if (cameraTransform == null)
             cameraTransform = Camera.main.transform;
 
+        GameObject water = GameObject.FindWithTag("Water");
+        if (water != null)
+        {
+            Collider waterCollider = water.GetComponent<Collider>();
+            if (waterCollider != null)
+            {
+                waterSurfaceY = waterCollider.bounds.max.y;
+            }
+            else
+            {
+                waterSurfaceY = water.transform.position.y;
+            }
+        }
+
         stateMachine.Initialize(new PlayerIdleState(this, stateMachine, "Idle"));
+
+        if (!photonView.IsMine)
+        {
+            if (cameraTransform != null)
+                cameraTransform.gameObject.SetActive(false);
+
+            if (cameraPivot != null)
+                cameraPivot.gameObject.SetActive(false);
+        }
+
         SetStateBar();
         StartCoroutine(getHungry());
         changeWaterState(true); //산소 메커니즘을 테스트하기 위해 임시로 Start에 배치
@@ -96,15 +126,24 @@ public class Player : MonoBehaviourPun
     }
     private void FixedUpdate()
     {
-        
+        if (!photonView.IsMine) return;
+
+        bool grounded = IsGrounded();
+
+        // 예시: 땅에 있을 때만 점프 가능
+        if (grounded && Input.GetKeyDown(KeyCode.Space))
+        {
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, 5f, rb.linearVelocity.z);
+        }
         if (!isBusy)
         {
+            CheckWaterState();
+
             if (isUnderwater)
                 SwimMove();
             else
                 GroundMove();
         }
-        
     }
     void RotateView()
     {
@@ -169,6 +208,38 @@ public class Player : MonoBehaviourPun
     }
 
     // 상태 관련 메서드 --------------------------------------------------------------------------
+
+    private void CheckWaterState()
+    {
+        if (cameraTransform != null)
+        {
+            isUnderwater = cameraTransform.position.y < waterSurfaceY;
+        }
+    }
+    public bool IsGrounded()
+    {
+        float radius = 0.3f;
+        Vector3 position = transform.position + Vector3.down * 0.5f;
+        return Physics.CheckSphere(position, radius, groundLayer);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Water"))
+        {
+            isUnderwater = true;
+            Debug.Log("Entered water");
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Water"))
+        {
+            isUnderwater = false;
+            Debug.Log("Exited water");
+        }
+    }
 
     void SetStateBar()
     {
@@ -256,10 +327,10 @@ public class Player : MonoBehaviourPun
         }
         else
         {
-            isUnderwater= false;
+            isUnderwater = false;
             //StopCoroutine(UseOxygen);
         }
-    } 
+    }
 
     public IEnumerator getSleepCoroutine()
     {
