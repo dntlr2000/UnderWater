@@ -1,3 +1,4 @@
+/*
 using UnityEditor;
 using UnityEngine;
 
@@ -71,3 +72,4 @@ public class PlayerState
         player.rb.linearVelocity = new Vector3(move.x, player.rb.linearVelocity.y, move.z);
     }
 }
+*/

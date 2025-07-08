@@ -45,12 +45,12 @@ public class PoolManager : MonoBehaviour
         if (poolDictionary[key].Count > 0)
         {
             obj = poolDictionary[key].Dequeue();
-            Debug.Log($"Dequed Sucessfully, ID : {obj.GetInstanceID()}");
+            //Debug.Log($"Dequed Sucessfully, ID : {obj.GetInstanceID()}");
         }
         else
         {
             obj = Instantiate(prefabDictionary[key]);
-            Debug.Log("Instantiate Object");
+            //Debug.Log("Instantiate Object");
         }
         
 

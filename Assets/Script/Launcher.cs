@@ -33,6 +33,7 @@ public class Launcher : MonoBehaviourPunCallbacks
     {
         Debug.Log("방에 입장 성공: " + PhotonNetwork.CurrentRoom.Name);
         // 4. 방 입장 완료 → GameScene으로 이동
-        PhotonNetwork.LoadLevel("Multitest");
+        //PhotonNetwork.LoadLevel("Multitest");
+        PhotonNetwork.LoadLevel("SampleScene");
     }
 }
