@@ -191,6 +191,45 @@ public class Inventory : MonoBehaviour
         }
     }
 
+    public void MoveItemSlot(int before, int after)
+    {
+        if (inventoryData.id[before] == -1) return;
+        Sprite ItemSpriteAfter;
+        if (inventoryData.id[after] == -1) //옮기는 자리가 빈 자리임
+        {
+            inventoryData.id[after] = inventoryData.id[before];
+            inventoryData.quantity[after] = inventoryData.quantity[before];
+            ItemSpriteAfter = inventoryData.item.GetIcons(inventoryData.id[after]);
+
+            ItemUI.LoadIcons(after, ItemSpriteAfter);
+            ItemUI.SetQuantity(after, inventoryData.quantity[after]);
+
+            RemoveAllItem(before);
+        }
+        //각 위치에 아이템이 존재할 때
+        else
+        {
+            int tempID = inventoryData.id[after];
+            int tempQuantity = inventoryData.quantity[after];
+
+            inventoryData.id[after] = inventoryData.id[before];
+            inventoryData.quantity[after] = inventoryData.quantity[before];
+
+            inventoryData.id[before] = tempID;
+            inventoryData.quantity[before] = tempQuantity;
+            ItemSpriteAfter = inventoryData.item.GetIcons(inventoryData.id[after]);
+            Sprite ItemSpriteBefore = inventoryData.item.GetIcons(inventoryData.id[before]);
+            ItemUI.LoadIcons(after, ItemSpriteAfter);
+            ItemUI.SetQuantity(after, inventoryData.quantity[after]);
+
+            ItemUI.LoadIcons(before, ItemSpriteBefore);
+            ItemUI.SetQuantity(before, inventoryData.quantity[before]);
+        }
+
+        Debug.Log($"Switched Items Slot {before} <-> Slot {after}");
+
+    }
+
 }
 
 [Serializable]
@@ -203,8 +242,8 @@ public class InventoryData
 
     public void GenerateData()
     {
-        quantity = new int[20];
-        id = new int[20];
+        quantity = new int[25];
+        id = new int[25];
         item = new ItemDatabase();
         item.GenerateData();
 
