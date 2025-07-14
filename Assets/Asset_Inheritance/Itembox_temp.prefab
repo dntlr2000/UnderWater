@@ -195,7 +195,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb9d8aec6e2a73c4c9d83ac2cb18420b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cursorType: Item
+  interactionId: Item
+  objectName: Item Box
   getAble: 1
   itemID: 1
   amount: 1
-  itemName: Box

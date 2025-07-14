@@ -550,7 +550,9 @@ MonoBehaviour:
   interactLayer:
     serializedVersion: 2
     m_Bits: 8
+  isBusy: 0
   inventory: {fileID: 0}
+  interactionUI: {fileID: 0}
 --- !u!1001 &383200109
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2114,6 +2116,10 @@ PrefabInstance:
       propertyPath: audioScript
       value: 
       objectReference: {fileID: 1842067645}
+    - target: {fileID: 1926775518229482987, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2116749441284006472, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
       propertyPath: m_IsActive
       value: 0
