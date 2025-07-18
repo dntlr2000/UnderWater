@@ -17,7 +17,6 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
     public virtual string GetInteractionID() => interactionId;
 
 
-
     public abstract void Interact(); //카메라가 이 오브젝트를 바라볼 때 호출됨
 
     public void UpdateGuage(bool interact, float holdTime)

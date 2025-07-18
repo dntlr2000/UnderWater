@@ -25,7 +25,6 @@ public class RaycastInteract : MonoBehaviour
         //Debug.Log("RayCast 활성화");
         inventory = FindAnyObjectByType<Inventory>();
         //playerCamera = Camera.main;
-        interactionUI.ResetUI();
     }
 
     private void Update()
@@ -36,13 +35,13 @@ public class RaycastInteract : MonoBehaviour
 
     public bool CanInteract()
     {
+
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit, distance, interactLayer)) //ray를 발사했을 때 distance 안에서 맞춘 오브젝트가 ineractLayer에 속한 경우 hit 안에 오브젝트 정보가 들어옴
         {
             Interactable interactable = hit.collider.GetComponent<Interactable>(); //InteractableObject 인터페이스를 구현한 클래스일 경우 받아와짐
-            
             
             if (interactable != null)
             {
@@ -77,6 +76,13 @@ public class RaycastInteract : MonoBehaviour
         interactionUI.ResetUI();
         interactionUI.UpdateGauge(0f);
     }
+    
+    //public bool CheckInteractable()
+    //{
+    //    if (isBusy) return false;
+    //    return inventory.HoldingInteractableItem();
+    //}
+    
 }
 
 /*
