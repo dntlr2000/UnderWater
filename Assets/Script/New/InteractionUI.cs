@@ -65,7 +65,9 @@ public class InteractionUI : MonoBehaviour
 
     public void ShowCursor()
     {
+        crosshairUI.SetActive(false);
         CursorUI.SetActive(true);
+        GaugeUI.SetActive(false);
     }
 
     public void ShowGauge()

@@ -125,6 +125,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         for (int i = 0; i < ChatText.Length; i++) ChatText[i].text = "";
 
         StartBtn.interactable = PhotonNetwork.IsMasterClient;
+        Debug.Log("Room joined: " + PhotonNetwork.CurrentRoom.Name);
     }
 
     public override void OnCreateRoomFailed(short returnCode, string message)

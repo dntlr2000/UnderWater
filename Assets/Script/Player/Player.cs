@@ -49,7 +49,10 @@ public class Player : MonoBehaviourPun
     private bool isSleep = false;
     private bool isMoving = false; //뛰는 로직 구현하기 위해 필요
     private bool Running = false;
-    
+
+    public JobData currentJob;
+    public JobData[] allJobs;
+    public JobType CurrentJobType => currentJob.jobType;
 
     [Header("각 상태에 대응되는 바UI")]
     public StateUICollection stateUICollection;
@@ -71,9 +74,49 @@ public class Player : MonoBehaviourPun
         rb.constraints = RigidbodyConstraints.FreezeRotation;
 
         stateMachine = new PlayerStateMachine();
+
+        if (photonView.IsMine)
+        {
+            AssignRandomJob();
+            QuestManager.Instance.RegisterLocalPlayer(this);
+        }
     }
+    void AssignRandomJob()
+    {
+        if (allJobs.Length == 0)
+        {
+            Debug.LogError("모든 직업 데이터를 할당해주세요!");
+            return;
+        }
+        int randomIndex = Random.Range(0, allJobs.Length);
+        currentJob = allJobs[randomIndex];
+        Debug.Log($"랜덤 직업 할당됨: {currentJob.jobName}");
+    }
+
     private void Start()
     {
+        if (!photonView.IsMine)
+        {
+            if (cameraTransform != null && cameraTransform.GetComponent<Camera>() != null)
+                cameraTransform.GetComponent<Camera>().enabled = false;
+
+            if (cameraPivot != null)
+
+                cameraPivot.gameObject.SetActive(false);
+        }
+        else
+        {
+            if (currentJob != null)
+            {
+                QuestManager.Instance.TryUnlockQuests(currentJob);
+            }
+            else
+            {
+                Debug.LogError("CurrentJob이 할당되지 않았습니다.");
+            }
+        }
+            
+
         if (cameraTransform == null)
             cameraTransform = Camera.main.transform;
 
@@ -81,27 +124,10 @@ public class Player : MonoBehaviourPun
         if (water != null)
         {
             Collider waterCollider = water.GetComponent<Collider>();
-            if (waterCollider != null)
-            {
-                waterSurfaceY = waterCollider.bounds.max.y;
-            }
-            else
-            {
-                waterSurfaceY = water.transform.position.y;
-            }
+            waterSurfaceY = (waterCollider != null) ? waterCollider.bounds.max.y : water.transform.position.y;
         }
 
         stateMachine.Initialize(new PlayerIdleState(this, stateMachine, "Idle"));
-
-        if (!photonView.IsMine)
-        {
-            if (cameraTransform != null)
-                cameraTransform.gameObject.SetActive(false);
-
-            if (cameraPivot != null)
-                cameraPivot.gameObject.SetActive(false);
-        }
-
         SetStateBar();
         StartCoroutine(getHungry());
         changeWaterState(true); //산소 메커니즘을 테스트하기 위해 임시로 Start에 배치
@@ -109,8 +135,12 @@ public class Player : MonoBehaviourPun
 
     private void Update()
     {
-        //if (photonView == null) Debug.LogError("photonView가 비어있습니다.");
         if (!photonView.IsMine) return;
+
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            QuestUI.Instance.ToggleQuestWindow();
+        }
 
         stateMachine.currentState.Update();
 
@@ -126,7 +156,7 @@ public class Player : MonoBehaviourPun
     }
     private void FixedUpdate()
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine || isBusy) return;
 
         bool grounded = IsGrounded();
 
@@ -135,15 +165,13 @@ public class Player : MonoBehaviourPun
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, 5f, rb.linearVelocity.z);
         }
-        if (!isBusy)
-        {
-            CheckWaterState();
 
-            if (isUnderwater)
-                SwimMove();
-            else
-                GroundMove();
-        }
+        CheckWaterState();
+
+        if (isUnderwater)
+            SwimMove();
+        else
+            GroundMove();
     }
     void RotateView()
     {
