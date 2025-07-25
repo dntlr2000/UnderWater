@@ -1,7 +1,7 @@
 using UnityEngine;
 
 
-public class FieldItem : InteractableObject, Interactable
+public class FieldItem : InteractableObject//, Interactable
 {
     public bool getAble = true;
     public int itemID; //연관된 아이템 DB의 아이디
@@ -12,7 +12,6 @@ public class FieldItem : InteractableObject, Interactable
     public override void Interact() //카메라가 이 오브젝트를 바라볼 때 호출됨
     {
         //Debug.Log("Item Detected");
-
         if (getAble && Input.GetMouseButtonDown(1))
         {
             Debug.Log("아이템 습득 시도");

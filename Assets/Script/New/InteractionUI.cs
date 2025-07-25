@@ -60,12 +60,16 @@ public class InteractionUI : MonoBehaviour
             return;
         }
 
+        Debug.Log($"받은 커서 타입 : {type}");
         cursorImage.sprite = sprite;
     }
 
     public void ShowCursor()
     {
+        //Debug.Log("############호출됨");
+        crosshairUI.SetActive(false);
         CursorUI.SetActive(true);
+        GaugeUI.SetActive(false);
     }
 
     public void ShowGauge()
@@ -82,8 +86,11 @@ public class InteractionUI : MonoBehaviour
 
     public void ResetUI()
     {
+        //SetCursor("Normal");
         crosshairUI.SetActive(true);
         CursorUI.SetActive(false);
         GaugeUI.SetActive(false);
+
+        //Debug.Log("@@@@@Reseted Icon");
     }
 }

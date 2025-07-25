@@ -10,7 +10,7 @@ public class Rock : MonoBehaviour, Interactable
         pv = GetComponent<PhotonView>();
     }
 
-    public string GetCursorType() => "Hand";
+    public string GetCursorType() => "Rock";
     public string GetInteractionID() => "Rock";
     public InteractionType GetInteractionType() => InteractionType.Instant;
 

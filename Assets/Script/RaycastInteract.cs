@@ -33,7 +33,7 @@ public class RaycastInteract : MonoBehaviour
         CanInteract(); //현재 구조상 바라보고 있으면 매 프레임마다 호출되는 방식
     }
 
-    public bool CanInteract()
+    public void CanInteract()
     {
 
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
@@ -42,14 +42,19 @@ public class RaycastInteract : MonoBehaviour
         if (Physics.Raycast(ray, out hit, distance, interactLayer)) //ray를 발사했을 때 distance 안에서 맞춘 오브젝트가 ineractLayer에 속한 경우 hit 안에 오브젝트 정보가 들어옴
         {
             Interactable interactable = hit.collider.GetComponent<Interactable>(); //InteractableObject 인터페이스를 구현한 클래스일 경우 받아와짐
-            
+            interactionUI.ShowCursor();
             if (interactable != null)
             {
                 //currentTarget = interactable; 
-                interactionUI.SetCursor(interactable.GetCursorType());
-
+                interactionUI.SetCursor(interactable.GetCursorType()); //정상 반영됨
+                //interactionUI.ShowCursor();
+                
+                
                 interactable.Interact(); //해당 인터페이스를 구현한 클래스의 Interact 메서드를 불러온다.
+                //ResetInteractionState();
+                return;
             }
+
             else
             {
                 
@@ -57,7 +62,7 @@ public class RaycastInteract : MonoBehaviour
             
         }
         ResetInteractionUI();
-        return true;
+        return;
     }
 
 
@@ -72,7 +77,7 @@ public class RaycastInteract : MonoBehaviour
     public void ResetInteractionState()
     {
         //holdTimer = 0f;
-        //currentTarget = null;
+       //currentTarget = null;
         interactionUI.ResetUI();
         interactionUI.UpdateGauge(0f);
     }

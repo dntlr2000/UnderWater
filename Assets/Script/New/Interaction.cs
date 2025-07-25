@@ -37,7 +37,7 @@ public class Interaction : MonoBehaviour
             var interactable = hit.collider.GetComponent<Interactable>();
             if (interactable != null)
             {
-                currentTarget = interactable;
+                //currentTarget = interactable;
                 interactionUI.SetCursor(interactable.GetCursorType());
 
                 switch (interactable.GetInteractionType())
@@ -47,7 +47,7 @@ public class Interaction : MonoBehaviour
                         if (Input.GetKeyDown(KeyCode.E))
                         {
                             interactable.Interact();
-                            ResetInteractionState();
+                            //ResetInteractionState();
                         }
                         break;
 
@@ -70,6 +70,7 @@ public class Interaction : MonoBehaviour
                             interactionUI.UpdateGauge(0f);
                         }
                         break;
+                    
                 }
 
                 return;

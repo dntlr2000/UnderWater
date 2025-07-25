@@ -309,8 +309,10 @@ MonoBehaviour:
   crosshairUI: {fileID: 1511342936035719928}
   CursorUI: {fileID: 5852055618207313923}
   GaugeUI: {fileID: 126543790461455326}
-  cursorImage: {fileID: 6500104670297932783}
+  cursorImage: {fileID: 8114498890284553560}
   cursorDataList:
+  - cursorType: Normal
+    cursorSprite: {fileID: 21300000, guid: c7b87fa286009b349a5158c847aea53a, type: 3}
   - cursorType: Rock
     cursorSprite: {fileID: 21300000, guid: e25ff1fe73f928645af6c12233164d50, type: 3}
   - cursorType: Door
