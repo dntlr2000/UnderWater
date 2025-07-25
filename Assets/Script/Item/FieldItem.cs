@@ -1,3 +1,4 @@
+using Photon.Pun;
 using UnityEngine;
 
 
@@ -9,19 +10,37 @@ public class FieldItem : InteractableObject//, Interactable
     //public int durability = -1;
     //private Inventory inventory;
 
+    public override InteractionType GetInteractionType() => InteractionType.Instant; //사실 이 구조면 InteractionType이 필요없을거 같기도
+    
+
     public override void Interact() //카메라가 이 오브젝트를 바라볼 때 호출됨
     {
         //Debug.Log("Item Detected");
-        if (getAble && Input.GetMouseButtonDown(1))
+        if (GetInteractionType() == InteractionType.Instant)
         {
-            Debug.Log("아이템 습득 시도");
-            GetItem();
+            if (getAble && Input.GetMouseButtonDown(1))
+            {
+                //Debug.Log("아이템 습득 시도");
+                GetItem();
+                RPC_Deactivate();
+            }
         }
+        else
+        {
+            if (getAble && Input.GetMouseButton(1))
+            {
+                UpdateGuage(true, holdDuration);
+            }
+            else
+            {
+                UpdateGuage(false, holdDuration);
+            }
+        }
+        
     }
 
 
     //현재로서는 Instant, Guage만 정의되어있음
-    public override InteractionType GetInteractionType() => InteractionType.Instant;
 
     public void GetItem()
     {
@@ -39,4 +58,3 @@ public class FieldItem : InteractableObject//, Interactable
         gameObject.SetActive(false);
     }
 }
-
