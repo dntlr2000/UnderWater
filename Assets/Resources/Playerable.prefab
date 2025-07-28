@@ -699,7 +699,11 @@ MonoBehaviour:
   fatigue: 0
   stamina: 100
   currentJob: {fileID: 0}
-  allJobs: []
+  allJobs:
+  - {fileID: 11400000, guid: 2020002d21f98b74d8684c677afe6700, type: 2}
+  - {fileID: 11400000, guid: 05196aee36b459248935b95f7bf92fbb, type: 2}
+  - {fileID: 11400000, guid: 8d6ac1c3b82b43d418b4d523dcd4b91d, type: 2}
+  - {fileID: 11400000, guid: 26de992d9af81a74d99eee13f9139a6c, type: 2}
   stateUICollection: {fileID: 0}
 --- !u!114 &8175924925092543015
 MonoBehaviour:
@@ -721,7 +725,7 @@ MonoBehaviour:
   observableSearch: 2
   ObservedComponents:
   - {fileID: 1819224067686749904}
-  sceneViewId: 5
+  sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
 --- !u!114 &3974807859545433685

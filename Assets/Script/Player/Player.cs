@@ -88,6 +88,13 @@ public class Player : MonoBehaviourPun
             Debug.LogError("모든 직업 데이터를 할당해주세요!");
             return;
         }
+
+        Debug.Log("현재 allJobs 배열 내용:");
+        for (int i = 0; i < allJobs.Length; i++)
+        {
+            Debug.Log($"[{i}] {allJobs[i].jobName}");
+        }
+
         int randomIndex = Random.Range(0, allJobs.Length);
         currentJob = allJobs[randomIndex];
         Debug.Log($"랜덤 직업 할당됨: {currentJob.jobName}");
@@ -115,7 +122,7 @@ public class Player : MonoBehaviourPun
                 Debug.LogError("CurrentJob이 할당되지 않았습니다.");
             }
         }
-            
+
 
         if (cameraTransform == null)
             cameraTransform = Camera.main.transform;
