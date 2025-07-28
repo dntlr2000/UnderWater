@@ -53,7 +53,7 @@ public class OptionManager : MonoBehaviour
         }
     }
     */
-
+    /*
     private void Awake()
     {
         //LoadOptions();
@@ -62,6 +62,7 @@ public class OptionManager : MonoBehaviour
             LockCursor(true);
         }
     }
+    */
 
     private void SaveOptions() // 버튼을 이용해서 저장을 할 경우 public으로 전환 바람
     {
@@ -101,12 +102,12 @@ public class OptionManager : MonoBehaviour
     {
         if (!state)
         {
-            LockCursor(true);
+            //LockCursor(true);
             SaveOptions();
             ApplyOptions();
             ifOptionActive = false;
             OptionScreen.SetActive(false);
-            player.canMoveCamera = true;
+            //player.canMoveCamera = true;
         }
 
         else
@@ -114,7 +115,7 @@ public class OptionManager : MonoBehaviour
             ifOptionActive = true;
             OptionScreen.SetActive(true);
             //audioManager.PlaySFX(0)//여는 효과음 추가
-            LockCursor(false);
+            //LockCursor(false);
             LoadOptions();   
         }
         //audioManager.PlaySFX(1)//닫는 효과음 추가
@@ -152,6 +153,7 @@ public class OptionManager : MonoBehaviour
         audioScript.SetVolume(SoundType.SFX, SFXValue);
     }
 
+    /*
     public void LockCursor(bool state)
     {
         if (state)
@@ -166,5 +168,6 @@ public class OptionManager : MonoBehaviour
             Cursor.visible = true;
         }
     }
+    */
 
 }
