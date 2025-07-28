@@ -12,13 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b9885ddac281b36459fae11db56b869e, type: 3}
   m_Name: QuestData 3
   m_EditorClassIdentifier: 
-  questID: 
-  title: 
-  description: 
+  questID: Q301
+  title: "\uCD08\uBCF4 \uD0D0\uD5D8\uAC00\uC758 \uAFC8"
+  description: "1\uC9C0\uC5ED\uC744 \uD0D0\uC0AC\uD574\uBCF4\uC790"
   icon: {fileID: 0}
-  questType: 0
-  requiredJob: 0
-  objectives: []
-  rewards: []
+  questType: 1
+  requiredJob: 2
+  objectives:
+  - objectiveID: "1\uC9C0\uC5ED\uC744 \uD0D0\uC0AC\uD574\uBCF4\uC138\uC694"
+    description: "\uBBF8\uC6A9\uC2E4, PC\uBC29, \uAC00\uC815\uC9D1"
+    type: 3
+    targetAmount: 3
+    currentAmount: 0
+    collectItemName: 
+  rewards:
+  - rewardType: 2
+    amount: 300
   prerequisiteQuest: {fileID: 0}
   isCompleted: 0

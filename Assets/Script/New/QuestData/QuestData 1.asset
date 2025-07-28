@@ -12,13 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b9885ddac281b36459fae11db56b869e, type: 3}
   m_Name: QuestData 1
   m_EditorClassIdentifier: 
-  questID: 
-  title: 
-  description: 
-  icon: {fileID: 0}
-  questType: 0
+  questID: Q101
+  title: "\uCD08\uBCF4 \uC694\uB9AC\uC0AC\uC758 \uAFC8"
+  description: "\uC694\uB9AC\uB97C \uC81C\uC791\uD574\uBCF4\uC790"
+  icon: {fileID: 21300000, guid: 91c4c869eccb14e44a7522169770c9b7, type: 3}
+  questType: 1
   requiredJob: 0
-  objectives: []
-  rewards: []
+  objectives:
+  - objectiveID: cooking_soup
+    description: "\uC2A4\uD504 5\uAC1C \uC81C\uC791\uD558\uAE30"
+    type: 4
+    targetAmount: 5
+    currentAmount: 0
+    collectItemName: Soup
+  rewards:
+  - rewardType: 3
+    amount: 1
   prerequisiteQuest: {fileID: 0}
   isCompleted: 0

@@ -466,6 +466,56 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3386235482016585254, guid: ad5963ba44c953b41beb2488d266b2bf, type: 3}
   m_PrefabInstance: {fileID: 383200109}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &673978298
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 673978300}
+  - component: {fileID: 673978299}
+  m_Layer: 0
+  m_Name: QuestManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &673978299
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673978298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e01240d6cebff846a6679779bb0a809, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  allQuests:
+  - {fileID: 11400000, guid: edd3b90ade1f04d4b85857cdd39ebd48, type: 2}
+  - {fileID: 11400000, guid: f74367797b1d5a84c83684c4b2cac50e, type: 2}
+  - {fileID: 11400000, guid: f1489df275f69bf4d830787ad018046e, type: 2}
+  - {fileID: 11400000, guid: 3c1c0151df1bc3840aded4d085a790c7, type: 2}
+  - {fileID: 11400000, guid: ddd39061ab2f7404d91098cb42d68486, type: 2}
+--- !u!4 &673978300
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673978298}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.83771616, y: -0.39457846, z: -1.760365}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
@@ -1844,6 +1894,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 331092842191594276, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 77.60559
+      objectReference: {fileID: 0}
     - target: {fileID: 1235607703190144594, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
       propertyPath: audioScript
       value: 
@@ -1930,6 +1984,18 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6224744964114851405, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6955047334258512542, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6955047334258512542, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6955047334258512542, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
+      propertyPath: m_AnchorMin.y
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
@@ -2264,3 +2330,4 @@ SceneRoots:
   - {fileID: 1265618391}
   - {fileID: 1316991157}
   - {fileID: 1213704022}
+  - {fileID: 673978300}

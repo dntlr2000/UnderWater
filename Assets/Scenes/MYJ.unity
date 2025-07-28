@@ -150,6 +150,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   allQuests:
   - {fileID: 11400000, guid: edd3b90ade1f04d4b85857cdd39ebd48, type: 2}
+  - {fileID: 11400000, guid: f74367797b1d5a84c83684c4b2cac50e, type: 2}
+  - {fileID: 11400000, guid: f1489df275f69bf4d830787ad018046e, type: 2}
+  - {fileID: 11400000, guid: 3c1c0151df1bc3840aded4d085a790c7, type: 2}
+  - {fileID: 11400000, guid: ddd39061ab2f7404d91098cb42d68486, type: 2}
 --- !u!4 &46173449
 Transform:
   m_ObjectHideFlags: 0
@@ -1936,7 +1940,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 331092842191594276, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 55.090782
+      value: 0.000022888184
       objectReference: {fileID: 0}
     - target: {fileID: 1235607703190144594, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
       propertyPath: audioScript
@@ -2044,6 +2048,18 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6955047334258512542, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
       propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8412483228761768578, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8412483228761768578, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8412483228761768578, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
+      propertyPath: m_SizeDelta.x
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
