@@ -137,6 +137,7 @@ GameObject:
   - component: {fileID: 6295653715910097020}
   - component: {fileID: 4016954196144122496}
   - component: {fileID: 2769219541438026153}
+  - component: {fileID: 4386371690594068182}
   m_Layer: 5
   m_Name: HandHeldSlot_Icon
   m_TagString: Untagged
@@ -198,6 +199,21 @@ MonoBehaviour:
     y: 0
     width: 1
     height: 1
+--- !u!114 &4386371690594068182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4981825520009924897}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbd6b5abf0dbad04e8c8a9ae544ad5ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  originalParent: {fileID: 0}
+  originalAnchoredPos: {x: 0, y: 0}
+  originalSlotID: 0
 --- !u!1 &6525552298079614318
 GameObject:
   m_ObjectHideFlags: 0
@@ -233,7 +249,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 35, y: -25}
-  m_SizeDelta: {x: 200, y: 50}
+  m_SizeDelta: {x: 30, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5976594521154867640
 CanvasRenderer:

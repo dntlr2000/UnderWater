@@ -46,22 +46,13 @@ public class Inventory : MonoBehaviour
         }
         */
 
-        //임시로 설정
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            GetItem(0, 1);
-        }
-
-        if (Input.GetKeyDown(KeyCode.N)) {
-            GetItem(1, 3);
-        }
-
         if (Input.GetKeyDown(KeyCode.Q))
         {
             //RemoveAllItem(index);
             RemoveItem(index, 1);
         }
 
+        //들고 있는 아이템 변경하기
         Vector2 delta = Input.mouseScrollDelta;
         if (delta.y > 0f)
         {
@@ -102,6 +93,21 @@ public class Inventory : MonoBehaviour
             IndexSetter();
         }
 
+        //아이템 사용하기
+        if (Input.GetMouseButtonDown(1))
+        {
+            if (inventoryData.id[index] < 0) return;
+
+            inventoryData.useItem(index);
+            ItemUI.SetQuantity(index, inventoryData.quantity[index]);
+            if (inventoryData.quantity[index] <= 0)
+            {
+                inventoryData.id[index] = -1;
+                ItemUI.ResetIcons(index);
+            }
+
+            
+        }
     }
 
     private void FixedUpdate()
@@ -191,6 +197,50 @@ public class Inventory : MonoBehaviour
         }
     }
 
+    public void MoveItemSlot(int before, int after)
+    {
+        if (inventoryData.id[before] == -1) return;
+        Sprite ItemSpriteAfter;
+        if (inventoryData.id[after] == -1) //옮기는 자리가 빈 자리임
+        {
+            inventoryData.id[after] = inventoryData.id[before];
+            inventoryData.quantity[after] = inventoryData.quantity[before];
+            ItemSpriteAfter = inventoryData.item.GetIcons(inventoryData.id[after]);
+
+            ItemUI.LoadIcons(after, ItemSpriteAfter);
+            ItemUI.SetQuantity(after, inventoryData.quantity[after]);
+
+            RemoveAllItem(before);
+        }
+        //각 위치에 아이템이 존재할 때
+        else
+        {
+            int tempID = inventoryData.id[after];
+            int tempQuantity = inventoryData.quantity[after];
+
+            inventoryData.id[after] = inventoryData.id[before];
+            inventoryData.quantity[after] = inventoryData.quantity[before];
+
+            inventoryData.id[before] = tempID;
+            inventoryData.quantity[before] = tempQuantity;
+            ItemSpriteAfter = inventoryData.item.GetIcons(inventoryData.id[after]);
+            Sprite ItemSpriteBefore = inventoryData.item.GetIcons(inventoryData.id[before]);
+            ItemUI.LoadIcons(after, ItemSpriteAfter);
+            ItemUI.SetQuantity(after, inventoryData.quantity[after]);
+
+            ItemUI.LoadIcons(before, ItemSpriteBefore);
+            ItemUI.SetQuantity(before, inventoryData.quantity[before]);
+        }
+
+        Debug.Log($"Switched Items Slot {before} <-> Slot {after}");
+
+    }
+
+    public bool HoldingInteractableItem() //들고 있을 때 상호작용 가능한 아이템인지 확인 =>InteractableObject와 연계
+    {
+        if (inventoryData.id[index] == -1) return true;
+        return inventoryData.item.getInteractable(inventoryData.id[index]);
+    }
 }
 
 [Serializable]
@@ -203,8 +253,8 @@ public class InventoryData
 
     public void GenerateData()
     {
-        quantity = new int[20];
-        id = new int[20];
+        quantity = new int[25];
+        id = new int[25];
         item = new ItemDatabase();
         item.GenerateData();
 
@@ -273,5 +323,10 @@ public class InventoryData
         quantity = data.quantity;
         id = data.id;
 
+    }
+
+    public void useItem(int index)
+    {
+        quantity[index] = item.useItem(id[index], quantity[index]);
     }
 }

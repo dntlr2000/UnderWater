@@ -3,7 +3,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstract로 구현?
+public class ItemDatabase : MonoBehaviour //아이템 목록을 인터페이스나 abstract로 구현?
 {
     public ItemData[] items = new ItemData[30];
     private Sprite[] ItemIcons = new Sprite[30];
@@ -24,9 +24,16 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
         items[0].durability = 99; //최대 내구도
 
         */
-        items[0].itemName = "NullItem";
+        items[0].itemName = "Null Item";
         items[0].weight = 0; 
         items[0].durability = 99;
+        items[0].interactable = true;
+
+        items[1].itemName = "Item Box";
+        items[1].weight = 0;
+        items[1].durability = 99;
+        items[1].interactable = false;
+
 
         LoadIcons(); //아이템 아이콘들을 먼저 전부 로딩
 
@@ -83,7 +90,7 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
         return ItemIcons[index];
     }
 
-    //protected abstract void useItem(); //아이템 기능
+    //protected abstract void useItem(); //아이템 기능을 이렇게 구현할까 싶기도
     public int useItem(int itemId, int quantity)
     {
         //abstract로 아이템 별로 상속 받아서 기능을 구현하는 방법도 생각 해보았으나 스크립트 파일이 너무 많아질 것을 우려해서 이 방법을 선택함.
@@ -91,17 +98,23 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
         //아이템 별로 기능을 if 문으로 돌리면서 구현하는 것 외에 더 좋은 아이디어가 생각나면 수정할 예정..
 
         //내구도가 있는 아이템의 경우 내구도가 전부 소모되면 quantitiy 값을 0으로 반환
-        Debug.Log($"Item {items[itemId].itemName} used.");
+        if (itemId == -1) return 0;
+
+        Debug.Log($"#Item {items[itemId].itemName} used.");
+
+        Inventory inventory = FindAnyObjectByType<Inventory>(); //GetItem() 사용하기 위해
+        if (inventory == null) { Debug.LogWarning($"ItemDatabase에서 인벤토리 스크립트를 찾을 수 없습니다."); return -1; }
 
         if (itemId == 0)
         {
-            //임시용 아이템. 사용 불가.
-            Debug.Log("Item Used!");
+            //임시용 아이템. 기능 없음.
+            quantity -= 1;
         }
 
         else if (itemId == 1)
-        {
-
+        {   
+            inventory.GetItem(0, 3);
+            quantity -= 1;
         }
 
 
@@ -125,6 +138,12 @@ public class ItemDatabase// : MonoBehaviour //아이템 목록을 인터페이스나 abstrac
         return -1;
 
     }
+
+    public bool getInteractable(int itemId)
+    {
+        if (itemId == -1) return false;
+        return items[itemId].interactable;
+    }
 }
 
 [Serializable]
@@ -135,6 +154,7 @@ public struct ItemData
     //public int quantity; //소지 개수 //인벤토리 매니저를 통해 관리하는게 더 나을듯?
     public float weight; //안쓸 것 같으면 삭제
     public float durability; //내구도. 아직 상세 부분은 미구현
+    public bool interactable; //들고 있을 때 필드의 오브젝트와 상호작용할 수 있는 아이템인지 판단 여부 ex: 소모형 아이템
 
     //public string itemFileName;
 }

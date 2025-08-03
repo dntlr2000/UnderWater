@@ -78,7 +78,7 @@ public class Player : MonoBehaviourPun
         if (photonView.IsMine)
         {
             AssignRandomJob();
-            QuestManager.Instance.RegisterLocalPlayer(this);
+            //QuestManager.Instance.RegisterLocalPlayer(this);
         }
     }
     void AssignRandomJob()
@@ -115,7 +115,7 @@ public class Player : MonoBehaviourPun
         {
             if (currentJob != null)
             {
-                QuestManager.Instance.TryUnlockQuests(currentJob);
+                //QuestManager.Instance.TryUnlockQuests(currentJob);
             }
             else
             {
