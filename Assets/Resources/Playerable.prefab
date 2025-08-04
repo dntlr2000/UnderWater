@@ -15,7 +15,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &4404091881621677141
 RectTransform:
   m_ObjectHideFlags: 0
@@ -426,6 +426,8 @@ MonoBehaviour:
     cursorSprite: {fileID: 21300000, guid: e25ff1fe73f928645af6c12233164d50, type: 3}
   - cursorType: Door
     cursorSprite: {fileID: 21300000, guid: 24cd3cfcba30b614ea976e2a837aacef, type: 3}
+  - cursorType: Item
+    cursorSprite: {fileID: 21300000, guid: e25ff1fe73f928645af6c12233164d50, type: 3}
   gaugeImage: {fileID: 2255142211287375803}
   gaugeUnfilledImage: {fileID: 7203881778745875289}
 --- !u!1 &3453806653155162943
@@ -2325,7 +2327,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3144513080453044343, guid: ec071bba909d2484dba5280acdde9760, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3144513080453044343, guid: ec071bba909d2484dba5280acdde9760, type: 3}
       propertyPath: m_TagString

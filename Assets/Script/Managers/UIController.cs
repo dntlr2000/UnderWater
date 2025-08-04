@@ -23,6 +23,7 @@ public class UIController : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            CheckPlayerScript();
             if (!pauseState) //옵션이 비활성화되어 있을 때
             {
                 if (itemUIManager.showInventory) { //아이템창이 활성화되어 있으면 아이템 창 닫고 종료
@@ -111,4 +112,10 @@ public class UIController : MonoBehaviour
         }
     }
 
+
+    private void CheckPlayerScript()
+    {
+        if (playerScript == null)
+            playerScript = FindAnyObjectByType<Player>();
+    }
 }
