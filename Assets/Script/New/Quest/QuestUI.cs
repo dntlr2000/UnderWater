@@ -22,6 +22,9 @@ public class QuestUI : MonoBehaviour
 
     public Button completeButton;
     private QuestData currentSelectedQuest;
+
+    public bool isActive = false; //isActive
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
@@ -34,21 +37,21 @@ public class QuestUI : MonoBehaviour
 
     public void ToggleQuestWindow()
     {
-        bool isActive = questWindow.activeSelf;
+        //isActive = questWindow.activeSelf; //isActive에서 이름 변경
         questWindow.SetActive(!isActive);
         if (questWindow.activeSelf)
         {
             RefreshQuestList();
 
             // 퀘스트 창이 열리면 마우스 커서 보이게
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            //Cursor.lockState = CursorLockMode.None;
+            //Cursor.visible = true;
         }
         else
         {
             // 퀘스트 창이 닫히면 마우스 커서 숨기고 잠그기
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            //Cursor.lockState = CursorLockMode.Locked;
+            //Cursor.visible = false;
         }
     }
 

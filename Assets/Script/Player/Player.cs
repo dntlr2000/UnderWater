@@ -144,10 +144,10 @@ public class Player : MonoBehaviourPun
     {
         if (!photonView.IsMine) return;
 
-        if (Input.GetKeyDown(KeyCode.Tab))
-        {
-            QuestUI.Instance.ToggleQuestWindow();
-        }
+        //if (Input.GetKeyDown(KeyCode.Tab))
+        //{
+        //    QuestUI.Instance.ToggleQuestWindow();
+        //}
 
         stateMachine.currentState.Update();
 

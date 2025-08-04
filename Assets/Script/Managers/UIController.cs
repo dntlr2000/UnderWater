@@ -9,6 +9,8 @@ public class UIController : MonoBehaviour
 
     public Player playerScript;
 
+    public QuestUI questUI;
+
     //private bool ifMouseOn = true;
 
     // Update is called once per frame
@@ -54,10 +56,18 @@ public class UIController : MonoBehaviour
                     return;
                 }
 
+                if (questUI.isActive)
+                {
+                    TurnQuestPanel(false);
+                }
 
-                playerScript.canMoveCamera = true;
-                SetPauseScreen(false);
-                return;
+                else
+                {
+                    playerScript.canMoveCamera = true;
+                    SetPauseScreen(false);
+                    return;
+                }
+                
             }
 
         }
@@ -68,6 +78,23 @@ public class UIController : MonoBehaviour
             {
                 itemUIManager.SwitchInventoryState();
                 playerScript.canMoveCamera = false;
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            //QuestUI.Instance.ToggleQuestWindow();
+            //questUI.ToggleQuestWindow();
+            if (!questUI.isActive)
+            {
+                TurnQuestPanel(true);
+                LockCursor(false);
+            }
+            else
+            {
+                TurnQuestPanel(false);
+                LockCursor(true);
+
             }
         }
     }
@@ -112,6 +139,35 @@ public class UIController : MonoBehaviour
         }
     }
 
+    public void TurnQuestPanel(bool state)
+    {
+        //ToggleQuestWindow를 최대한 보존한 채로 사용하려다보니 구조가 복잡해짐 이후 구조 개편을 허가 받으면 수정할 예정
+        if (state) //state이 true -> isActive = false -> ToggleQuerstWindow가 false를 기준으로 동작 -> 이후 isActive를 뒤집어서 정정
+        {
+            //QuestUI.Instance.gameObject.SetActive(true);
+            //QuestUI.Instance.isActive = false;
+            
+            //questUI.gameObject.SetActive(true);
+            questUI.isActive = false;
+        }
+        else
+        {
+            //QuestUI.Instance.gameObject.SetActive(false);
+            //QuestUI.Instance.isActive = true;
+
+            //questUI.gameObject.SetActive(false);
+            questUI.isActive = true;
+        }
+
+        //QuestUI.Instance.ToggleQuestWindow();
+        //QuestUI.Instance.isActive = !QuestUI.Instance.isActive;
+        questUI.ToggleQuestWindow();
+        questUI.isActive = state;
+        if (pauseState == false)
+        {
+            LockCursor(true);
+        }
+    }
 
     private void CheckPlayerScript()
     {
