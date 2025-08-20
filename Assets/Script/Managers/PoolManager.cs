@@ -25,7 +25,7 @@ public class PoolManager : MonoBehaviour
             poolDictionary[key].Enqueue(obj);
         }
 
-        Debug.Log($"Created Pool, Name = {key}, Size = {poolDictionary[key].Count}");
+/*        Debug.Log($"Created Pool, Name = {key}, Size = {poolDictionary[key].Count}");*/
     }
 
     public GameObject GetFromPool(string key)
@@ -55,7 +55,7 @@ public class PoolManager : MonoBehaviour
         
 
         obj.SetActive(true);
-        Debug.Log($"Object left in Pool: {poolDictionary[key].Count}");
+        //Debug.Log($"Object left in Pool: {poolDictionary[key].Count}");
         return obj;
     }
 

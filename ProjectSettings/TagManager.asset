@@ -8,6 +8,7 @@ TagManager:
   - Ping
   - Bullet
   - Water
+  - Monster
   layers:
   - Default
   - TransparentFX

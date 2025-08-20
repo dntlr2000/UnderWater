@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d904880a16824db4bba0be7dd4da9f88, type: 3}
   m_Name: Explorer
   m_EditorClassIdentifier: 
-  jobType: 0
-  jobName: 
+  jobType: 2
+  jobName: Explorer
   jobIcon: {fileID: 0}
-  description: 
+  description: "\uD0D0\uD5D8\uAC00"

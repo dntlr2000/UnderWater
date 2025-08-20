@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d904880a16824db4bba0be7dd4da9f88, type: 3}
   m_Name: Technician
   m_EditorClassIdentifier: 
-  jobType: 0
-  jobName: 
+  jobType: 3
+  jobName: Texhnician
   jobIcon: {fileID: 0}
-  description: 
+  description: "\uAE30\uC220\uC790"

@@ -59,7 +59,12 @@ public class QuestUI : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        var activeQuests = QuestManager.Instance.GetActiveQuests();
+        if (Player.localPlayer == null)
+            return;
+
+        var activeQuests = QuestManager.Instance.GetActiveQuestsForPlayer(Player.localPlayer);
+
+        Debug.Log($"[QuestUI] 활성 퀘스트 개수: {activeQuests.Count}");
 
         foreach (var quest in activeQuests)
         {
@@ -81,7 +86,7 @@ public class QuestUI : MonoBehaviour
             ClearQuestDetail();
         }
     }
-
+    
     void ShowQuestDetail(QuestData quest)
     {
         currentSelectedQuest = quest;

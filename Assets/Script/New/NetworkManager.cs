@@ -169,7 +169,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            PhotonNetwork.LoadLevel("SampleScene"); // 인게임 씬 이름에 맞게 수정
+            PhotonNetwork.LoadLevel("MYJ"); // 인게임 씬 이름에 맞게 수정
         }
     }
     #endregion 방
