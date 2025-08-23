@@ -56,10 +56,10 @@ public class UIController : MonoBehaviour
                     return;
                 }
 
-                if (questUI.isActive)
+                /*if (questUI.isActive)
                 {
                     TurnQuestPanel(false);
-                }
+                }*/
 
                 else
                 {
@@ -81,7 +81,7 @@ public class UIController : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.Tab))
+        /*if (Input.GetKeyDown(KeyCode.Tab))
         {
             //QuestUI.Instance.ToggleQuestWindow();
             //questUI.ToggleQuestWindow();
@@ -96,7 +96,7 @@ public class UIController : MonoBehaviour
                 LockCursor(true);
 
             }
-        }
+        }*/
     }
 
     public void Rotatable(bool state)
@@ -139,7 +139,7 @@ public class UIController : MonoBehaviour
         }
     }
 
-    public void TurnQuestPanel(bool state)
+    /*public void TurnQuestPanel(bool state)
     {
         //ToggleQuestWindow를 최대한 보존한 채로 사용하려다보니 구조가 복잡해짐 이후 구조 개편을 허가 받으면 수정할 예정
         if (state) //state이 true -> isActive = false -> ToggleQuerstWindow가 false를 기준으로 동작 -> 이후 isActive를 뒤집어서 정정
@@ -167,7 +167,7 @@ public class UIController : MonoBehaviour
         {
             LockCursor(true);
         }
-    }
+    }*/
 
     private void CheckPlayerScript()
     {

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d904880a16824db4bba0be7dd4da9f88, type: 3}
   m_Name: Fighter
   m_EditorClassIdentifier: 
-  jobType: 0
-  jobName: 
-  jobIcon: {fileID: 0}
-  description: 
+  jobType: 1
+  jobName: Fighter
+  jobIcon: {fileID: 21300000, guid: d8843bf6fcec94d459c3b7e87dbaef3f, type: 3}
+  description: "\uACA9\uD22C\uAC00"

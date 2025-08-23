@@ -12,7 +12,7 @@ public class PlayerStateMachine
 
     public void ChangeState(PlayerState newState)
     {
-        if (currentState == newState) return;
+        if (currentState.GetType() == newState.GetType()) return;
         currentState.Exit();
         currentState = newState;
         currentState.Enter();

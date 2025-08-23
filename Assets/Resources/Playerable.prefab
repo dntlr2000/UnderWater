@@ -688,10 +688,10 @@ MonoBehaviour:
   runSpeedMultiply: 3
   groundLayer:
     serializedVersion: 2
-    m_Bits: 16
+    m_Bits: 128
   waterLayer:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 16
   checkDistance: 2
   waterSurfaceY: 7
   health: 100

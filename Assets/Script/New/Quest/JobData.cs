@@ -1,11 +1,13 @@
 using UnityEngine;
 using Photon.Pun;
 using System.Collections.Generic;
+#if UNITY_EDITOR
 using UnityEditor.Experimental.GraphView;
+#endif
 
 public enum JobType { chef, fighter, explorer, technician }
 
-[CreateAssetMenu(menuName = "Data/JobData")]
+[CreateAssetMenu(fileName = "NewJob", menuName = "Jobs/JobData")]
 public class JobData : ScriptableObject
 {
     public JobType jobType;

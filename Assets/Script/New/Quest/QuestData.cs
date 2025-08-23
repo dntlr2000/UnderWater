@@ -39,7 +39,21 @@ public class QuestData : ScriptableObject
     public QuestData prerequisiteQuest; //선행퀘스트
     public bool isCompleted;
 
-    public bool IsUnlocked => prerequisiteQuest == null || QuestManager.Instance.IsQuestCompleted(prerequisiteQuest);
+    [SerializeField]
+    private bool isUnlockedManually = false;
+
+    public bool IsUnlocked
+    {
+        get
+        {
+            return isUnlockedManually || prerequisiteQuest == null || QuestManager.Instance.IsQuestCompleted(prerequisiteQuest);
+        }
+    }
+    public void Unlock()
+    {
+        // 내부 bool 필드 사용
+        isUnlockedManually = true;
+    }
 
 }
 

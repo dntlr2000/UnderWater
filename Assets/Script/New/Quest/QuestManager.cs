@@ -17,28 +17,38 @@ public class QuestManager : MonoBehaviour
     {
         if (Instance == null) Instance = this;
     }
-    private void Start()
-    {
-        if (allQuests.Count > 0)
-            AddQuest(allQuests[0]);
-    }
 
     public void RegisterLocalPlayer(Player player)
     {
         localPlayer = player;
     }
 
+    private void Start()
+    {
+        if (allQuests.Count > 0)
+            AddQuest(allQuests[0]);
+    }
+
+    public void InitQuestsForPlayer(Player player)
+    {
+        RegisterLocalPlayer(player);
+        TryUnlockQuests(player.currentJob);
+    }
+
     public void TryUnlockQuests(JobData jobData)
     {
         foreach (var quest in allQuests)
         {
-            if (!quest.IsUnlocked || completedQuests.Contains(quest.questID) || activeQuests.Contains(quest))
+            if (completedQuests.Contains(quest.questID) || activeQuests.Contains(quest))
                 continue;
 
-            if (quest.questType == QuestType.Main ||
-               (quest.questType == QuestType.Job && quest.requiredJob == jobData.jobType))
+            if (quest.IsUnlocked)
             {
-                AddQuest(quest);
+                if (quest.questType == QuestType.Main ||
+                   (quest.questType == QuestType.Job && quest.requiredJob == jobData.jobType))
+                {
+                    AddQuest(quest);
+                }
             }
         }
     }
@@ -74,6 +84,20 @@ public class QuestManager : MonoBehaviour
     public List<QuestData> GetActiveQuests()
     {
         return activeQuests;
+    }
+
+    public List<QuestData> GetActiveQuestsForPlayer(Player player)
+    {
+        List<QuestData> playerQuests = new List<QuestData>();
+        foreach (var quest in activeQuests)
+        {
+            if (quest.questType == QuestType.Main ||
+            (quest.questType == QuestType.Job && quest.requiredJob == player.CurrentJobType))
+            {
+                playerQuests.Add(quest);
+            }
+        }
+        return playerQuests;
     }
 
     private void GrantRewards(QuestData quest)
