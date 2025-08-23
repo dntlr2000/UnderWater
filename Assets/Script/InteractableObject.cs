@@ -1,4 +1,6 @@
 using Photon.Pun;
+using Photon.Pun.Demo.PunBasics;
+using Photon.Realtime;
 using UnityEngine;
 
 public abstract class InteractableObject : MonoBehaviour, Interactable
@@ -14,13 +16,21 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
 
     InteractionUI interactionUI;
 
+    public Player player;
+    protected Camera playerCamera;
+    protected RaycastHit lastHit;
+    protected int playerId;
+
+
     //이 구조로 구현하면 InteractionType이 필요한가? 싶음. 
     public virtual InteractionType GetInteractionType() => InteractionType.Instant;
     public virtual string GetCursorType() => cursorType; // => return cursorType와 동일
     public virtual string GetInteractionID() => interactionId;
 
     public abstract void Interact(); //카메라가 이 오브젝트를 바라볼 때 호출됨
-    public virtual void HoldInteract() { }
+    public virtual void HoldInteract() {
+        Debug.Log("홀딩 완료");
+    }
 
     protected PhotonView pv;
     protected virtual void Awake()
@@ -118,5 +128,19 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
             Debug.LogWarning("PhotonNetwork가 존재하지 않습니다");
             return null;
         }
+    }
+
+    public virtual void SetInteractor(Player interactor, Camera cam = null, Inventory inv = null, RaycastHit hit = default)
+    {
+        //Debug.Log("상호작용에 필요한 정보를 수신하였습니다.");
+
+        player = interactor;
+        playerCamera = cam != null ? cam : Camera.main; //Camera.main으로도 아예 할당 없이 될까
+        //이후 플레이어 간의 인벤토리 구분 기능이 필요하면 수정 필요
+        inventory = inv != null ? inv : null; //일단 인벤토리가 UI에 귀속되어 있으므로 null로
+        lastHit = hit;
+
+        // PUN에서 조작자 식별이 필요하면 ActorNumber를 함께 저장(옵션)
+        playerId = Photon.Pun.PhotonNetwork.LocalPlayer?.ActorNumber ?? -1;
     }
 }

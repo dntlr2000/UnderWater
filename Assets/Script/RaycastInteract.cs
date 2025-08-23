@@ -7,7 +7,7 @@ public class RaycastInteract : MonoBehaviour
     public float distance = 5f;
     public LayerMask interactLayer; //상호작용할 레이어
     public bool isBusy = false; //isBusy가 지금은 필요한지 모르겠음
-    //public Player player;
+    public Player player;
 
     [Header("인벤토리")]
     public Inventory inventory;
@@ -15,6 +15,7 @@ public class RaycastInteract : MonoBehaviour
     [Header("상호작용 기능 관련 설정")]
     //private Interactable currentTarget; //Interaction 코드를 보면 currentTarget은 없어도 되지 않을까 싶음
     public InteractionUI interactionUI;
+
 
     //private float holdTimer = 0f;
     //public float holdDuration = 1.5f;
@@ -25,6 +26,7 @@ public class RaycastInteract : MonoBehaviour
         //Debug.Log("RayCast 활성화");
         inventory = FindAnyObjectByType<Inventory>();
         //playerCamera = Camera.main;
+        player = GetComponent<Player>();
     }
 
     private void Update()
@@ -47,9 +49,14 @@ public class RaycastInteract : MonoBehaviour
             {
                 //currentTarget = interactable; 
                 interactionUI.SetCursor(interactable.GetCursorType()); //정상 반영됨
-                //interactionUI.ShowCursor();
-                
-                
+
+                //interactionUI.ShowCursor();              
+                if (interactable is InteractableObject io) //플레이어 정보 전달
+                {
+                    //Debug.Log("상호작용 대상에게 정보를 전달하였습니다.");
+                    io.SetInteractor(player, playerCamera, inventory, hit);
+                }
+
                 interactable.Interact(); //해당 인터페이스를 구현한 클래스의 Interact 메서드를 불러온다.
                 //ResetInteractionState();
                 return;
@@ -57,9 +64,9 @@ public class RaycastInteract : MonoBehaviour
 
             else
             {
-                
+
             }
-            
+
         }
         ResetInteractionUI();
         return;
@@ -77,16 +84,18 @@ public class RaycastInteract : MonoBehaviour
     public void ResetInteractionState()
     {
         //holdTimer = 0f;
-       //currentTarget = null;
+        //currentTarget = null;
         interactionUI.ResetUI();
         interactionUI.UpdateGauge(0f);
     }
-    
+
     //public bool CheckInteractable()
     //{
     //    if (isBusy) return false;
     //    return inventory.HoldingInteractableItem();
     //}
+
+
     
 }
 

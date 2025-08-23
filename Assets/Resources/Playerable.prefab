@@ -748,6 +748,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   isBusy: 0
+  player: {fileID: 0}
   inventory: {fileID: 0}
   interactionUI: {fileID: 2157994574257035225}
 --- !u!114 &7118758774447805676
