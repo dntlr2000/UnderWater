@@ -300,7 +300,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4f1686b5b7591042a16132e08ff36fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemPrefab: {fileID: 6595760750608722912, guid: 2a15e0ce18f98b745a8052f619b83483, type: 3}
+  itemPrefab: {fileID: 6595760750608722912, guid: 88762fb963709fa4d9d1896cfe77a9e7, type: 3}
 --- !u!114 &150385531
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2525,6 +2525,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 423188655125860936, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1235607703190144594, guid: 8a1de556a52ad654e80fb824ed56155c, type: 3}
       propertyPath: player
       value: 

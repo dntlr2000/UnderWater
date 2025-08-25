@@ -1,4 +1,5 @@
 using Photon.Pun;
+using System.Collections;
 using UnityEngine;
 
 
@@ -10,8 +11,14 @@ public class FieldItem : InteractableObject//, Interactable
     //public int durability = -1;
     //private Inventory inventory;
 
-    public override InteractionType GetInteractionType() => InteractionType.Instant; //사실 이 구조면 InteractionType이 필요없을거 같기도
+    public override InteractionType GetInteractionType() => InteractionType.Gauge; //사실 이 구조면 InteractionType이 필요없을거 같기도
     
+    public void Start()
+    {
+        StartCoroutine(WaitforGetable());
+        holdDuration = 1f;
+        
+    }
 
     public override void Interact() //카메라가 이 오브젝트를 바라볼 때 호출됨
     {
@@ -48,6 +55,10 @@ public class FieldItem : InteractableObject//, Interactable
         
     }
 
+    public override void HoldInteract()
+    {
+        GetItem();
+    }
 
     //현재로서는 Instant, Guage만 정의되어있음
 
@@ -65,5 +76,30 @@ public class FieldItem : InteractableObject//, Interactable
 
         inventory.GetItem(itemID, amount);
         gameObject.SetActive(false);
+    }
+
+
+
+    IEnumerator WaitforGetable()
+    {
+        yield return new WaitForSeconds(2f);
+        getAble = true;
+    }
+
+
+    //private void OnTriggerEnter(Collider other) //ItemTemp 스크립트에서 옮겨옴
+    //{
+    //    if (other.tag == "Player")
+    //    {
+    //        Debug.Log("Get Item.");
+    //        gameObject.SetActive(false);
+    //    }
+    //}
+
+    private void OnDisable()
+    {
+        Debug.Log("Disabled Item.");
+        PoolManager.Instance.ReturnToPool("Item", gameObject);
+
     }
 }

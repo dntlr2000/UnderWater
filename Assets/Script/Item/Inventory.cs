@@ -8,6 +8,7 @@ public class Inventory : MonoBehaviour
     private InventoryData inventoryData;
     public ItemUIManager ItemUI;
     public Transform IndexLine;
+    public Player player; //플레이어가 포톤을 통해 자신의 인벤토리를 할당하는 기능 필요
 
     //private bool showInventory = false; //ItemUI에서 일단 가져와봄 Update 부하를 줄이기 위해 ItemUI의 메서드를 여기로 옮길 수 있음
 
@@ -49,7 +50,8 @@ public class Inventory : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Q))
         {
             //RemoveAllItem(index);
-            RemoveItem(index, 1);
+            //RemoveItem(index, 1);
+            DropItem(index, 1);
         }
 
         //들고 있는 아이템 변경하기
@@ -197,6 +199,25 @@ public class Inventory : MonoBehaviour
         }
     }
 
+    public void DropItem(int index, int amount = 1)
+    {
+        if (inventoryData.id[index] == -1)
+        {
+            return;
+        }
+        else
+        {
+            int trueQuantity = inventoryData.quantity[index] < amount ? inventoryData.quantity[index] : amount;
+            Transform playerTransform = player.transform;
+            Vector3 DropLocation = playerTransform.position + playerTransform.forward * 3f;
+            inventoryData.item.generateFieldItem(inventoryData.id[index], DropLocation, trueQuantity);
+
+            RemoveItem(index, amount);
+
+        }
+
+    }
+
     public void MoveItemSlot(int before, int after)
     {
         if (inventoryData.id[before] == -1) return;
@@ -241,6 +262,7 @@ public class Inventory : MonoBehaviour
         if (inventoryData.id[index] == -1) return true;
         return inventoryData.item.getInteractable(inventoryData.id[index]);
     }
+
 }
 
 [Serializable]

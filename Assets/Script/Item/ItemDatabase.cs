@@ -33,6 +33,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         items[1].weight = 0;
         items[1].durability = 99;
         items[1].interactable = false;
+        //items[1].fieldItemName = "1";
 
 
         LoadIcons(); //¾ÆÀÌÅÛ ¾ÆÀÌÄÜµéÀ» ¸ÕÀú ÀüºÎ ·Îµù
@@ -121,7 +122,6 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         return quantity; //¼Ò¸ðÇü ¾ÆÀÌÅÛÀÎ °æ¿ì quantityÀÇ °ªÀ» ¼Ò¸ðµÈ ¸¸Å­ »©°í ¹ÝÈ¯¹Þµµ·Ï ÇÔ
     }
 
-
     public string getItemName(int itemId)
     {
         return items[itemId].itemName;
@@ -144,6 +144,36 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         if (itemId == -1) return false;
         return items[itemId].interactable;
     }
+
+    public GameObject generateFieldItem(int itemId, Vector3 Location, int quantity = 1)
+    {
+        string resourcesPath = "FieldItem/Object" + itemId;
+        GameObject prefab = Resources.Load<GameObject>(resourcesPath);
+        if (prefab == null)
+        {
+            Debug.LogWarning($"°æ·Î¿¡ ¾ÆÀÌÅÛÀÌ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù: {resourcesPath}");
+            //±âº»°ª
+            resourcesPath = "FieldItem/Object" + 1;
+            prefab = Resources.Load<GameObject>(resourcesPath);
+            if (prefab == null ) {
+                Debug.LogError("±âº»°ªÀ¸·Î ¾ÆÀÌÅÛÀ» ºÒ·¯¿À·Á°í ÇßÀ¸³ª ½ÇÆÐÇß½À´Ï´Ù!");
+            }
+        }
+
+        //»ý¼º
+        GameObject go = Instantiate(prefab, Location, Quaternion.identity);
+        //go.name = $"Item + {itemId}";
+
+        //¼Ó¼º ÁöÁ¤
+        FieldItem fieldScript = go.GetComponent<FieldItem>();
+        if (fieldScript != null)
+        {
+            fieldScript.itemID = itemId;
+            fieldScript.amount = quantity;
+        }
+
+        return go;
+    }
 }
 
 [Serializable]
@@ -157,4 +187,5 @@ public struct ItemData
     public bool interactable; //µé°í ÀÖÀ» ¶§ ÇÊµåÀÇ ¿ÀºêÁ§Æ®¿Í »óÈ£ÀÛ¿ëÇÒ ¼ö ÀÖ´Â ¾ÆÀÌÅÛÀÎÁö ÆÇ´Ü ¿©ºÎ ex: ¼Ò¸ðÇü ¾ÆÀÌÅÛ
 
     //public string itemFileName;
+    //public string fieldItemName;
 }

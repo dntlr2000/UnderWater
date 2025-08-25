@@ -2293,7 +2293,8 @@ PrefabInstance:
       propertyPath: playerCamera
       value: 
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 18123786200099819, guid: 25590958c6692c34484b3df37682e164, type: 3}
     m_RemovedGameObjects:
     - {fileID: 6556824895811949627, guid: 25590958c6692c34484b3df37682e164, type: 3}
     - {fileID: 1389339288159856133, guid: 25590958c6692c34484b3df37682e164, type: 3}
@@ -2358,6 +2359,7 @@ MonoBehaviour:
   index: 0
   ItemUI: {fileID: 8519500007451475139}
   IndexLine: {fileID: 4200475630785194121}
+  player: {fileID: 0}
 --- !u!114 &8519500007451475139
 MonoBehaviour:
   m_ObjectHideFlags: 0
