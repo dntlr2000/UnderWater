@@ -1,8 +1,9 @@
 using System.Collections.Generic;
-using Photon.Pun;
-using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.UI;
+using Photon.Pun;
+using Photon.Realtime;
+using ExitGames.Client.Photon;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -29,6 +30,11 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     [Header("ETC")]
     public Text StatusText;
     public PhotonView PV;
+
+    [Header("JobSelectPanel")]
+    public GameObject JobSelectPanel;
+    public Button[] JobBtns;
+    public JobData[] jobDatas;
 
     List<RoomInfo> myList = new List<RoomInfo>();
     int currentPage = 1, maxPage, multiple;
@@ -126,6 +132,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         StartBtn.interactable = PhotonNetwork.IsMasterClient;
         Debug.Log("Room joined: " + PhotonNetwork.CurrentRoom.Name);
+        SetupJobButtons();
     }
 
     public override void OnCreateRoomFailed(short returnCode, string message)
@@ -169,7 +176,16 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            PhotonNetwork.LoadLevel("SampleScene"); // 인게임 씬 이름에 맞게 수정
+            foreach (var player in PhotonNetwork.PlayerList)
+            {
+                if (!player.CustomProperties.ContainsKey("JobIndex"))
+                {
+                    Debug.LogWarning("모든 플레이어가 직업을 선택해야 합니다.");
+                    return;
+                }
+            }
+
+            PhotonNetwork.LoadLevel("SampleScene");
         }
     }
     #endregion 방
@@ -200,4 +216,87 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         }
     }
     #endregion 채팅
+
+    #region 직업
+    private void SetupJobButtons()
+    {
+        JobSelectPanel.SetActive(true);
+
+        for (int i = 0; i < JobBtns.Length; i++)
+        {
+            int index = i;
+            JobBtns[i].onClick.RemoveAllListeners(); // 중복 방지
+            JobBtns[i].onClick.AddListener(() => SelectJob(index));
+        }
+
+        RefreshJobButtons();
+    }
+
+    public void SelectJob(int index)
+    {
+        var props = PhotonNetwork.LocalPlayer.CustomProperties ?? new ExitGames.Client.Photon.Hashtable();
+
+        // 이미 선택한 버튼 클릭 → 취소
+        if (props.TryGetValue("JobIndex", out object currentJob) && (int)currentJob == index)
+        {
+            props.Remove("JobIndex");
+            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+            Debug.Log("직업 선택 취소: " + jobDatas[index].jobName);
+
+            RefreshJobButtons();
+            return;
+        }
+
+        // 다른 플레이어가 선택했는지 확인
+        foreach (var player in PhotonNetwork.PlayerList)
+        {
+            if (player != PhotonNetwork.LocalPlayer &&
+                player.CustomProperties.TryGetValue("JobIndex", out object taken) &&
+                (int)taken == index)
+            {
+                Debug.Log("이미 다른 플레이어가 선택한 직업: " + jobDatas[index].jobName);
+                return;
+            }
+        }
+
+        // 선택 적용
+        props["JobIndex"] = index;
+        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+        Debug.Log("선택한 직업: " + jobDatas[index].jobName);
+    }
+
+    public void RefreshJobButtons()
+    {
+        bool hasSelectedJob = PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object myJobIndex);
+
+        for (int i = 0; i < JobBtns.Length; i++)
+        {
+            bool takenByOther = false;
+
+            // 다른 플레이어가 선택했는지 확인
+            foreach (var player in PhotonNetwork.PlayerList)
+            {
+                if (player != PhotonNetwork.LocalPlayer &&
+                    player.CustomProperties.TryGetValue("JobIndex", out object job) &&
+                    (int)job == i)
+                {
+                    takenByOther = true;
+                    break;
+                }
+            }
+
+            // 버튼 활성화 조건
+            if (hasSelectedJob)
+            {
+                // 내가 선택한 버튼만 활성, 나머지는 비활성
+                JobBtns[i].interactable = ((int)myJobIndex == i);
+            }
+            else
+            {
+                // 아직 선택 안했으면 다른 사람이 선택한 버튼만 비활성
+                JobBtns[i].interactable = !takenByOther;
+            }
+        }
+    }
+    #endregion
 }
