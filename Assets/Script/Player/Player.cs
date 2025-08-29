@@ -124,6 +124,7 @@ public class Player : MonoBehaviourPunCallbacks
             StartCoroutine(getHungry());
             Inventory inventory = FindAnyObjectByType<Inventory>();
             inventory.player = this;
+            SetUnderwater(true); // 물 상태 변경 및 산소 소모 코루틴 시작
         }
 
         else
@@ -131,6 +132,9 @@ public class Player : MonoBehaviourPunCallbacks
             PlayerCanvas.SetActive(false);
             FirstViewLook.SetActive(false);
             ThirdViewLook.SetActive(true);
+            //this.enabled= false;
+            Rigidbody rb = GetComponent<Rigidbody>();
+            
         }
 
         if (currentJob != null)
@@ -145,7 +149,7 @@ public class Player : MonoBehaviourPunCallbacks
 
         stateMachine.Initialize(new PlayerIdleState(this, stateMachine));
 
-        SetUnderwater(true); // 물 상태 변경 및 산소 소모 코루틴 시작
+       
     }
 
     private void Update()
@@ -314,7 +318,7 @@ public class Player : MonoBehaviourPunCallbacks
 
     private void SetUnderwater(bool underwater)
     {
-        if (isUnderwater == underwater) return;
+        if (isUnderwater == underwater || !photonView.IsMine) return;
 
         isUnderwater = underwater;
         /*        Debug.Log(underwater ? "Entered water" : "Exited water");*/
@@ -359,6 +363,7 @@ public class Player : MonoBehaviourPunCallbacks
 
     public void SetBarUI()
     {
+        if (!photonView.IsMine) { return; }
         healthBar.SetBarUI(health);
         hungerBar.SetBarUI(hunger);
         thirstBar.SetBarUI(thirst);
