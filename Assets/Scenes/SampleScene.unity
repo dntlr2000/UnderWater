@@ -1898,6 +1898,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 614e597ce750ec04ba86293396d55fab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  jobPrefabs:
+  - {fileID: 5368671032790062748, guid: 77e02d5ab299c54449bea4f64793d867, type: 3}
+  - {fileID: 5368671032790062748, guid: 77e02d5ab299c54449bea4f64793d867, type: 3}
+  - {fileID: 5368671032790062748, guid: 77e02d5ab299c54449bea4f64793d867, type: 3}
+  - {fileID: 5368671032790062748, guid: 77e02d5ab299c54449bea4f64793d867, type: 3}
 --- !u!4 &1723963532
 Transform:
   m_ObjectHideFlags: 0

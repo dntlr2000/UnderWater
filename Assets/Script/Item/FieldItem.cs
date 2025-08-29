@@ -10,6 +10,7 @@ public class FieldItem : InteractableObject//, Interactable
     public int amount; //개수
     //public int durability = -1;
     //private Inventory inventory;
+    public bool ifPool = true;
 
     public override InteractionType GetInteractionType() => InteractionType.Gauge; //사실 이 구조면 InteractionType이 필요없을거 같기도
     
@@ -75,7 +76,8 @@ public class FieldItem : InteractableObject//, Interactable
         //해결 방안1 : 아이템이 소모되어 삭제되는 시점을 코루틴 등으로 미루기
 
         inventory.GetItem(itemID, amount);
-        gameObject.SetActive(false);
+        //gameObject.SetActive(false);
+        Destroy(gameObject);
     }
 
 
@@ -96,10 +98,12 @@ public class FieldItem : InteractableObject//, Interactable
     //    }
     //}
 
+    /*
     private void OnDisable()
     {
         Debug.Log("Disabled Item.");
         PoolManager.Instance.ReturnToPool("Item", gameObject);
 
     }
+    */
 }

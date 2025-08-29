@@ -145,7 +145,7 @@ public class ItemDatabase : MonoBehaviour //아이템 목록을 인터페이스나 abstract�
         return items[itemId].interactable;
     }
 
-    public GameObject generateFieldItem(int itemId, Vector3 Location, int quantity = 1)
+    public GameObject generateFieldItem(int itemId, Vector3 Location, int quantity = 1, bool ifPool = false)
     {
         string resourcesPath = "FieldItem/Object" + itemId;
         GameObject prefab = Resources.Load<GameObject>(resourcesPath);
@@ -170,6 +170,7 @@ public class ItemDatabase : MonoBehaviour //아이템 목록을 인터페이스나 abstract�
         {
             fieldScript.itemID = itemId;
             fieldScript.amount = quantity;
+            fieldScript.ifPool = ifPool;
         }
 
         return go;

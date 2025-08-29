@@ -24,7 +24,12 @@ public class RaderScript : MonoBehaviour
 
     void Update()
     {
-        if (player == null) player = FindAnyObjectByType<Player>().transform;
+        if (player == null)
+        {
+            Player playerScript = FindAnyObjectByType<Player>();
+            if (playerScript == null) return;
+            player = playerScript.transform;
+        }
         RotatePlayerIcon();
         FindPingObjects("Ping");
         // 레이더 점 업데이트
