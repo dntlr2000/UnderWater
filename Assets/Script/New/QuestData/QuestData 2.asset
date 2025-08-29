@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9885ddac281b36459fae11db56b869e, type: 3}
+  m_Name: QuestData 2
+  m_EditorClassIdentifier: 
+  questID: Q201
+  title: "\uCD08\uBCF4 \uACA9\uD22C\uAC00\uC758 \uAFC8"
+  description: "\uBAAC\uC2A4\uD130\uB97C \uCC98\uCE58\uD574\uBCF4\uC790"
+  icon: {fileID: 0}
+  questType: 1
+  requiredJob: 1
+  objectives:
+  - objectiveID: Fight_fish
+    description: "\uD53C\uB77C\uBBF8 5\uB9C8\uB9AC \uCC98\uCE58"
+    type: 1
+    targetAmount: 5
+    currentAmount: 0
+    collectItemName: 
+  rewards:
+  - rewardType: 2
+    amount: 100
+  prerequisiteQuest: {fileID: 0}
+  isCompleted: 0

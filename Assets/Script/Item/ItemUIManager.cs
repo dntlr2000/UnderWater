@@ -96,7 +96,6 @@ public class ItemUIManager : MonoBehaviour
     }
 
 
-
     public void ResetIcons(int index)
     {
         itemSlots[index].itemSlotIcon.gameObject.SetActive(false);

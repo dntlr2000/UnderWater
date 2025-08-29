@@ -71,8 +71,8 @@ public class SaveController : MonoBehaviour
     void Start()
     {
         //saveFilePath = Path.Combine(Application.persistentDataPath, "saveData.json");
-        PlayerTransform = PlayerObject.transform;
-        playerId = "Player001";//gameObject.name;
+        //PlayerTransform = PlayerObject.transform;
+        //playerId = "Player001";//gameObject.name;
         //Photon으로 구현하는지, Unity6 자체 제공 패키지로 구현하는지에 따라 다른 플레이어에 대한 정보를 받아오는 방식이 달라서 다른 플레이어에 대한 저장을 알아보는건 보류
         
     }

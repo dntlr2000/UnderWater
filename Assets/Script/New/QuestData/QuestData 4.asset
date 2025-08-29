@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9885ddac281b36459fae11db56b869e, type: 3}
+  m_Name: QuestData 4
+  m_EditorClassIdentifier: 
+  questID: Q401
+  title: "\uCD08\uBCF4 \uAE30\uC220\uC790\uC758 \uAFC8"
+  description: "\uC0C8\uB85C\uC6B4 \uC544\uC774\uD15C\uC744 \uC81C\uC791\uD574\uBCF4\uC790"
+  icon: {fileID: 0}
+  questType: 1
+  requiredJob: 3
+  objectives:
+  - objectiveID: Create_knife
+    description: "\uCE7C 3\uC790\uB8E8 \uC81C\uC791\uD558\uAE30"
+    type: 5
+    targetAmount: 3
+    currentAmount: 0
+    collectItemName: 
+  rewards:
+  - rewardType: 2
+    amount: 500
+  prerequisiteQuest: {fileID: 0}
+  isCompleted: 0
