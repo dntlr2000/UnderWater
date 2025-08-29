@@ -485,7 +485,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2759165975910545799
 RectTransform:
   m_ObjectHideFlags: 0
@@ -707,6 +707,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8d6ac1c3b82b43d418b4d523dcd4b91d, type: 2}
   - {fileID: 11400000, guid: 26de992d9af81a74d99eee13f9139a6c, type: 2}
   stateUICollection: {fileID: 0}
+  PlayerCanvas: {fileID: 4302061794173576235}
+  FirstViewLook: {fileID: 2348633237659199538}
+  ThirdViewLook: {fileID: 9205113163273730808}
 --- !u!114 &8175924925092543015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2570,5 +2573,10 @@ PrefabInstance:
 --- !u!4 &8427625828715831362 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2371247805836116685, guid: ec071bba909d2484dba5280acdde9760, type: 3}
+  m_PrefabInstance: {fileID: 6060908704466395791}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &9205113163273730808 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3144513080453044343, guid: ec071bba909d2484dba5280acdde9760, type: 3}
   m_PrefabInstance: {fileID: 6060908704466395791}
   m_PrefabAsset: {fileID: 0}

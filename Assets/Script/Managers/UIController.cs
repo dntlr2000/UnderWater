@@ -38,6 +38,7 @@ public class UIController : MonoBehaviour
                 SetPauseScreen(true);
                 playerScript.canMoveCamera = false;
 
+
             }
 
             else //일시정지가 활성화되어있을 때
@@ -56,10 +57,10 @@ public class UIController : MonoBehaviour
                     return;
                 }
 
-                /*if (questUI.isActive)
+                if (questUI.isActive)
                 {
                     TurnQuestPanel(false);
-                }*/
+                }
 
                 else
                 {

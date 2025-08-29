@@ -78,6 +78,16 @@ public class Player : MonoBehaviourPunCallbacks
     StateUIManager oxygenBar;
     StateUIManager fatigueBar;
     StateUIManager staminaBar;
+
+    #endregion
+
+    #region Able Only Player
+    //플레이어일 때 활성화
+    public GameObject PlayerCanvas;
+    public GameObject FirstViewLook;
+
+    //다른 플레이어일 때 활성화
+    public GameObject ThirdViewLook;
     #endregion
 
     //수중 상태일 때 체력이 
@@ -107,6 +117,20 @@ public class Player : MonoBehaviourPunCallbacks
         {
             QuestManager.Instance.RegisterLocalPlayer(this);
             QuestManager.Instance.InitQuestsForPlayer(this);
+            PlayerCanvas.SetActive(true);
+            ThirdViewLook.SetActive(false);
+            FirstViewLook.SetActive(true);
+            SetStateBar();
+            StartCoroutine(getHungry());
+            Inventory inventory = FindAnyObjectByType<Inventory>();
+            inventory.player = this;
+        }
+
+        else
+        {
+            PlayerCanvas.SetActive(false);
+            FirstViewLook.SetActive(false);
+            ThirdViewLook.SetActive(true);
         }
 
         if (currentJob != null)
@@ -121,15 +145,7 @@ public class Player : MonoBehaviourPunCallbacks
 
         stateMachine.Initialize(new PlayerIdleState(this, stateMachine));
 
-        SetStateBar();
-
-        StartCoroutine(getHungry());
-
         SetUnderwater(true); // 물 상태 변경 및 산소 소모 코루틴 시작
-
-        //임시 구현, 포톤을 통해 플레이어를 구별할 때 인벤토리도 그에 맞게 구별하는 기능 추가 필요
-        Inventory inventory = FindAnyObjectByType<Inventory>();
-        inventory.player = this;
     }
 
     private void Update()
@@ -138,7 +154,7 @@ public class Player : MonoBehaviourPunCallbacks
 
         //if (Input.GetKeyDown(KeyCode.Tab))
         //{
-            //QuestUI.Instance.ToggleQuestWindow();
+        //QuestUI.Instance.ToggleQuestWindow();
         //}
 
         stateMachine.currentState.Update();
@@ -469,5 +485,6 @@ public class Player : MonoBehaviourPunCallbacks
             currentJob = allJobs[index];
         }
     }
-}
     #endregion
+
+}
