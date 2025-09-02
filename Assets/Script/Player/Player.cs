@@ -103,7 +103,6 @@ public class Player : MonoBehaviourPunCallbacks
 
         if (photonView.IsMine)
         {
-            AssignRandomJob();
             QuestManager.Instance.InitQuestsForPlayer(this);
             localPlayer = this;
         }
@@ -466,20 +465,16 @@ public class Player : MonoBehaviourPunCallbacks
     #endregion
 
     #region Job Assignment
-    void AssignRandomJob()
+    public void SetJob(int jobIndex)
     {
-        if (allJobs.Length == 0)
+        if (jobIndex < 0 || jobIndex >= allJobs.Length)
         {
-            Debug.LogError("모든 직업 데이터를 할당해주세요!");
+            Debug.LogError("올바르지 않은 JobIndex: " + jobIndex);
             return;
         }
 
-        int randomIndex = Random.Range(0, allJobs.Length);
-        currentJob = allJobs[randomIndex];
-
-        ExitGames.Client.Photon.Hashtable hash = new ExitGames.Client.Photon.Hashtable();
-        hash["JobIndex"] = randomIndex;
-        photonView.Owner.SetCustomProperties(hash);
+        currentJob = allJobs[jobIndex];
+        QuestManager.Instance.TryUnlockQuests(currentJob);
     }
 
     public override void OnPlayerPropertiesUpdate(Photon.Realtime.Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)

@@ -4,6 +4,8 @@ using UnityEngine.UI;
 using Photon.Pun;
 using Photon.Realtime;
 using ExitGames.Client.Photon;
+using System;
+using Unity.VisualScripting;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -36,6 +38,20 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public Button[] JobBtns;
     public JobData[] jobDatas;
 
+    [Header("PlayerSlotPanel")]
+    public GameObject[] PlayerSlots;
+    public Image[] PlayerJobIcons;
+    public Text[] PlayerSlotNames;
+    public Text[] PlayerSlotJobs;
+
+    [Header("Save System UI")]
+    public Button LoadGameBtn;
+    public Text SelectedSaveText;
+    public GameObject SaveListPanel;
+    public Transform SaveListContent;
+    public GameObject SaveBtnPrefab;
+
+    private string selectedSaveId = null;
     List<RoomInfo> myList = new List<RoomInfo>();
     int currentPage = 1, maxPage, multiple;
 
@@ -117,7 +133,80 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     #endregion 서버연결
 
     #region 방
-    public void CreateRoom() => PhotonNetwork.CreateRoom(RoomInput.text == "" ? "Room" + Random.Range(0,100) : RoomInput.text, new RoomOptions { MaxPlayers = 2});
+    /*public void CreateRoom() => PhotonNetwork.CreateRoom(RoomInput.text == "" ? "Room" + Random.Range(0,100) : RoomInput.text, new RoomOptions { MaxPlayers = 2});*/
+
+    public void NewGame()
+    {
+        /*if(!PhotonNetwork.IsMasterClient) return;*/
+
+        SaveData newSave = new SaveData();
+        newSave.saveId = Guid.NewGuid().ToString();
+        newSave.dayCount = 0;
+        newSave.jobAssignments = new Dictionary<string, int>();
+
+        CreateRoom(newSave);
+    }
+
+    public void LoadGame()
+    {
+/*        if (!PhotonNetwork.IsMasterClient) return;*/
+        if (string.IsNullOrEmpty(selectedSaveId))
+        {
+            Debug.LogWarning("저장 파일을 선택하세요!");
+            return;
+        }
+
+        SaveData loaded = SaveSystem.Load(selectedSaveId);
+        if (loaded == null) return;
+
+        CreateRoom(loaded);
+    }
+
+    public void RefreshSaveList()
+    {
+        foreach (Transform child in SaveListContent)
+            Destroy(child.gameObject);
+
+        List<SaveData> saves = SaveSystem.LoadAll();
+        foreach (var save in saves)
+        {
+            GameObject btnObj = Instantiate(SaveBtnPrefab, SaveListContent);
+            btnObj.GetComponentInChildren<Text>().text = $"Day {save.dayCount} ({save.saveId})";
+
+            string saveId = save.saveId;
+            btnObj.GetComponent<Button>().onClick.AddListener(() => OnClick_SelectSave(saveId));
+        }
+    }
+
+    public void OnClick_SelectSave(string saveId)
+    {
+        selectedSaveId = saveId;
+        SelectedSaveText.text = $"선택된 저장: {saveId}";
+        SaveListPanel.SetActive(false); // 스크롤뷰 닫기
+    }
+
+    public void ToggleSaveList()
+    {
+        SaveListPanel.SetActive(!SaveListPanel.activeSelf);
+    }
+
+    private void CreateRoom(SaveData data)
+    {
+        SaveSystem.Save(data);
+
+        string roomName = string.IsNullOrEmpty(RoomInput.text)
+            ? "Room" + UnityEngine.Random.Range(0, 100)
+            : RoomInput.text;
+
+        RoomOptions options = new RoomOptions { MaxPlayers = 2 };
+
+        ExitGames.Client.Photon.Hashtable roomProps = new ExitGames.Client.Photon.Hashtable();
+        roomProps["SaveData"] = JsonUtility.ToJson(data);
+        options.CustomRoomProperties = roomProps;
+        options.CustomRoomPropertiesForLobby = new string[] { "SaveData" };
+
+        PhotonNetwork.CreateRoom(roomName, options);
+    }
 
     public void JoinRandomRoom() => PhotonNetwork.JoinRandomRoom();
 
@@ -132,31 +221,53 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
         StartBtn.interactable = PhotonNetwork.IsMasterClient;
         Debug.Log("Room joined: " + PhotonNetwork.CurrentRoom.Name);
+
         SetupJobButtons();
+
+        RefreshPlayerSlots();
     }
 
     public override void OnCreateRoomFailed(short returnCode, string message)
     {
-        RoomInput.text = "";
-        CreateRoom();
+        Debug.LogWarning("방 생성 실패: " + message);
+
+        // 새 게임 기준으로 기본 SaveData 생성
+        SaveData newSave = new SaveData();
+        newSave.saveId = Guid.NewGuid().ToString();
+        newSave.dayCount = 0;
+        newSave.jobAssignments = new Dictionary<string, int>();
+
+        // SaveData 저장 후 방 생성
+        SaveSystem.Save(newSave);
+        CreateRoom(newSave);
     }
 
     public override void OnJoinRandomFailed(short returnCode, string message)
     {
-        RoomInput.text = "";
-        CreateRoom();
+        Debug.LogWarning("랜덤 방 입장 실패: " + message);
+
+        // 새 게임 기준으로 기본 SaveData 생성
+        SaveData newSave = new SaveData();
+        newSave.saveId = Guid.NewGuid().ToString();
+        newSave.dayCount = 0;
+        newSave.jobAssignments = new Dictionary<string, int>();
+
+        SaveSystem.Save(newSave);
+        CreateRoom(newSave);
     }
 
     public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
     {
         RoomRenewal();
         ChatRPC("<color=yellow>" + newPlayer.NickName + "님이 참가하셨습니다.</color>");
+        RefreshPlayerSlots();
     }
 
     public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
     {
         RoomRenewal();
         ChatRPC("<color=yellow>" + otherPlayer.NickName + "님이 퇴장하셨습니다.</color>");
+        RefreshPlayerSlots();
     }
 
     public override void OnMasterClientSwitched(Photon.Realtime.Player newMasterClient)
@@ -225,7 +336,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         for (int i = 0; i < JobBtns.Length; i++)
         {
             int index = i;
-            JobBtns[i].onClick.RemoveAllListeners(); // 중복 방지
+            JobBtns[i].onClick.RemoveAllListeners();
             JobBtns[i].onClick.AddListener(() => SelectJob(index));
         }
 
@@ -236,14 +347,24 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         var props = PhotonNetwork.LocalPlayer.CustomProperties ?? new ExitGames.Client.Photon.Hashtable();
 
-        // 이미 선택한 버튼 클릭 → 취소
-        if (props.TryGetValue("JobIndex", out object currentJob) && (int)currentJob == index)
-        {
-            props.Remove("JobIndex");
-            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
-            Debug.Log("직업 선택 취소: " + jobDatas[index].jobName);
+        bool hasJob = props.ContainsKey("JobIndex") && props["JobIndex"] != null;
 
+        // 이미 선택한 버튼 클릭 → 취소
+        if (hasJob && (int)props["JobIndex"] == index)
+        {
+            props["JobIndex"] = null;
+            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+
+            // UI 즉시 갱신
+            JobBtns[index].GetComponent<Image>().color = Color.white;
             RefreshJobButtons();
+            return;
+        }
+
+        // 다른 직업 이미 선택됨 → 선택 불가
+        if (hasJob)
+        {
+            Debug.Log("이미 직업이 선택되어 있습니다.");
             return;
         }
 
@@ -252,51 +373,116 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         {
             if (player != PhotonNetwork.LocalPlayer &&
                 player.CustomProperties.TryGetValue("JobIndex", out object taken) &&
+                taken != null &&
                 (int)taken == index)
             {
-                Debug.Log("이미 다른 플레이어가 선택한 직업: " + jobDatas[index].jobName);
+                Debug.Log("다른 플레이어가 이미 선택한 직업입니다.");
                 return;
             }
         }
 
-        // 선택 적용
+        // 직업 선택
         props["JobIndex"] = index;
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
-        Debug.Log("선택한 직업: " + jobDatas[index].jobName);
+
+        // 선택 버튼 즉시 초록색
+        JobBtns[index].GetComponent<Image>().color = Color.green;
+
+        RefreshJobButtons();
+    }
+
+    public void CancelJob()
+    {
+        if (!PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("JobIndex")) return;
+
+        ExitGames.Client.Photon.Hashtable props = new();
+        props["JobIndex"] = null;
+        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+        RefreshJobButtons();
+        RefreshPlayerSlots();
+    }
+
+    public override void OnPlayerPropertiesUpdate(Photon.Realtime.Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
+    {
+        if (JobBtns == null || PlayerSlots == null) return; // UI가 준비되지 않았으면 무시
+        if (changedProps.ContainsKey("JobIndex"))
+            RefreshJobButtons();
+
+        RefreshPlayerSlots();
     }
 
     public void RefreshJobButtons()
     {
-        bool hasSelectedJob = PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object myJobIndex);
+        if (JobBtns == null) return;
 
         for (int i = 0; i < JobBtns.Length; i++)
         {
-            bool takenByOther = false;
+            if (JobBtns[i] == null) continue;
 
-            // 다른 플레이어가 선택했는지 확인
+            bool isTakenByOther = false;
             foreach (var player in PhotonNetwork.PlayerList)
             {
                 if (player != PhotonNetwork.LocalPlayer &&
                     player.CustomProperties.TryGetValue("JobIndex", out object job) &&
+                    job != null &&
                     (int)job == i)
                 {
-                    takenByOther = true;
+                    isTakenByOther = true;
                     break;
                 }
             }
 
-            // 버튼 활성화 조건
-            if (hasSelectedJob)
+            bool isMyJob = PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object myJob) && myJob != null && (int)myJob == i;
+
+            JobBtns[i].interactable = !isTakenByOther && (!PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("JobIndex") || isMyJob);
+
+            var img = JobBtns[i].GetComponent<Image>();
+            if (img != null)
+                img.color = isMyJob ? Color.green : Color.white;
+        }
+    }
+
+    private void RefreshPlayerSlots()
+    {
+        var players = PhotonNetwork.PlayerList;
+
+        for (int i = 0; i < PlayerSlots.Length; i++)
+        {
+            if (i < players.Length)
             {
-                // 내가 선택한 버튼만 활성, 나머지는 비활성
-                JobBtns[i].interactable = ((int)myJobIndex == i);
+                PlayerSlots[i].SetActive(true);
+                var p = players[i];
+
+                // 이름
+                PlayerSlotNames[i].text = p.NickName;
+
+                // 직업
+                int jobIndex = -1;
+                if (p.CustomProperties.ContainsKey("JobIndex"))
+                    jobIndex = (int)p.CustomProperties["JobIndex"];
+
+                if (jobIndex >= 0 && jobIndex < jobDatas.Length)
+                {
+                    PlayerSlotJobs[i].text = jobDatas[jobIndex].jobName;
+                    PlayerJobIcons[i].sprite = jobDatas[jobIndex].jobIcon;
+                    PlayerJobIcons[i].enabled = true;
+                }
+                else
+                {
+                    PlayerSlotJobs[i].text = "직업 없음";
+                    PlayerJobIcons[i].enabled = false;
+                }
             }
             else
             {
-                // 아직 선택 안했으면 다른 사람이 선택한 버튼만 비활성
-                JobBtns[i].interactable = !takenByOther;
+                // 남는 슬롯은 비활성
+                PlayerSlots[i].SetActive(true);  // 항상 4개 슬롯 활성
+                PlayerSlotNames[i].text = "빈 슬롯";
+                PlayerSlotJobs[i].text = "";
+                PlayerJobIcons[i].enabled = false;
             }
         }
     }
+
     #endregion
 }
