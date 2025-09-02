@@ -28,11 +28,13 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         items[0].weight = 0; 
         items[0].durability = 99;
         items[0].interactable = true;
+        
 
         items[1].itemName = "Item Box";
         items[1].weight = 0;
         items[1].durability = 99;
         items[1].interactable = false;
+        items[1].price = 100;
         //items[1].fieldItemName = "1";
 
 
@@ -64,7 +66,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
     }
     
 
-    public void LoadIcons(int index)
+    public Sprite LoadIcons(int index)
     {
         ItemIcons[index] = Resources.Load<Sprite>("Item/Item"+ index);
 
@@ -75,6 +77,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
 
         if (ItemIcons[index] != null) Debug.Log($"Item ID = {index} Icon Load Complete");
 
+        return ItemIcons[index];
     }
 
     void DebugListAllSprites(string folder) //°æ·Î¿¡ ÆÄÀÏµé È®ÀÎ¿ë
@@ -145,6 +148,12 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         return items[itemId].interactable;
     }
 
+    public int getPrice(int itemId)
+    {
+        if (itemId == -1) Debug.LogError("Àß¸øµÈ °ª ÀÔ·Â");
+        return items[itemId].price;
+    }
+
     public GameObject generateFieldItem(int itemId, Vector3 Location, int quantity = 1, bool ifPool = false)
     {
         string resourcesPath = "FieldItem/Object" + itemId;
@@ -183,6 +192,7 @@ public struct ItemData
     public string itemName; //¾ÆÀÌÅÛ ÀÌ¸§
     public int itemId; //ID
     //public int quantity; //¼ÒÁö °³¼ö //ÀÎº¥Åä¸® ¸Å´ÏÀú¸¦ ÅëÇØ °ü¸®ÇÏ´Â°Ô ´õ ³ªÀ»µí?
+    public int price; //°³´ç °¡°Ý
     public float weight; //¾È¾µ °Í °°À¸¸é »èÁ¦
     public float durability; //³»±¸µµ. ¾ÆÁ÷ »ó¼¼ ºÎºÐÀº ¹Ì±¸Çö
     public bool interactable; //µé°í ÀÖÀ» ¶§ ÇÊµåÀÇ ¿ÀºêÁ§Æ®¿Í »óÈ£ÀÛ¿ëÇÒ ¼ö ÀÖ´Â ¾ÆÀÌÅÛÀÎÁö ÆÇ´Ü ¿©ºÎ ex: ¼Ò¸ðÇü ¾ÆÀÌÅÛ

@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,6 +9,7 @@ public class ItemUIManager : MonoBehaviour
     public GameObject InventoryScreen;
     //public RawImage[] itemSlots;
     public ItemSlot[] itemSlots;
+    public TextMeshProUGUI MoneyText;
     
 
     //public Texture defaultSlotTexture;
@@ -100,5 +102,10 @@ public class ItemUIManager : MonoBehaviour
     {
         itemSlots[index].itemSlotIcon.gameObject.SetActive(false);
         itemSlots[index].quatitiy.gameObject.SetActive(false);
+    }
+
+    public void UpdateMoney(int value)
+    {
+        MoneyText.text = value.ToString() + "G";
     }
 }
