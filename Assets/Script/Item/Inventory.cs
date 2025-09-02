@@ -23,7 +23,7 @@ public class Inventory : MonoBehaviour
     {
         inventoryData = new InventoryData();
         inventoryData.GenerateData();
-
+        GetMoney(100);
 
         //GetItem(0, 1);
         Debug.Log("Inventory data generated");
@@ -33,19 +33,6 @@ public class Inventory : MonoBehaviour
 
     void Update()
     {
-        /*
-        if (Input.GetKeyDown(KeyCode.I))
-        {
-            if (showInventory)
-            {
-                showInventory = false;
-            }
-            else
-            {
-                showInventory = true;
-            }
-        }
-        */
 
         if (Input.GetKeyDown(KeyCode.Q))
         {
@@ -107,8 +94,6 @@ public class Inventory : MonoBehaviour
                 inventoryData.id[index] = -1;
                 ItemUI.ResetIcons(index);
             }
-
-            
         }
     }
 
@@ -263,6 +248,34 @@ public class Inventory : MonoBehaviour
         return inventoryData.item.getInteractable(inventoryData.id[index]);
     }
 
+    public void GetMoney(int value)
+    {
+        if (inventoryData.money < 0 && value <= 0) return;
+        inventoryData.money += value;
+        if (inventoryData.money < 0) inventoryData.money = 0;
+        ItemUI.UpdateMoney(inventoryData.money);
+    }
+
+    public int GetMoneyData()
+    {
+        return inventoryData.money;
+    }
+
+    public int GetItemID(int index)
+    {
+        return inventoryData.id[index];
+    }
+
+    public int GetQuantity(int index)
+    {
+        return inventoryData.quantity[index];
+    }
+
+    public string GetName(int index)
+    {
+        return inventoryData.GetItemName(index);
+    }
+
 }
 
 [Serializable]
@@ -272,6 +285,8 @@ public class InventoryData
     public int[] id;
 
     public ItemDatabase item; //Serializable이 아니므로 이 값이 json으로 저장되진 않음
+
+    public int money;
 
     public void GenerateData()
     {
@@ -285,6 +300,8 @@ public class InventoryData
             quantity[i] = 0;
             id[i] = -1;
         }
+
+        money = 0;
 
         Debug.Log("InventoryData data generated");
 
