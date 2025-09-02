@@ -10,6 +10,7 @@ public class UIController : MonoBehaviour
     public Player playerScript;
 
     public QuestUI questUI;
+    public ShopManager shop;
 
     //private bool ifMouseOn = true;
 
@@ -38,6 +39,7 @@ public class UIController : MonoBehaviour
                 SetPauseScreen(true);
                 playerScript.canMoveCamera = false;
 
+
             }
 
             else //일시정지가 활성화되어있을 때
@@ -50,16 +52,21 @@ public class UIController : MonoBehaviour
                     return;
                 }
 
-                if (optionManager.ifOptionActive) //옵션이 활성화되어있을 때
+                else if (optionManager.ifOptionActive) //옵션이 활성화되어있을 때
                 {
                     optionManager.TurnOptions(false);
                     return;
                 }
 
-                /*if (questUI.isActive)
+                else if (questUI.isActive)
                 {
                     TurnQuestPanel(false);
-                }*/
+                }
+
+                else if (shop.ifShopOn)
+                {
+                    SetShopScreen(false);
+                }
 
                 else
                 {
@@ -173,5 +180,20 @@ public class UIController : MonoBehaviour
     {
         if (playerScript == null)
             playerScript = FindAnyObjectByType<Player>();
+    }
+
+    public void SetShopScreen(bool state)
+    {
+        if (state)
+        {
+            shop.gameObject.SetActive(true);
+            shop.ifShopOn = true;
+        }
+
+        else
+        {
+            shop.gameObject.SetActive(false);
+            shop.ifShopOn = false;
+        }
     }
 }

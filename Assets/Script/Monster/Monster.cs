@@ -197,7 +197,7 @@ public class Monster : Character
                 lookRot *= Quaternion.Euler(0f, yawOffset, 0f);
             transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, 10f * Time.fixedDeltaTime);
         }
-        Debug.Log("몬스터 이동중");
+        //Debug.Log("몬스터 이동중");
     }
 
     private void MoveTowardsWater()
@@ -276,7 +276,7 @@ public class Monster : Character
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"[Monster Trigger] {other.name}, layer={other.gameObject.layer}, tag={other.tag}");
+        //Debug.Log($"[Monster Trigger] {other.name}, layer={other.gameObject.layer}, tag={other.tag}");
 
         if (detectionLayers.value != 0 && ((1 << other.gameObject.layer) & detectionLayers) == 0)
             return;
