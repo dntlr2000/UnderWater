@@ -178,7 +178,8 @@ public class ShopManager : MonoBehaviour
             inventoryList[i].itemName.text = database.getItemName(inventory.GetItemID(k));
             inventoryList[i].priceText.text = database.getPrice(inventory.GetItemID(k)) + "G";
             inventoryList[i].quatitiy.text = inventory.GetQuantity(k).ToString();
-            inventoryList[i].itemSlotIcon.texture = database.LoadIcons(inventory.GetItemID(k)).texture;
+            //inventoryList[i].itemSlotIcon.texture = database.LoadIcons(inventory.GetItemID(k)).texture;
+            inventoryList[i].itemSlotIcon.texture = inventory.GetIcon(inventory.GetItemID(k)).texture;
         }
 
     }

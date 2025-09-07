@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class ItemDatabase : MonoBehaviour //아이템 목록을 인터페이스나 abstract로 구현?
 {
+    //경고 로그가 많이 뜨는 원인이기 때문에 이후에 인스턴스화로 수정 예정
     public ItemData[] items = new ItemData[30];
     private Sprite[] ItemIcons = new Sprite[30];
 

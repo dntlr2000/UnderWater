@@ -103,7 +103,7 @@ public class Player : MonoBehaviourPunCallbacks
 
         if (photonView.IsMine)
         {
-            QuestManager.Instance.InitQuestsForPlayer(this);
+            //QuestManager.Instance.InitQuestsForPlayer(this);
             localPlayer = this;
         }
     }

@@ -29,4 +29,22 @@ public class ItemSlot : MonoBehaviour, IDropHandler
             shopManager.SelectSlot(SlotID);
         }
     }
+
+    public void SelectedStorageInventory()
+    {
+        StorageBox storageBox = FindAnyObjectByType<StorageBox>();
+        if (storageBox != null)
+        {
+            storageBox.SetInventorytIndex(SlotID);
+        }
+    }
+
+    public void SelectedStorageBox()
+    {
+        StorageBox storageBox = FindAnyObjectByType<StorageBox>();
+        if (storageBox != null)
+        {
+            storageBox.SetBoxIndex(SlotID);
+        }
+    }
 }
