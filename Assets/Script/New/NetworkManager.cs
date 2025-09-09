@@ -6,6 +6,7 @@ using Photon.Realtime;
 using ExitGames.Client.Photon;
 using System;
 using Unity.VisualScripting;
+using System.IO;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -51,7 +52,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public Transform SaveListContent;
     public GameObject SaveBtnPrefab;
 
-    private string selectedSaveId = null;
+    private string selectedSaveRoomName = null;
     List<RoomInfo> myList = new List<RoomInfo>();
     int currentPage = 1, maxPage, multiple;
 
@@ -137,29 +138,45 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public void NewGame()
     {
-        /*if(!PhotonNetwork.IsMasterClient) return;*/
+        SaveData data;
 
-        SaveData newSave = new SaveData();
-        newSave.saveId = Guid.NewGuid().ToString();
-        newSave.dayCount = 0;
-        newSave.jobAssignments = new Dictionary<string, int>();
+        if (!string.IsNullOrEmpty(selectedSaveRoomName))
+        {
+            // 선택된 저장 불러오기
+            data = SaveSystem.LoadByRoomName(selectedSaveRoomName);
+            if (data == null)
+            {
+                Debug.LogWarning("선택된 저장이 존재하지 않습니다. 새로 생성합니다.");
+                data = CreateNewSave(RoomInput.text);
+            }
+        }
+        else
+        {
+            data = CreateNewSave(RoomInput.text);
+        }
 
-        CreateRoom(newSave);
+        CreateRoom(data);
     }
 
     public void LoadGame()
     {
-/*        if (!PhotonNetwork.IsMasterClient) return;*/
-        if (string.IsNullOrEmpty(selectedSaveId))
-        {
-            Debug.LogWarning("저장 파일을 선택하세요!");
-            return;
-        }
+        if (string.IsNullOrEmpty(selectedFilePath)) return;
 
-        SaveData loaded = SaveSystem.Load(selectedSaveId);
+        SaveData loaded = SaveSystem.LoadByRoomName(selectedFilePath);
         if (loaded == null) return;
 
         CreateRoom(loaded);
+    }
+
+    private SaveData CreateNewSave(string roomName)
+    {
+        string finalRoomName = string.IsNullOrEmpty(roomName) ? "Room" + UnityEngine.Random.Range(0, 100) : roomName;
+        SaveData newSave = new SaveData(finalRoomName);
+        newSave.saveId = Guid.NewGuid().ToString();
+        newSave.dayCount = 0;
+        newSave.jobAssignments = new Dictionary<string, int>();
+        SaveSystem.Save(newSave);
+        return newSave;
     }
 
     public void RefreshSaveList()
@@ -167,22 +184,22 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         foreach (Transform child in SaveListContent)
             Destroy(child.gameObject);
 
-        List<SaveData> saves = SaveSystem.LoadAll();
-        foreach (var save in saves)
+        List<string> saves = SaveSystem.GetRoomNames();
+        foreach (var roomName in saves)
         {
             GameObject btnObj = Instantiate(SaveBtnPrefab, SaveListContent);
-            btnObj.GetComponentInChildren<Text>().text = $"Day {save.dayCount} ({save.saveId})";
-
-            string saveId = save.saveId;
-            btnObj.GetComponent<Button>().onClick.AddListener(() => OnClick_SelectSave(saveId));
+            btnObj.GetComponentInChildren<Text>().text = roomName;
+            btnObj.GetComponent<Button>().onClick.AddListener(() => OnClick_SelectSave(roomName));
         }
     }
 
-    public void OnClick_SelectSave(string saveId)
+    private string selectedFilePath;
+
+    public void OnClick_SelectSave(string roomName)
     {
-        selectedSaveId = saveId;
-        SelectedSaveText.text = $"선택된 저장: {saveId}";
-        SaveListPanel.SetActive(false); // 스크롤뷰 닫기
+        selectedSaveRoomName = roomName;
+        SelectedSaveText.text = $"선택된 저장: {roomName}";
+        SaveListPanel.SetActive(false);
     }
 
     public void ToggleSaveList()
@@ -231,8 +248,12 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         Debug.LogWarning("방 생성 실패: " + message);
 
+        string roomName = string.IsNullOrEmpty(RoomInput.text)
+            ? "Room" + UnityEngine.Random.Range(0, 100)
+            : RoomInput.text;
+
         // 새 게임 기준으로 기본 SaveData 생성
-        SaveData newSave = new SaveData();
+        SaveData newSave = new SaveData(roomName);
         newSave.saveId = Guid.NewGuid().ToString();
         newSave.dayCount = 0;
         newSave.jobAssignments = new Dictionary<string, int>();
@@ -246,8 +267,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     {
         Debug.LogWarning("랜덤 방 입장 실패: " + message);
 
+        string roomName = "Room" + UnityEngine.Random.Range(0, 100);
+
         // 새 게임 기준으로 기본 SaveData 생성
-        SaveData newSave = new SaveData();
+        SaveData newSave = new SaveData(roomName);
         newSave.saveId = Guid.NewGuid().ToString();
         newSave.dayCount = 0;
         newSave.jobAssignments = new Dictionary<string, int>();

@@ -7,98 +7,64 @@ public static class SaveSystem
 {
     private static string SavePath => Path.Combine(Application.persistentDataPath, "Saves");
 
-    [Serializable]
-    private class SaveWrapper
-    {
-        public string saveId;
-        public int dayCount;
-        public List<JobAssignment> jobs = new();
-    }
-
-    [Serializable]
-    private class JobAssignment
-    {
-        public string playerId;
-        public int jobIndex;
-    }
-
     // 저장하기
     public static void Save(SaveData data)
     {
+        if (data == null) return;
+
+        if (string.IsNullOrEmpty(data.roomName)) data.roomName = "Room";
+
         if (!Directory.Exists(SavePath))
             Directory.CreateDirectory(SavePath);
 
-        SaveWrapper wrapper = new SaveWrapper
-        {
-            saveId = data.saveId,
-            dayCount = data.dayCount
-        };
+        string json = JsonUtility.ToJson(data, true);
+        string fileName = $"{data.roomName}.json";  // 방별 파일명
+        File.WriteAllText(Path.Combine(SavePath, fileName), json);
 
-        if (data.jobAssignments != null)
-        {
-            foreach (var kv in data.jobAssignments)
-            {
-                wrapper.jobs.Add(new JobAssignment { playerId = kv.Key, jobIndex = kv.Value });
-            }
-        }
-
-        string json = JsonUtility.ToJson(wrapper, true);
-        File.WriteAllText(Path.Combine(SavePath, data.saveId + ".json"), json);
+        Debug.Log($"[SaveSystem] 저장 완료: {fileName}");
     }
 
-    // 불러오기
-    public static SaveData Load(string saveId)
+    // 방 이름으로 저장 불러오기
+    public static SaveData LoadByRoomName(string roomName)
     {
-        string file = Path.Combine(SavePath, saveId + ".json");
-        if (!File.Exists(file)) return null;
+        if (string.IsNullOrEmpty(roomName)) return null;
 
-        string json = File.ReadAllText(file);
-        SaveWrapper wrapper = JsonUtility.FromJson<SaveWrapper>(json);
+        string path = Path.Combine(SavePath, roomName + ".json");
+        if (!File.Exists(path)) return null;
 
-        SaveData data = new SaveData
-        {
-            saveId = wrapper.saveId,
-            dayCount = wrapper.dayCount,
-            jobAssignments = new Dictionary<string, int>()
-        };
-
-        foreach (var job in wrapper.jobs)
-        {
-            data.jobAssignments[job.playerId] = job.jobIndex;
-        }
-
-        return data;
+        string json = File.ReadAllText(path);
+        return JsonUtility.FromJson<SaveData>(json);
     }
 
-    // 저장된 모든 파일 불러오기
+    // 모든 세이브 불러오기
     public static List<SaveData> LoadAll()
     {
-        List<SaveData> saves = new List<SaveData>();
+        List<SaveData> saves = new();
 
-        if (!Directory.Exists(SavePath))
-            return saves;
+        if (!Directory.Exists(SavePath)) return saves;
 
         string[] files = Directory.GetFiles(SavePath, "*.json");
         foreach (var file in files)
         {
             string json = File.ReadAllText(file);
-            SaveWrapper wrapper = JsonUtility.FromJson<SaveWrapper>(json);
-
-            SaveData data = new SaveData
-            {
-                saveId = wrapper.saveId,
-                dayCount = wrapper.dayCount,
-                jobAssignments = new Dictionary<string, int>()
-            };
-
-            foreach (var job in wrapper.jobs)
-            {
-                data.jobAssignments[job.playerId] = job.jobIndex;
-            }
-
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
             saves.Add(data);
         }
 
         return saves;
+    }
+
+    // 방 이름 목록 반환 (로비에서 선택용)
+    public static List<string> GetRoomNames()
+    {
+        List<string> roomNames = new();
+        if (!Directory.Exists(SavePath)) return roomNames;
+
+        string[] files = Directory.GetFiles(SavePath, "*.json");
+        foreach (var f in files)
+        {
+            roomNames.Add(Path.GetFileNameWithoutExtension(f)); // 확장자 제거
+        }
+        return roomNames;
     }
 }

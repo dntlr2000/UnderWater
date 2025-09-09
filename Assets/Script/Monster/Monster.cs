@@ -147,10 +147,7 @@ public class Monster : Character
             switch (behaviorType)
             {
                 case MonsterBehaviorType.AvoidPlayer:
-                    if (distance < avoidDistance)
-                        Move(-direction.normalized);
-                    else
-                        RandomSwim();
+                    Move(-direction.normalized);
                     break;
 
                 case MonsterBehaviorType.AttackPlayer:

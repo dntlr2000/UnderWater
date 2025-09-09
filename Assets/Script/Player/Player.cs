@@ -136,10 +136,7 @@ public class Player : MonoBehaviourPunCallbacks
             
         }
 
-        if (currentJob != null)
-            QuestManager.Instance.TryUnlockQuests(currentJob);
-        else
-            Debug.LogError("CurrentJob이 할당되지 않았습니다.");
+        JobSetting();
 
         if (cameraTransform == null)
             cameraTransform = Camera.main.transform;
@@ -484,6 +481,25 @@ public class Player : MonoBehaviourPunCallbacks
             int index = (int)changedProps["JobIndex"];
             currentJob = allJobs[index];
         }
+    }
+
+    public void JobSetting()
+    {
+        if (photonView.Owner.CustomProperties.TryGetValue("JobIndex", out object jobIndexObj))
+        {
+            int jobIndex = (int)jobIndexObj;
+            if (jobIndex >= 0 && jobIndex < allJobs.Length)
+            {
+                currentJob = allJobs[jobIndex];
+                Debug.Log($"{photonView.Owner.NickName} 직업 세팅: {currentJob.jobName}");
+                QuestManager.Instance.TryUnlockQuests(currentJob);
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"{photonView.Owner.NickName} 은(는) 아직 직업이 없습니다.");
+        }
+
     }
     #endregion
 
