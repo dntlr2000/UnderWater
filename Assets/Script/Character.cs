@@ -10,13 +10,13 @@ public abstract class Character : MonoBehaviour
     //공격 메서드
     public virtual void Attack()
     {
-        Debug.Log($"{gameObject.name}이 {atkPower}만큼의 피해를 가했습니다.");
+        //Debug.Log($"{gameObject.name}이 {atkPower}만큼의 피해를 가했습니다.");
     }
 
     public virtual void TakeDamage(float damage)
     {
         health -= damage;
-        Debug.Log($"{gameObject}가 {damage}만큼의 피해를 입었습니다.");
+        //Debug.Log($"{gameObject}가 {damage}만큼의 피해를 입었습니다.");
 
         if(health <= 0)
         {

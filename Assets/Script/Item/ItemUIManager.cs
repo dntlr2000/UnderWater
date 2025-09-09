@@ -83,7 +83,7 @@ public class ItemUIManager : MonoBehaviour
         itemSlots[index].itemSlotIcon.gameObject.SetActive(true);
         //itemSlots[index].quatitiy.gameObject.SetActive(true);
 
-        Debug.Log($"added item icon on slot {index}");
+        //Debug.Log($"added item icon on slot {index}");
     }
 
     public void SetQuantity(int index, int quantity)

@@ -1,4 +1,4 @@
-//using TMPro;
+using TMPro;
 using UnityEngine;
 
 public class StorageBox : InventoryFrame
@@ -10,11 +10,17 @@ public class StorageBox : InventoryFrame
     public ItemUIManager boxUI;
     public string boxName = "storageBox";
     public bool ifBoxOpen = false;
+
+    public TMP_InputField inputField;
+    public int exchangeMoney;
+
+    public bool usingPhoton = false;
+
     private void Start()
     {
         SetBox();
         inventoryName = boxName;
-        
+
     }
 
     private void Awake()
@@ -94,6 +100,8 @@ public class StorageBox : InventoryFrame
         if (inventory.GetItemID(index) == -1 || inventory.GetQuantity(index) <= 0) return;
         GetItem(inventory.GetItemID(index), inventory.GetQuantity(index));
         inventory.RemoveAllItem(index);
+        Debug.Log($"{index}번 아이템을 보관합니다.");
+        
         UpdateMenu();
     }
 
@@ -107,6 +115,7 @@ public class StorageBox : InventoryFrame
         if (GetItemID(index) == -1 || GetQuantity(index) <= 0) return;
         inventory.GetItem(GetItemID(index), GetQuantity(index));
         RemoveAllItem(index);
+        Debug.Log($"{index}번 아이템을 꺼냅니다.");
         UpdateMenu();
     }
 
@@ -121,14 +130,46 @@ public class StorageBox : InventoryFrame
         GetMoney(amount);
         inventory.GetMoney(-amount);
         UpdateMenu();
+        exchangeMoney = 0;
+        inputField.text = "0";
     }
 
-    public void WithDrawMoney(int amount)
+    public void StorageMoney()
+    {
+        StorageMoney(exchangeMoney);
+        exchangeMoney = 0;
+        inputField.text = "0";
+    }
+
+    public void WithdrawMoney(int amount)
     {
         if (GetMoneyData() < amount) return;
         GetMoney(-amount);
         inventory.GetMoney(amount);
         UpdateMenu();
+
+    }
+
+    public void WithdrawMoney()
+    {
+        WithdrawMoney(exchangeMoney);
+        exchangeMoney = 0;
+        inputField.text = "0";
+    }
+
+    public void SetExchangeMoney()
+    {
+        if (int.TryParse(inputField.text, out int result))
+        {
+            if (result <= 0) return;
+            exchangeMoney = result;
+
+        }
+        else
+        {
+            Debug.LogWarning("정수형 및 양수만 입력해주세요.");
+            exchangeMoney = 0;
+        }
     }
 
     public void SetBoxName(string name)
@@ -140,7 +181,7 @@ public class StorageBox : InventoryFrame
     {
         boxIndex = _index;
     }
-    
+
     public void SetInventorytIndex(int _index)
     {
         inventoryIndex = _index;

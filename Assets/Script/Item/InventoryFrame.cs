@@ -167,12 +167,12 @@ public class InventoryFrame : MonoBehaviour
         return inventoryData.item.GetIcons(index);
     }
 
-    public void LoadData()
+    public virtual void LoadData()
     {
         inventoryData.LoadInventory(inventoryName);
     }
 
-    public void SaveData()
+    public virtual void SaveData()
     {
         inventoryData.SaveInventory(inventoryName);
     }
@@ -204,7 +204,7 @@ public class InventoryData
 
         money = 0;
 
-        Debug.Log("InventoryData data generated");
+        //Debug.Log("InventoryData data generated");
 
     }
 
@@ -261,6 +261,7 @@ public class InventoryData
         InventoryData data = JsonUtility.FromJson<InventoryData>(json);
 
         quantity = data.quantity;
+        money = data.money;
         id = data.id;
 
     }
