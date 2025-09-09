@@ -5,6 +5,7 @@ public class OpenableStorageBox : InteractableObject
     public string boxName = "storageBox";
     public bool interactable = true;
     StorageBox box;
+    public bool usePhoton = false;
 
     private void Start()
     {
@@ -42,6 +43,7 @@ public class OpenableStorageBox : InteractableObject
 
         box.gameObject.SetActive(true);
         box.SetBox();
+        box.usingPhoton = usePhoton;
         box.SetBoxName(boxName);
         box.LoadBox();
     }
