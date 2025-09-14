@@ -7,14 +7,14 @@ public class StorageBox : InventoryFrame
     public int boxIndex;
 
     public Inventory inventory;
-    public ItemUIManager boxUI;
+    public ItemUIManager boxUI; //박스의 아이템 UI, InventoryFrame의 itemUI는 사용자의 인벤토리의 UI에 할당
     public string boxName = "storageBox";
     public bool ifBoxOpen = false;
 
     public TMP_InputField inputField;
     public int exchangeMoney;
 
-    public bool usingPhoton = false;
+    //public bool usingPhoton = false;
 
     private void Start()
     {

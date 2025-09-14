@@ -218,6 +218,148 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   PauseState: 0
+--- !u!1 &441638792386018827
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2475943002552742646}
+  - component: {fileID: 1928026232819239196}
+  - component: {fileID: 8728244417897900600}
+  - component: {fileID: 6004497488222160022}
+  m_Layer: 5
+  m_Name: StorageBox
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2475943002552742646
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 441638792386018827}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 7709727495370817156}
+  m_Father: {fileID: 6224744964114851405}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 750, y: 400}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1928026232819239196
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 441638792386018827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f7ce4d4ba7395744a1ad015d37451ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ItemUI: {fileID: 8728244417897900600}
+  inventoryIndex: 0
+  boxIndex: 0
+  inventory: {fileID: 0}
+  boxUI: {fileID: 6004497488222160022}
+  boxName: storageBox
+  ifBoxOpen: 0
+  inputField: {fileID: 3376709020369875039}
+  exchangeMoney: 0
+--- !u!114 &8728244417897900600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 441638792386018827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 276cabf85ba399949b5bda7b465ab577, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showInventory: 1
+  InventoryScreen: {fileID: 6934647914729826290}
+  itemSlots:
+  - {fileID: 3361570408252202886}
+  - {fileID: 2110331077243592707}
+  - {fileID: 2700967771822248561}
+  - {fileID: 3229581166513449411}
+  - {fileID: 8614036266005237205}
+  - {fileID: 5769216875454481993}
+  - {fileID: 7234884930827550120}
+  - {fileID: 5821069494265595476}
+  - {fileID: 8224525329127321904}
+  - {fileID: 248772589294699857}
+  - {fileID: 5215109816616975842}
+  - {fileID: 9095128200263211492}
+  - {fileID: 8838406429994485212}
+  - {fileID: 8254107246959333652}
+  - {fileID: 1671982062044533339}
+  - {fileID: 608534176324286439}
+  - {fileID: 8443313355947312992}
+  - {fileID: 875988138108251496}
+  - {fileID: 2375928225312283534}
+  - {fileID: 226982416580510776}
+  - {fileID: 8512809265161628442}
+  - {fileID: 393816213528294087}
+  - {fileID: 2863469467971005774}
+  - {fileID: 5005150244838747541}
+  - {fileID: 8004342965123764002}
+  MoneyText: {fileID: 4544902381191964753}
+--- !u!114 &6004497488222160022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 441638792386018827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 276cabf85ba399949b5bda7b465ab577, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showInventory: 0
+  InventoryScreen: {fileID: 4586871732697941896}
+  itemSlots:
+  - {fileID: 1389137927477244122}
+  - {fileID: 7870594957579232772}
+  - {fileID: 3360930129930244964}
+  - {fileID: 2496882155142839278}
+  - {fileID: 3394819531458070715}
+  - {fileID: 7141716719663643821}
+  - {fileID: 493729484190960902}
+  - {fileID: 8475482952461524082}
+  - {fileID: 2481231445018565699}
+  - {fileID: 787733456462684651}
+  - {fileID: 422746524582612522}
+  - {fileID: 8715688608372983359}
+  - {fileID: 1549212925858255622}
+  - {fileID: 1786714929502003124}
+  - {fileID: 617133624494521691}
+  - {fileID: 3033559691759633040}
+  - {fileID: 9132025962031925692}
+  - {fileID: 1701366128611419252}
+  - {fileID: 1732906164254993474}
+  - {fileID: 309585269811051455}
+  - {fileID: 3713263334600188084}
+  - {fileID: 8623026625733178209}
+  - {fileID: 2064700093227834820}
+  - {fileID: 7726690186711762011}
+  - {fileID: 4009560506690079147}
+  MoneyText: {fileID: 8388882884857660523}
 --- !u!1 &447428192675561180
 GameObject:
   m_ObjectHideFlags: 0
@@ -861,7 +1003,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 619900352579477283}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
         m_MethodName: CloseBox
         m_Mode: 1
@@ -994,7 +1136,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 619900352579477283}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
         m_MethodName: StorageItem
         m_Mode: 3
@@ -1006,7 +1148,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 619900352579477283}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
         m_MethodName: StorageMoney
         m_Mode: 1
@@ -1419,9 +1561,6 @@ GameObject:
   - component: {fileID: 7709727495370817156}
   - component: {fileID: 3986994598999534682}
   - component: {fileID: 2522555931153081915}
-  - component: {fileID: 619900352579477283}
-  - component: {fileID: 4311111929233507018}
-  - component: {fileID: 182773076475808464}
   m_Layer: 5
   m_Name: StorageBoxScreen
   m_TagString: Untagged
@@ -1436,7 +1575,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1414139757966109143}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1452,7 +1591,7 @@ RectTransform:
   - {fileID: 5369300595716791441}
   - {fileID: 4135662627722042031}
   - {fileID: 1258220313949682290}
-  m_Father: {fileID: 6224744964114851405}
+  m_Father: {fileID: 2475943002552742646}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -1494,110 +1633,6 @@ MonoBehaviour:
     y: 0
     width: 1
     height: 1
---- !u!114 &619900352579477283
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1414139757966109143}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9f7ce4d4ba7395744a1ad015d37451ef, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ItemUI: {fileID: 4311111929233507018}
-  inventoryIndex: 0
-  boxIndex: 0
-  inventory: {fileID: 0}
-  boxUI: {fileID: 182773076475808464}
-  boxName: storageBox
-  ifBoxOpen: 0
-  inputField: {fileID: 3376709020369875039}
-  exchangeMoney: 0
-  usingPhoton: 0
---- !u!114 &4311111929233507018
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1414139757966109143}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 276cabf85ba399949b5bda7b465ab577, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  showInventory: 1
-  InventoryScreen: {fileID: 6934647914729826290}
-  itemSlots:
-  - {fileID: 3361570408252202886}
-  - {fileID: 2110331077243592707}
-  - {fileID: 2700967771822248561}
-  - {fileID: 3229581166513449411}
-  - {fileID: 8614036266005237205}
-  - {fileID: 5769216875454481993}
-  - {fileID: 7234884930827550120}
-  - {fileID: 5821069494265595476}
-  - {fileID: 8224525329127321904}
-  - {fileID: 248772589294699857}
-  - {fileID: 5215109816616975842}
-  - {fileID: 9095128200263211492}
-  - {fileID: 8838406429994485212}
-  - {fileID: 8254107246959333652}
-  - {fileID: 1671982062044533339}
-  - {fileID: 608534176324286439}
-  - {fileID: 8443313355947312992}
-  - {fileID: 875988138108251496}
-  - {fileID: 2375928225312283534}
-  - {fileID: 226982416580510776}
-  - {fileID: 8512809265161628442}
-  - {fileID: 393816213528294087}
-  - {fileID: 2863469467971005774}
-  - {fileID: 5005150244838747541}
-  - {fileID: 8004342965123764002}
-  MoneyText: {fileID: 4544902381191964753}
---- !u!114 &182773076475808464
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1414139757966109143}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 276cabf85ba399949b5bda7b465ab577, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  showInventory: 0
-  InventoryScreen: {fileID: 4586871732697941896}
-  itemSlots:
-  - {fileID: 1389137927477244122}
-  - {fileID: 7870594957579232772}
-  - {fileID: 3360930129930244964}
-  - {fileID: 2496882155142839278}
-  - {fileID: 3394819531458070715}
-  - {fileID: 7141716719663643821}
-  - {fileID: 493729484190960902}
-  - {fileID: 8475482952461524082}
-  - {fileID: 2481231445018565699}
-  - {fileID: 787733456462684651}
-  - {fileID: 422746524582612522}
-  - {fileID: 8715688608372983359}
-  - {fileID: 1549212925858255622}
-  - {fileID: 1786714929502003124}
-  - {fileID: 617133624494521691}
-  - {fileID: 3033559691759633040}
-  - {fileID: 9132025962031925692}
-  - {fileID: 1701366128611419252}
-  - {fileID: 1732906164254993474}
-  - {fileID: 309585269811051455}
-  - {fileID: 3713263334600188084}
-  - {fileID: 8623026625733178209}
-  - {fileID: 2064700093227834820}
-  - {fileID: 7726690186711762011}
-  - {fileID: 4009560506690079147}
-  MoneyText: {fileID: 8388882884857660523}
 --- !u!1 &1422566919589250684
 GameObject:
   m_ObjectHideFlags: 0
@@ -2621,7 +2656,7 @@ MonoBehaviour:
   m_OnEndEdit:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 619900352579477283}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
         m_MethodName: SetExchangeMoney
         m_Mode: 1
@@ -2793,7 +2828,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 619900352579477283}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
         m_MethodName: WithdrawItem
         m_Mode: 1
@@ -2805,7 +2840,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 619900352579477283}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
         m_MethodName: WithdrawMoney
         m_Mode: 1
@@ -15154,7 +15189,7 @@ PrefabInstance:
       addedObject: {fileID: 1192513707701665895}
     - targetCorrespondingSourceObject: {fileID: 3276514708590217796, guid: 25590958c6692c34484b3df37682e164, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 7709727495370817156}
+      addedObject: {fileID: 2475943002552742646}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 6760039074428315498, guid: 25590958c6692c34484b3df37682e164, type: 3}
       insertIndex: -1
@@ -15256,7 +15291,7 @@ MonoBehaviour:
   playerScript: {fileID: 0}
   questUI: {fileID: 4974676479444101778}
   shop: {fileID: 6451796539912290389}
-  storageBox: {fileID: 619900352579477283}
+  storageBox: {fileID: 1414139757966109143}
 --- !u!224 &6224744964114851405 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3276514708590217796, guid: 25590958c6692c34484b3df37682e164, type: 3}

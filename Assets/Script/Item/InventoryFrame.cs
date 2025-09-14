@@ -248,7 +248,7 @@ public class InventoryData
 
         Debug.Log($"인벤토리 데이터 저장 경로: {path}");
     }
-
+    
     public void LoadInventory(string dataName)
     {
         string path = Application.persistentDataPath + $"/{dataName}.json";
