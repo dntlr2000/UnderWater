@@ -272,12 +272,13 @@ MonoBehaviour:
   ItemUI: {fileID: 8728244417897900600}
   inventoryIndex: 0
   boxIndex: 0
-  inventory: {fileID: 0}
+  inventory: {fileID: 3744100515275574478}
   boxUI: {fileID: 6004497488222160022}
   boxName: storageBox
   ifBoxOpen: 0
   inputField: {fileID: 3376709020369875039}
   exchangeMoney: 0
+  linkedViewID: 0
 --- !u!114 &8728244417897900600
 MonoBehaviour:
   m_ObjectHideFlags: 0

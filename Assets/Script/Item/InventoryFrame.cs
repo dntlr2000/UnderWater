@@ -149,6 +149,7 @@ public class InventoryFrame : MonoBehaviour
 
     public int GetItemID(int index)
     {
+        //Debug.Log($"GetItemID가 호출되었습니다 : {inventoryData.id[index]}");
         return inventoryData.id[index];
     }
 
@@ -184,7 +185,7 @@ public class InventoryData
 {
     public int[] quantity;
     public int[] id;
-
+    [NonSerialized] // 명시적으로 직렬화에서 제외
     public ItemDatabase item; //Serializable이 아니므로 이 값이 json으로 저장되진 않음
 
     public int money;
@@ -271,5 +272,36 @@ public class InventoryData
         quantity[index] = item.useItem(id[index], quantity[index]);
     }
 
+    public void InitializeItemDatabase()
+    {
+        if (item == null)
+        {
+            item = new ItemDatabase();
+            item.GenerateData();
+        }
+    }
+
+    /* 버그의 원인이라 기존의 저장 시스템으로 롤백
+    public void SaveToFile(string dataName)
+    {
+        string path = Application.persistentDataPath + $"/{dataName}.json";
+        string json = JsonUtility.ToJson(this, true); // true를 넣어주면 보기 좋게 포맷팅됩니다.
+        File.WriteAllText(path, json);
+        Debug.Log($"인벤토리 데이터 저장 완료: {path}");
+    }
+
+    public static InventoryData LoadFromFile(string dataName)
+    {
+        string path = Application.persistentDataPath + $"/{dataName}.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            InventoryData data = JsonUtility.FromJson<InventoryData>(json);
+            Debug.Log($"인벤토리 데이터 로드 완료: {path}");
+            return data;
+        }
+        return null;
+    }
+    */
 
 }

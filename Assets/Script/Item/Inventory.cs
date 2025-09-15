@@ -1,3 +1,4 @@
+using Photon.Pun;
 using System;
 using System.IO;
 using UnityEngine;
@@ -130,5 +131,20 @@ public class Inventory : InventoryFrame
         return inventoryData.item.getInteractable(inventoryData.id[index]);
     }
 
+    [PunRPC]
+    public void PunRPC_AddItem(int id, int quantity)
+    {
+        GetItem(id, quantity); // 기존에 있던 아이템 추가 로직 호출
+        Debug.Log($"네트워크를 통해 아이템 수신: ID {id}, 수량 {quantity}");
+    }
 
+    [PunRPC]
+    public void PunRPC_SetMoney(int newTotalMoney)
+    {
+        // inventoryData.money -= amount; 와 같이 계산하는 것보다
+        // 서버가 계산한 최종 금액을 그대로 덮어쓰는 것이 동기화에 더 안전합니다.
+        inventoryData.money = newTotalMoney;
+        ItemUI.UpdateMoney(inventoryData.money);
+        Debug.Log($"네트워크를 통해 돈 수신. 현재 잔액: {inventoryData.money}");
+    }
 }
