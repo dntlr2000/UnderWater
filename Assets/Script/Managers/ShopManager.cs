@@ -77,7 +77,7 @@ public class ShopManager : MonoBehaviour
 
     public void BuyItem(int amount = 1)
     {
-        if (shopItems[selectedID] == -1)
+        if (selectedID == -1 || shopItems[selectedID] == -1 || selectedID >= shopItems.Length)
         {
             return;
         }
@@ -100,7 +100,7 @@ public class ShopManager : MonoBehaviour
 
     public void SellItem(int amount = 1)
     {
-        if (inventory.GetItemID(selectedID) == -1)
+        if (selectedID == -1 || inventory.GetItemID(selectedID) == -1)
         {
             Debug.Log("선택된 아이템이 없습니다.");
             return;
@@ -182,6 +182,11 @@ public class ShopManager : MonoBehaviour
             inventoryList[i].itemSlotIcon.texture = inventory.GetIcon(inventory.GetItemID(k)).texture;
         }
 
+        if (selectedID != -1)
+        {
+            if (selectedID < shopList.Length) shopList[selectedID].SetColor();
+            if (selectedID < 30) inventoryList[selectedID % 8].SetColor();
+        }
     }
 
 
@@ -226,7 +231,11 @@ public class ShopManager : MonoBehaviour
 
         }
 
-
+        if (selectedID != -1)
+        {
+            if (selectedID < shopList.Length) shopList[selectedID].SetColor();
+            if (selectedID < 30) inventoryList[selectedID % 8].SetColor();
+        }
     }
 
     public void onScroll(int y)
@@ -241,7 +250,15 @@ public class ShopManager : MonoBehaviour
 
     public void SelectSlot(int index)
     {
+        if (selectedID != -1)
+        {
+            if (selectedID < shopList.Length) shopList[selectedID].SetColor();
+            if (selectedID < 30) inventoryList[selectedID % 8].SetColor();
+        }
+        
         selectedID = index;
+        if (selectedID < shopList.Length) shopList[index].SetColor(110, 123, 150);
+        if (selectedID < 30) inventoryList[index % 8].SetColor(110, 123, 150);
     }
 
 

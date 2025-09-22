@@ -6,6 +6,7 @@ using UnityEngine.EventSystems;
 public class ItemSlot : MonoBehaviour, IDropHandler
 {
     public int SlotID;
+    public RawImage background;
     public RawImage itemSlotIcon;
     //public Texture defaultSlotTexture;
     public TextMeshProUGUI quatitiy;
@@ -46,5 +47,10 @@ public class ItemSlot : MonoBehaviour, IDropHandler
         {
             storageBox.SetBoxIndex(SlotID);
         }
+    }
+
+    public void SetColor(byte r = 63, byte g = 63, byte b = 63)
+    {
+        background.color = new Color32(r, g, b, 71);
     }
 }

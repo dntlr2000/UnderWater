@@ -251,17 +251,22 @@ public class StorageBox : InventoryFrame
 
     public void SetBoxName(string name)
     {
+        
         inventoryName = name;
     }
 
     public void SetBoxIndex(int _index)
     {
+        if (boxIndex != -1) boxUI.SetColors(boxIndex);
         boxIndex = _index;
+        boxUI.SetColors(_index, 110, 123, 150);
     }
 
     public void SetInventorytIndex(int _index)
     {
+        if (inventoryIndex != -1)ItemUI.SetColors(inventoryIndex);
         inventoryIndex = _index;
+        ItemUI.SetColors(_index, 110, 123, 150);
     }
 
 

@@ -190,9 +190,11 @@ MonoBehaviour:
   interactionId: Item
   objectName: Item Box
   player: {fileID: 0}
+  usePhoton: 1
   getAble: 0
   itemID: 1
   amount: 1
+  ifPool: 1
 --- !u!114 &9103384896578973413
 MonoBehaviour:
   m_ObjectHideFlags: 0

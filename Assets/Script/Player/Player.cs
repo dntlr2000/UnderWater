@@ -124,6 +124,8 @@ public class Player : MonoBehaviourPunCallbacks
             Inventory inventory = FindAnyObjectByType<Inventory>();
             inventory.player = this;
             SetUnderwater(true); // 물 상태 변경 및 산소 소모 코루틴 시작
+            RaycastInteract raycastInteract = GetComponent<RaycastInteract>();
+            raycastInteract.enabled= true;
         }
 
         else
@@ -133,7 +135,8 @@ public class Player : MonoBehaviourPunCallbacks
             ThirdViewLook.SetActive(true);
             //this.enabled= false;
             Rigidbody rb = GetComponent<Rigidbody>();
-            
+            RaycastInteract raycastInteract = GetComponent<RaycastInteract>();
+            raycastInteract.enabled = false;
         }
 
         JobSetting();

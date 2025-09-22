@@ -108,4 +108,9 @@ public class ItemUIManager : MonoBehaviour
     {
         MoneyText.text = value.ToString() + "G";
     }
+
+    public void SetColors(int index, byte r = 63, byte g = 63, byte b = 63)
+    {
+        itemSlots[index].SetColor(r, g, b);
+    }
 }
