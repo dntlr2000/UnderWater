@@ -22,6 +22,7 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
     protected int playerId;
     public bool usePhoton;
 
+    //public float cooldownTime;
 
     //이 구조로 구현하면 InteractionType이 필요한가? 싶음. 
     public virtual InteractionType GetInteractionType() => InteractionType.Instant;
@@ -76,7 +77,7 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
 
     public void ResetInteractionState()
     {
-        if (interactionUI != null)
+        if (interactionUI == null)
         {
             Debug.LogWarning("ResetInteractionState을 실행할 수 없습니다.");
             return;
@@ -158,4 +159,6 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
             Destroy(gameObject);
         }
     }
+
+
 }

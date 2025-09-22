@@ -2,13 +2,45 @@ using System;
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
+using Photon.Pun;
+using Photon.Realtime;
 
 public class ItemDatabase : MonoBehaviour //아이템 목록을 인터페이스나 abstract로 구현?
 {
-    //경고 로그가 많이 뜨는 원인이기 때문에 이후에 인스턴스화로 수정 예정
     public ItemData[] items = new ItemData[30];
     private Sprite[] ItemIcons = new Sprite[30];
+    private PhotonView photonView;
 
+    private static ItemDatabase _instance;
+    public static ItemDatabase Instance
+    {
+        get
+        {
+            // 만약 인스턴스가 아직 없다면 씬에서 찾아봅니다.
+            if (_instance == null)
+            {
+                _instance = FindAnyObjectByType<ItemDatabase>();
+                if (_instance == null)
+                {
+                    Debug.LogError("씬에 ItemDatabase 오브젝트가 존재하지 않습니다!");
+                }
+            }
+            return _instance;
+        }
+    }
+
+    private void Awake()
+    {
+        if (_instance != null && _instance != this)
+        {
+            Destroy(this.gameObject);
+        }
+        else
+        {
+            _instance = this;          
+        }
+        GenerateData();
+    }
 
     public void GenerateData()
     {
@@ -184,6 +216,51 @@ public class ItemDatabase : MonoBehaviour //아이템 목록을 인터페이스나 abstract�
         }
 
         return go;
+    }
+
+    public void GenerateItemPhoton(int itemID, int amount, Vector3 Location)
+    {
+        if (photonView == null) { 
+            photonView = GetComponent<PhotonView>(); 
+            if (photonView == null) { Debug.LogError("PhotonView가 존재하지 않습니다!"); }
+        }
+        
+
+        int itemIDToDrop = itemID;
+        int quantityToDrop = amount;
+
+        Vector3 dropLocation = Location;
+
+        photonView.RPC("PunRPC_Master_InstantiateDroppedItem", RpcTarget.MasterClient, itemIDToDrop, quantityToDrop, dropLocation);
+    }
+
+    [PunRPC]
+    public void PunRPC_Master_InstantiateDroppedItem(int itemID, int amount, Vector3 location)
+    {
+        if (!PhotonNetwork.IsMasterClient)
+        {
+            return;
+        }
+
+        string prefabPath = $"FieldItem/Object{itemID}";
+        if (Resources.Load(prefabPath) == null)
+        {
+            prefabPath = "FieldItem/Object1";
+        }
+        GameObject droppedItem = PhotonNetwork.Instantiate(prefabPath, location, Quaternion.identity);
+
+        if (droppedItem != null)
+        {
+            PhotonView itemView = droppedItem.GetComponent<PhotonView>();
+            if (itemView != null)
+            {
+                itemView.RPC("PunRPC_SetItemProperties", RpcTarget.All, itemID, amount);
+            }
+            else
+            {
+                Debug.LogError($"Dropped item prefab '{prefabPath}' is missing a PhotonView component.");
+            }
+        }
     }
 }
 

@@ -152,7 +152,7 @@ public class Inventory : InventoryFrame
     public bool HoldingInteractableItem() //들고 있을 때 상호작용 가능한 아이템인지 확인 =>InteractableObject와 연계
     {
         if (inventoryData.id[index] == -1) return true;
-        return inventoryData.item.getInteractable(inventoryData.id[index]);
+        return ItemDatabase.Instance.getInteractable(inventoryData.id[index]);
     }
 
     [PunRPC]

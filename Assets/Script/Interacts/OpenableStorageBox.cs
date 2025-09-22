@@ -23,10 +23,10 @@ public class OpenableStorageBox : InteractableObject
         // 마스터 클라이언트만 초기 데이터를 생성합니다.
         if (PhotonNetwork.IsMasterClient)
         {
-            storageData = new InventoryData();
+            storageData = new InventoryData(); // InventoryData 객체는 우선 생성
             storageData.GenerateData();
             storageData.LoadInventory(boxName);
-
+            //storageData.LoadInventory(boxName);
             Debug.Log("storageData를 생성하였습니다.");
         }
     }
@@ -155,7 +155,7 @@ public class OpenableStorageBox : InteractableObject
         else
         {
             Debug.LogError($"ID {requesterViewID}를 가진 요청자를 찾을 수 없습니다.");
-            // (아이템 지급 실패 시 아이템을 다시 창고에 넣는 등의 예외 처리가 필요할 수 있습니다)
+
         }
     }
 
@@ -164,23 +164,22 @@ public class OpenableStorageBox : InteractableObject
     private void SyncDataToAll()
     {
         if (!PhotonNetwork.IsMasterClient) return;
-
+        storageData.SaveInventory(boxName);
+        //Debug.Log($"SyncDataToAll - 현재 잔액 : {storageData.money}");
         string jsonData = JsonUtility.ToJson(storageData);
         photonView.RPC("PunRPC_SyncBoxData", RpcTarget.AllBuffered, jsonData);
         Debug.Log("모든 클라이언트에게 창고 데이터 동기화 전송");
 
-        // 데이터가 변경될 때마다 저장하도록 호출
-        //storageData.SaveToFile(boxName);
-        storageData.SaveInventory(boxName);
     }
 
     [PunRPC]
     public void PunRPC_SyncBoxData(string jsonData)
     {
+        //Debug.Log($"PUNRPC_SyncBoxData - 현재 잔액 : {storageData.money}");
         InventoryData data = JsonUtility.FromJson<InventoryData>(jsonData);
-        data.InitializeItemDatabase(); // ItemDatabase 초기화
+        //data.InitializeItemDatabase(); // ItemDatabase 초기화
         this.storageData = data; // 로컬 데이터 업데이트
-
+        //Debug.Log($"PUNRPC_SyncBoxData2 - 현재 잔액 : {storageData.money}");
         // 만약 이 박스의 UI가 현재 열려있다면, UI를 즉시 업데이트
         if (box != null && box.gameObject.activeInHierarchy && box.linkedViewID == photonView.ViewID)
         {
@@ -188,6 +187,7 @@ public class OpenableStorageBox : InteractableObject
             box.UpdateInventoryMenu();
         }
         Debug.Log("창고 데이터 동기화 받음.");
+        //Debug.Log($"PUNRPC_SyncBoxData3 - 현재 잔액 : {storageData.money}");
     }
 
     [PunRPC]
@@ -208,9 +208,10 @@ public class OpenableStorageBox : InteractableObject
         {
             //현재로선 서버에서 각각의 플레이어가 관리하는 재화에 간섭하지 않음
         }
-
+        storageData.SaveInventory();
         //변경된 창고 데이터를 모든 클라이언트에게 동기화
         SyncDataToAll();
+        //Debug.Log($"싱크 완료, 현재 창고 잔액: {storageData.money}");
     }
 
     [PunRPC]
@@ -233,7 +234,7 @@ public class OpenableStorageBox : InteractableObject
                 int newTotalMoney = requesterInventory.GetMoneyData() + amount;
                 requesterPhotonView.RPC("PunRPC_SetMoney", info.Sender, newTotalMoney);
             }
-
+            storageData.SaveInventory();
             //변경된 창고 데이터를 모든 클라이언트에게 동기화.
             SyncDataToAll();
         }
