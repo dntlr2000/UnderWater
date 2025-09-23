@@ -51,6 +51,11 @@ MonoBehaviour:
   - PunRPC_RequestWithdrawMoney
   - PunRPC_SetMoney
   - PunRPC_RequestLatestData
+  - PunRPC_DropItem
+  - PunRPC_Master_InstantiateDroppedItem
+  - PunRPC_SetItemProperties
+  - PunRPC_SpawnItemFromPool
+  - PunRPC_TryToPickup
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
