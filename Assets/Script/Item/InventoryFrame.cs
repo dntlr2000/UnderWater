@@ -42,7 +42,7 @@ public class InventoryFrame : MonoBehaviour
 
                 //inventoryData.item.LoadIcons(inventoryData.id[i]);
 
-                Sprite ItemSprite = inventoryData.item.GetIcons(id);
+                Sprite ItemSprite = ItemDatabase.Instance.GetIcons(id);
                 if (ItemSprite == null)
                 {
                     Debug.LogWarning($"ID가 {id}인 아이템 아이콘을 찾을 수 없습니다.");
@@ -103,7 +103,7 @@ public class InventoryFrame : MonoBehaviour
         {
             inventoryData.id[after] = inventoryData.id[before];
             inventoryData.quantity[after] = inventoryData.quantity[before];
-            ItemSpriteAfter = inventoryData.item.GetIcons(inventoryData.id[after]);
+            ItemSpriteAfter = ItemDatabase.Instance.GetIcons(inventoryData.id[after]);
 
             ItemUI.LoadIcons(after, ItemSpriteAfter);
             ItemUI.SetQuantity(after, inventoryData.quantity[after]);
@@ -121,8 +121,8 @@ public class InventoryFrame : MonoBehaviour
 
             inventoryData.id[before] = tempID;
             inventoryData.quantity[before] = tempQuantity;
-            ItemSpriteAfter = inventoryData.item.GetIcons(inventoryData.id[after]);
-            Sprite ItemSpriteBefore = inventoryData.item.GetIcons(inventoryData.id[before]);
+            ItemSpriteAfter = ItemDatabase.Instance.GetIcons(inventoryData.id[after]);
+            Sprite ItemSpriteBefore = ItemDatabase.Instance.GetIcons(inventoryData.id[before]);
             ItemUI.LoadIcons(after, ItemSpriteAfter);
             ItemUI.SetQuantity(after, inventoryData.quantity[after]);
 
@@ -149,6 +149,7 @@ public class InventoryFrame : MonoBehaviour
 
     public int GetItemID(int index)
     {
+        //Debug.Log($"GetItemID가 호출되었습니다 : {inventoryData.id[index]}");
         return inventoryData.id[index];
     }
 
@@ -164,7 +165,7 @@ public class InventoryFrame : MonoBehaviour
 
     public Sprite GetIcon(int index)
     {
-        return inventoryData.item.GetIcons(index);
+        return ItemDatabase.Instance.GetIcons(index);
     }
 
     public virtual void LoadData()
@@ -184,8 +185,8 @@ public class InventoryData
 {
     public int[] quantity;
     public int[] id;
-
-    public ItemDatabase item; //Serializable이 아니므로 이 값이 json으로 저장되진 않음
+    //[NonSerialized] // 명시적으로 직렬화에서 제외
+    //public ItemDatabase item; //Serializable이 아니므로 이 값이 json으로 저장되진 않음
 
     public int money;
 
@@ -193,8 +194,8 @@ public class InventoryData
     {
         quantity = new int[25];
         id = new int[25];
-        item = new ItemDatabase();
-        item.GenerateData();
+        //item = new ItemDatabase();
+        //item.GenerateData();
 
         for (int i = 0; i < quantity.Length; i++)
         {
@@ -232,7 +233,7 @@ public class InventoryData
     public string GetItemName(int slot)
     {
         int itemId = id[slot];
-        return item.getItemName(itemId);
+        return ItemDatabase.Instance.getItemName(itemId);
     }
 
     //id는 그냥 id[slot]의 값
@@ -248,7 +249,7 @@ public class InventoryData
 
         Debug.Log($"인벤토리 데이터 저장 경로: {path}");
     }
-
+    
     public void LoadInventory(string dataName)
     {
         string path = Application.persistentDataPath + $"/{dataName}.json";
@@ -268,8 +269,38 @@ public class InventoryData
 
     public void useItem(int index)
     {
-        quantity[index] = item.useItem(id[index], quantity[index]);
+        quantity[index] = ItemDatabase.Instance.useItem(id[index], quantity[index]);
     }
 
+    public void InitializeItemDatabase()
+    {
+        if (ItemDatabase.Instance == null)
+        {
+            ItemDatabase.Instance.GenerateData();
+        }
+    }
+
+    /* 버그의 원인이라 기존의 저장 시스템으로 롤백
+    public void SaveToFile(string dataName)
+    {
+        string path = Application.persistentDataPath + $"/{dataName}.json";
+        string json = JsonUtility.ToJson(this, true); // true를 넣어주면 보기 좋게 포맷팅됩니다.
+        File.WriteAllText(path, json);
+        Debug.Log($"인벤토리 데이터 저장 완료: {path}");
+    }
+
+    public static InventoryData LoadFromFile(string dataName)
+    {
+        string path = Application.persistentDataPath + $"/{dataName}.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            InventoryData data = JsonUtility.FromJson<InventoryData>(json);
+            Debug.Log($"인벤토리 데이터 로드 완료: {path}");
+            return data;
+        }
+        return null;
+    }
+    */
 
 }

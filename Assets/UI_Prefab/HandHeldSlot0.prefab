@@ -126,6 +126,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   SlotID: 0
+  background: {fileID: 2711990005715564860}
   itemSlotIcon: {fileID: 2769219541438026153}
   quatitiy: {fileID: 5178713019069159127}
   itemName: {fileID: 8512805797758637439}

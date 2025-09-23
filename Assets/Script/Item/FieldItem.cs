@@ -58,7 +58,10 @@ public class FieldItem : InteractableObject//, Interactable
 
     public override void HoldInteract()
     {
-        GetItem();
+        // 게이지가 다 차면 아이템 습득을 '요청'합니다.
+        RequestGetItem();
+        getAble = false;
+
     }
 
     //현재로서는 Instant, Guage만 정의되어있음
@@ -80,6 +83,31 @@ public class FieldItem : InteractableObject//, Interactable
         Destroy(gameObject);
     }
 
+    public void RequestGetItem()
+    {
+        if (!getAble) return;
+
+        // 자신의 인벤토리를 찾아 PhotonView ID를 마스터에게 보냅니다.
+        // 마스터는 이 ID를 보고 누구에게 아이템을 줘야 할지 알 수 있습니다.
+        Inventory localInventory = FindAnyObjectByType<Inventory>();
+        if (localInventory == null)
+        {
+            Debug.LogError("로컬 인벤토리를 찾을 수 없습니다.");
+            return;
+        }
+
+        PhotonView playerPhotonView = localInventory.GetComponent<PhotonView>();
+        if (playerPhotonView != null)
+        {
+            // 모든 클라이언트가 이 RPC를 호출하지만, 마스터 클라이언트만 응답하게 됩니다.
+            // pv는 FieldItem 자신의 PhotonView를 가리킵니다.
+            pv.RPC("PunRPC_TryToPickup", RpcTarget.MasterClient, playerPhotonView.ViewID);
+        }
+        else
+        {
+            Debug.LogError("플레이어의 PhotonView를 찾을 수 없습니다. Inventory 컴포넌트와 같은 오브젝트에 PhotonView가 있는지 확인하세요.");
+        }
+    }
 
 
     IEnumerator WaitforGetable()
@@ -88,22 +116,70 @@ public class FieldItem : InteractableObject//, Interactable
         getAble = true;
     }
 
-
-    //private void OnTriggerEnter(Collider other) //ItemTemp 스크립트에서 옮겨옴
-    //{
-    //    if (other.tag == "Player")
-    //    {
-    //        Debug.Log("Get Item.");
-    //        gameObject.SetActive(false);
-    //    }
-    //}
-
-    /*
-    private void OnDisable()
+    [PunRPC]
+    private void PunRPC_TryToPickup(int requesterViewID, PhotonMessageInfo info)
     {
-        Debug.Log("Disabled Item.");
-        PoolManager.Instance.ReturnToPool("Item", gameObject);
+        if (!PhotonNetwork.IsMasterClient) return;
 
+        // 아이템이 이미 다른 사람에 의해 파괴되었을 수 있으므로,
+        // 이 오브젝트가 아직 유효한지 확인하는 것이 좋습니다.
+        if (gameObject == null) return;
+
+        Debug.Log($"'{info.Sender.NickName}' (ViewID: {requesterViewID}) 플레이어가 아이템 습득을 요청합니다.");
+
+        // 요청자의 PhotonView를 찾습니다.
+        PhotonView requesterView = PhotonView.Find(requesterViewID);
+        if (requesterView != null)
+        {
+            // 요청자에게만 "PunRPC_AddItem" RPC를 보내 아이템을 인벤토리에 추가하도록 합니다.
+            // (이전에 창고 기능 구현 시 Inventory.cs에 만들어 둔 RPC를 재사용합니다.)
+            requesterView.RPC("PunRPC_AddItem", info.Sender, this.itemID, this.amount);
+
+            // 아이템 지급에 성공했으므로, 이 필드 아이템을 네트워크에서 파괴합니다.
+            // PhotonNetwork.Destroy()는 모든 클라이언트에서 이 오브젝트를 파괴합니다.
+            PhotonNetwork.Destroy(this.gameObject);
+        }
     }
-    */
+
+    public void OnPhotonInstantiate(PhotonMessageInfo info)
+    {
+        Debug.Log($"[RECEIVER CHECK] OnPhotonInstantiate called for {this.gameObject.name}.");
+
+        object[] data = info.photonView.InstantiationData;
+
+        // 1. 데이터가 아예 없는지 확인
+        if (data == null)
+        {
+            //Debug.LogError("[RECEIVER CHECK] Instantiation data is NULL! No data was received.");
+            return;
+        }
+
+        //Debug.Log($"[RECEIVER CHECK] Received data array with length: {data.Length}");
+
+        // 2. 데이터는 있는데 내용물이 부족한지 확인
+        if (data.Length >= 2)
+        {
+            // 3. 데이터가 정상일 경우, 어떤 값을 받았는지 확인
+            int receivedID = (int)data[0];
+            int receivedAmount = (int)data[1];
+            //Debug.Log($"[RECEIVER CHECK] Data received. ID: {receivedID}, Amount: {receivedAmount}");
+
+            this.itemID = receivedID;
+            this.amount = receivedAmount;
+
+            //Debug.Log($"[RECEIVER CHECK] Successfully set this item's ID to {this.itemID}");
+        }
+        else
+        {
+            Debug.LogError("[RECEIVER CHECK] Instantiation data was received, but it's too short!");
+        }
+    }
+
+    [PunRPC]
+    public void PunRPC_SetItemProperties(int id, int amt)
+    {
+        this.itemID = id;
+        this.amount = amt;
+        Debug.Log($"[PROPERTY SET] Item properties received via RPC. ID set to {this.itemID}, Amount to {this.amount}");
+    }
 }

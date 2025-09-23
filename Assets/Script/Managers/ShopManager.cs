@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class ShopManager : MonoBehaviour
 {
     Inventory inventory;
-    ItemDatabase database;
+    //ItemDatabase database;
     public TextMeshProUGUI GoldText;
 
     public bool ifShopOn = false;
@@ -27,8 +27,8 @@ public class ShopManager : MonoBehaviour
 
     private void Start()
     {
-        database = new ItemDatabase();
-        database.GenerateData();
+        //database = new ItemDatabase();
+        //database.GenerateData();
         UpdateMoneyData();
         GenerateShopData(0);
     }
@@ -77,7 +77,7 @@ public class ShopManager : MonoBehaviour
 
     public void BuyItem(int amount = 1)
     {
-        if (shopItems[selectedID] == -1)
+        if (selectedID == -1 || shopItems[selectedID] == -1 || selectedID >= shopItems.Length)
         {
             return;
         }
@@ -100,13 +100,13 @@ public class ShopManager : MonoBehaviour
 
     public void SellItem(int amount = 1)
     {
-        if (inventory.GetItemID(selectedID) == -1)
+        if (selectedID == -1 || inventory.GetItemID(selectedID) == -1)
         {
             Debug.Log("선택된 아이템이 없습니다.");
             return;
         }
 
-        inventory.GetMoney(database.getPrice(inventory.GetItemID(selectedID)) * amount);
+        inventory.GetMoney(ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * amount);
         inventory.RemoveItem(selectedID, amount);
         UpdateSellMenu();
         UpdateMoneyData();
@@ -175,13 +175,18 @@ public class ShopManager : MonoBehaviour
                 inventoryList[i].itemSlotIcon.gameObject.SetActive(false);
                 continue;
             }
-            inventoryList[i].itemName.text = database.getItemName(inventory.GetItemID(k));
-            inventoryList[i].priceText.text = database.getPrice(inventory.GetItemID(k)) + "G";
+            inventoryList[i].itemName.text = ItemDatabase.Instance.getItemName(inventory.GetItemID(k));
+            inventoryList[i].priceText.text = ItemDatabase.Instance.getPrice(inventory.GetItemID(k)) + "G";
             inventoryList[i].quatitiy.text = inventory.GetQuantity(k).ToString();
             //inventoryList[i].itemSlotIcon.texture = database.LoadIcons(inventory.GetItemID(k)).texture;
             inventoryList[i].itemSlotIcon.texture = inventory.GetIcon(inventory.GetItemID(k)).texture;
         }
 
+        if (selectedID != -1)
+        {
+            if (selectedID < shopList.Length) shopList[selectedID].SetColor();
+            if (selectedID < 30) inventoryList[selectedID % 8].SetColor();
+        }
     }
 
 
@@ -219,14 +224,18 @@ public class ShopManager : MonoBehaviour
                 continue;
             }
 
-            shopList[i].itemName.text = database.getItemName(shopItems[i]);
+            shopList[i].itemName.text = ItemDatabase.Instance.getItemName(shopItems[i]);
             shopList[i].priceText.text = shopPrice[i] + "G";
             //shopList[i].quatitiy.text = 
-            shopList[i].itemSlotIcon.texture = database.LoadIcons(shopItems[i]).texture;
+            shopList[i].itemSlotIcon.texture = ItemDatabase.Instance.LoadIcons(shopItems[i]).texture;
 
         }
 
-
+        if (selectedID != -1)
+        {
+            if (selectedID < shopList.Length) shopList[selectedID].SetColor();
+            if (selectedID < 30) inventoryList[selectedID % 8].SetColor();
+        }
     }
 
     public void onScroll(int y)
@@ -241,7 +250,15 @@ public class ShopManager : MonoBehaviour
 
     public void SelectSlot(int index)
     {
+        if (selectedID != -1)
+        {
+            if (selectedID < shopList.Length) shopList[selectedID].SetColor();
+            if (selectedID < 30) inventoryList[selectedID % 8].SetColor();
+        }
+        
         selectedID = index;
+        if (selectedID < shopList.Length) shopList[index].SetColor(110, 123, 150);
+        if (selectedID < 30) inventoryList[index % 8].SetColor(110, 123, 150);
     }
 
 
@@ -263,14 +280,14 @@ public class ShopManager : MonoBehaviour
         for (int i = 0; i < shopItems.Length; i++)
         {
             if (shopItems[i] == -1) continue;
-            shopPrice[i] = 2 * database.items[shopItems[i]].price;
+            shopPrice[i] = 2 * ItemDatabase.Instance.items[shopItems[i]].price;
         }
 
     }
 
     public int GetItemId(int shopId)
     {
-        return database.items[shopId].itemId;
+        return ItemDatabase.Instance.items[shopId].itemId;
     }
 }
 

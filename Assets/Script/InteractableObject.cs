@@ -20,7 +20,9 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
     protected Camera playerCamera;
     protected RaycastHit lastHit;
     protected int playerId;
+    public bool usePhoton;
 
+    //public float cooldownTime;
 
     //이 구조로 구현하면 InteractionType이 필요한가? 싶음. 
     public virtual InteractionType GetInteractionType() => InteractionType.Instant;
@@ -75,7 +77,7 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
 
     public void ResetInteractionState()
     {
-        if (interactionUI != null)
+        if (interactionUI == null)
         {
             Debug.LogWarning("ResetInteractionState을 실행할 수 없습니다.");
             return;
@@ -143,4 +145,20 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
         // PUN에서 조작자 식별이 필요하면 ActorNumber를 함께 저장(옵션)
         playerId = Photon.Pun.PhotonNetwork.LocalPlayer?.ActorNumber ?? -1;
     }
+
+    protected virtual void DestroySelf()
+    {
+        // 포톤을 사용하고 PhotonView가 있다면 네트워크 파괴를 시도합니다.
+        if (usePhoton && pv != null)
+        {
+            DestroyOnPhoton(); // 이 메소드는 이미 마스터/클라이언트 로직을 포함하고 있습니다.
+        }
+        // 포톤을 사용하지 않는 일반 오브젝트라면 그냥 로컬에서 파괴합니다.
+        else if (!usePhoton)
+        {
+            Destroy(gameObject);
+        }
+    }
+
+
 }

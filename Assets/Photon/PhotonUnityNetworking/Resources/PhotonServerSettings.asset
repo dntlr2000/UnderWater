@@ -43,6 +43,14 @@ MonoBehaviour:
   - ChatRPC
   - RequestDestroy
   - RPC_Deactivate
+  - PunRPC_RequestStoreItem
+  - PunRPC_RequestWithdrawItem
+  - PunRPC_SyncBoxData
+  - PunRPC_AddItem
+  - PunRPC_RequestDepositMoney
+  - PunRPC_RequestWithdrawMoney
+  - PunRPC_SetMoney
+  - PunRPC_RequestLatestData
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

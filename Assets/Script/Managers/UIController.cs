@@ -11,7 +11,7 @@ public class UIController : MonoBehaviour
 
     public QuestUI questUI;
     public ShopManager shop;
-    public StorageBox storageBox;
+    public GameObject storageBox;
 
     //private bool ifMouseOn = true;
 
@@ -38,7 +38,7 @@ public class UIController : MonoBehaviour
                 }
 
 
-                else if (storageBox.ifBoxOpen)
+                else if (storageBox.activeSelf)
                 {
                     SetBoxScreen(false);
                     return;
@@ -209,19 +209,20 @@ public class UIController : MonoBehaviour
     
     public void SetBoxScreen(bool state)
     {
+        //StorageBox boxScript = storageBox.GetComponent<StorageBox>();
         if (state)
         {
-            storageBox.gameObject.SetActive(true);
+            storageBox.SetActive(true);
             LockCursor(false);
             Rotatable(false);
-            storageBox.ifBoxOpen = true;
+            //boxScript.ifBoxOpen = true;
         }
         else
         {
-            storageBox.gameObject.SetActive(false);
+            storageBox.SetActive(false);
             LockCursor(true);
             Rotatable(true);
-            storageBox.ifBoxOpen = false;
+            //boxScript.ifBoxOpen = false;
         }
     }
 }
