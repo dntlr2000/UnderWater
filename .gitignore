@@ -74,3 +74,6 @@ crashlytics-build.properties
 
 # photon
 Assets\Settings\UniversalRenderPipelineGlobalSettings.asset
+
+# Firebase generated files
+FirebaseCppApp-*
