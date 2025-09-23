@@ -1,0 +1,162 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8350338907075736697
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1551184367329181870}
+  - component: {fileID: 5381586622865106197}
+  - component: {fileID: 7329042424541274025}
+  m_Layer: 0
+  m_Name: NetworkManger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1551184367329181870
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8350338907075736697}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1537.4578, y: 616.1016, z: 36.843613}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5381586622865106197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8350338907075736697}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
+--- !u!114 &7329042424541274025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8350338907075736697}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dda5b3d68fe27a3408792b0a9be979f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  LoginPanel: {fileID: 0}
+  EmailInput: {fileID: 0}
+  PasswordInput: {fileID: 0}
+  LoginStatusText: {fileID: 0}
+  LoginBtn: {fileID: 0}
+  RegisterBtn: {fileID: 0}
+  RegisterPanel: {fileID: 0}
+  RegisterEmailInput: {fileID: 0}
+  RegisterPasswordInput: {fileID: 0}
+  RegisterPasswordConfirmInput: {fileID: 0}
+  RegisterStatusText: {fileID: 0}
+  RegisterConfirmBtn: {fileID: 0}
+  BackToLoginBtn: {fileID: 0}
+  NicknamePanel: {fileID: 0}
+  NicknameInput: {fileID: 0}
+  NicknameConfirmBtn: {fileID: 0}
+  NicknameStatusText: {fileID: 0}
+  LobbyPanel: {fileID: 0}
+  RoomInput: {fileID: 0}
+  WelcomeText: {fileID: 0}
+  LobbyInfoText: {fileID: 0}
+  CellBtn:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  PreviousBtn: {fileID: 0}
+  NextBtn: {fileID: 0}
+  SettingsBtn: {fileID: 0}
+  SettingsPanel: {fileID: 0}
+  LogoutBtn: {fileID: 0}
+  ExitGameBtn: {fileID: 0}
+  ProfileBtn: {fileID: 0}
+  ProfilePanel: {fileID: 0}
+  ProfileNicknameInput: {fileID: 0}
+  ProfileSaveBtn: {fileID: 0}
+  ProfileStatusText: {fileID: 0}
+  RoomPanel: {fileID: 0}
+  ListText: {fileID: 0}
+  RoomInfoText: {fileID: 0}
+  ChatText:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  ChatInput: {fileID: 0}
+  StartBtn: {fileID: 0}
+  JobSelectPanel: {fileID: 0}
+  JobBtns:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  jobDatas:
+  - {fileID: 11400000, guid: 2020002d21f98b74d8684c677afe6700, type: 2}
+  - {fileID: 11400000, guid: 05196aee36b459248935b95f7bf92fbb, type: 2}
+  - {fileID: 11400000, guid: 8d6ac1c3b82b43d418b4d523dcd4b91d, type: 2}
+  - {fileID: 11400000, guid: 26de992d9af81a74d99eee13f9139a6c, type: 2}
+  PlayerSlots:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  PlayerJobIcons:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  PlayerSlotNames:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  PlayerSlotJobs:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  LoadGameBtn: {fileID: 0}
+  SelectedSaveText: {fileID: 0}
+  SaveListPanel: {fileID: 0}
+  SaveListContent: {fileID: 0}
+  SaveBtnPrefab: {fileID: 8046619416615970518, guid: 7ad8a5bfcf65c244381dac79867b777e, type: 3}
+  StatusText: {fileID: 0}
+  PV: {fileID: 5381586622865106197}
+  currentUserId: 
+  currentNickname: 

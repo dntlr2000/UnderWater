@@ -1,11 +1,14 @@
 using Photon.Pun;
 using System;
-using System.Net.NetworkInformation;
 using UnityEngine;
+using Firebase.Database;
+using Firebase.Extensions;
+using Firebase;
 
 public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
+    public DatabaseReference dbRef;
 
     private void Awake()
     {
@@ -16,9 +19,12 @@ public class SaveManager : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        dbRef = FirebaseDatabase.GetInstance(FirebaseApp.DefaultInstance,
+            "https://theoverflown-5908d-default-rtdb.firebaseio.com/").RootReference;
     }
 
-    public float autoSaveInterval = 60f; // 1분마다 저장
+    public float autoSaveInterval = 60f;
     private float timer;
 
     void Update()
@@ -38,8 +44,48 @@ public class SaveManager : MonoBehaviour
         if (!PhotonNetwork.IsMasterClient) return;
 
         SaveData data = CollectSaveData();
-        SaveSystem.Save(data);
-        Debug.Log(Application.persistentDataPath);
+        string userId = NetworkManager.Instance.currentUserId;
+        string nickname = NetworkManager.Instance.currentNickname;
+
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            Debug.LogWarning("[SaveManager] 로그인된 유저가 없습니다.");
+            return;
+        }
+
+        // 1. 로컬 저장
+        SaveSystem.Save(data, userId);
+        Debug.Log("[SaveManager] 로컬 저장 완료: " + Application.persistentDataPath);
+
+        // 2. Firebase 저장
+        SaveUserInfoToFirebase(userId, nickname);
+        SaveGameToFirebase(userId, data);
+    }
+
+    private void SaveUserInfoToFirebase(string userId, string nickname)
+    {
+        dbRef.Child("users").Child(userId).Child("nickname").SetValueAsync(nickname)
+            .ContinueWithOnMainThread(task =>
+            {
+                if (task.IsCompleted)
+                    Debug.Log("[SaveManager] Firebase 유저 정보 저장 완료");
+                else
+                    Debug.LogError("[SaveManager] Firebase 유저 정보 저장 실패: " + task.Exception);
+            });
+    }
+
+    private void SaveGameToFirebase(string userId, SaveData data)
+    {
+        string json = JsonUtility.ToJson(data);
+        dbRef.Child("saves").Child(userId).Child(data.saveId).SetRawJsonValueAsync(json)
+            .ContinueWithOnMainThread(task =>
+            {
+                if (task.IsCompleted)
+                    Debug.Log("[SaveManager] Firebase 클라우드 세이브 완료");
+                else
+                    Debug.LogError("[SaveManager] Firebase 세이브 실패: " + task.Exception);
+            });
     }
 
     private SaveData CollectSaveData()
@@ -48,17 +94,16 @@ public class SaveManager : MonoBehaviour
 
         SaveData data = new SaveData(roomName);
         data.saveId = Guid.NewGuid().ToString();
-        data.roomName = PhotonNetwork.CurrentRoom.Name;
+        data.roomName = roomName;
         data.createdDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
 
-        // 예시: 게임 상태 반영
-        data.dayCount = 5; // (게임에서 실제 값 넣기)
+        data.dayCount = 5; // 실제 게임 값
         foreach (var player in PhotonNetwork.PlayerList)
         {
             PlayerData pd = new PlayerData();
             pd.playerId = player.UserId ?? player.NickName;
-            pd.position = new PlayerLocation(Vector3.zero); // 실제 위치 가져오기
-            pd.items = new Item[0]; // 인벤토리 저장
+            pd.position = new PlayerLocation(Vector3.zero);
+            pd.items = new Item[0];
             data.players.Add(pd);
         }
 
