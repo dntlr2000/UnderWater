@@ -6,6 +6,10 @@ using UnityEngine;
 public class QuestManager : MonoBehaviour
 {
     public static QuestManager Instance;
+
+    public int CurrentQuestId => activeQuests.Count > 0 ? int.Parse(activeQuests[0].questID) : 0;
+    public int Difficulty => 1;
+
     public List<QuestData> allQuests;
 
     private HashSet<string> completedQuests = new();

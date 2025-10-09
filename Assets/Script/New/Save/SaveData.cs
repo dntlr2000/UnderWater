@@ -21,6 +21,10 @@ public class SaveData
     {
         this.roomName = roomName;
         this.createdDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        this.dayCount = 0;
+        this.jobAssignments = new Dictionary<string, int>(); // ¡ç ²À ÇÊ¿ä
+        this.players = new List<PlayerData>();
+        this.worldProgress = new WorldProgress();
     }
 }
 
@@ -30,6 +34,7 @@ public class PlayerData
     public string playerId;
     public PlayerLocation position;
     public Item[] items;
+    public int jobIndex;
 }
 
 [Serializable]
@@ -50,7 +55,7 @@ public class Item
 [Serializable]
 public class WorldProgress
 {
-    public int QuestID;
+    public string QuestID;
     public int Difficulty;
     public int SubmarinePowerLevel;
 }

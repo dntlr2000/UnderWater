@@ -465,6 +465,16 @@ public class Player : MonoBehaviourPunCallbacks
     #endregion
 
     #region Job Assignment
+    public int? JobIndex
+    {
+        get
+        {
+            if (photonView.Owner.CustomProperties.TryGetValue("JobIndex", out object jobIndexObj))
+                return (int)jobIndexObj;
+            return null;
+        }
+    }
+
     public void SetJob(int jobIndex)
     {
         if (jobIndex < 0 || jobIndex >= allJobs.Length)
@@ -488,22 +498,27 @@ public class Player : MonoBehaviourPunCallbacks
 
     public void JobSetting()
     {
-        if (photonView.Owner.CustomProperties.TryGetValue("JobIndex", out object jobIndexObj))
+        if (JobIndex.HasValue && currentJob == null)
         {
-            int jobIndex = (int)jobIndexObj;
-            if (jobIndex >= 0 && jobIndex < allJobs.Length)
-            {
-                currentJob = allJobs[jobIndex];
-                Debug.Log($"{photonView.Owner.NickName} 직업 세팅: {currentJob.jobName}");
-                QuestManager.Instance.TryUnlockQuests(currentJob);
-            }
+            int index = JobIndex.Value;
+            currentJob = allJobs[index];
+            Debug.Log($"{photonView.Owner.NickName} 직업 세팅: {currentJob.jobName}");
+            QuestManager.Instance.TryUnlockQuests(currentJob);
         }
         else
         {
             Debug.LogWarning($"{photonView.Owner.NickName} 은(는) 아직 직업이 없습니다.");
         }
-
     }
     #endregion
+
+    public void TeleportTo(Vector3 newPos)
+    {
+        if (!photonView.IsMine) return;
+
+        rb.position = newPos;
+        rb.linearVelocity = Vector3.zero; // 순간이동이므로 속도 초기화
+        transform.position = newPos;
+    }
 
 }

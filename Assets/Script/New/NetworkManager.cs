@@ -14,21 +14,22 @@ using Firebase;
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
     #region UI
-    [Header("Login/Register UI")]
+    [Header("Login UI")]
     public GameObject LoginPanel;
     public InputField EmailInput;
     public InputField PasswordInput;
-    public Text LoginStatusText;
     public Button LoginBtn;
     public Button RegisterBtn;
+    public Text LoginStatusText;
 
+    [Header("Register UI")]
     public GameObject RegisterPanel;
     public InputField RegisterEmailInput;
     public InputField RegisterPasswordInput;
     public InputField RegisterPasswordConfirmInput;
-    public Text RegisterStatusText;
     public Button RegisterConfirmBtn;
     public Button BackToLoginBtn;
+    public Text RegisterStatusText;
 
     [Header("Nickname UI")]
     public GameObject NicknamePanel;
@@ -46,17 +47,12 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public Button NextBtn;
     public Button SettingsBtn;
 
-    [Header("Settings UI")]
-    public GameObject SettingsPanel;
-    public Button LogoutBtn;
-    public Button ExitGameBtn;
-    public Button ProfileBtn;
-
-    [Header("Profile UI")]
-    public GameObject ProfilePanel;
-    public InputField ProfileNicknameInput;
-    public Button ProfileSaveBtn;
-    public Text ProfileStatusText;
+    //Save Pannel
+    public Button LoadGameBtn;
+    public Text SaveSelectText;
+    public GameObject SaveListPanel;
+    public Transform SaveListContent;
+    public GameObject SaveBtnPrefab;
 
     [Header("Room UI")]
     public GameObject RoomPanel;
@@ -66,23 +62,28 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public InputField ChatInput;
     public Button StartBtn;
 
-    [Header("JobSelectPanel")]
+    //Job Pannel
     public GameObject JobSelectPanel;
     public Button[] JobBtns;
     public JobData[] jobDatas;
 
-    [Header("PlayerSlotPanel")]
+    //PlayerSlotsPannel
     public GameObject[] PlayerSlots;
     public Image[] PlayerJobIcons;
     public Text[] PlayerSlotNames;
     public Text[] PlayerSlotJobs;
 
-    [Header("Save System UI")]
-    public Button LoadGameBtn;
-    public Text SelectedSaveText;
-    public GameObject SaveListPanel;
-    public Transform SaveListContent;
-    public GameObject SaveBtnPrefab;
+    [Header("Settings UI")]
+    public GameObject SettingsPanel;
+    public Button LogoutBtn;
+    public Button ExitGameBtn;
+    public Button ProfileBtn;
+
+    //ProfilePannel
+    public GameObject ProfilePanel;
+    public InputField ProfileNicknameInput;
+    public Button ProfileSaveBtn;
+    public Text ProfileStatusText;
 
     [Header("ETC")]
     public Text StatusText;
@@ -97,6 +98,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     private string selectedSaveRoomName = null;
     private List<RoomInfo> myList = new List<RoomInfo>();
     private int currentPage = 1, maxPage, multiple;
+    public RoomData currentRoomData = new RoomData();
 
     #region 서버연결
     private void Awake()
@@ -248,6 +250,9 @@ public class NetworkManager : MonoBehaviourPunCallbacks
                 FirebaseUser user = task.Result.User;
                 currentUserId = user.UserId;
 
+                PhotonNetwork.AuthValues = new AuthenticationValues();
+                PhotonNetwork.AuthValues.UserId = currentUserId;
+
                 // 닉네임 확인
                 dbRef.Child("users").Child(currentUserId).Child("nickname")
                     .GetValueAsync().ContinueWithOnMainThread(nickTask =>
@@ -278,7 +283,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     }
     #endregion
 
-    #region 닉네임 입력 처리
+       #region 닉네임 입력 처리
     private void ConfirmNickname()
     {
         string nickname = NicknameInput.text.Trim();
@@ -364,7 +369,9 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         NicknamePanel.SetActive(false);
         LobbyPanel.SetActive(true);
 
-        PhotonNetwork.ConnectUsingSettings();
+        if (!PhotonNetwork.IsConnected)
+            PhotonNetwork.ConnectUsingSettings();
+
         RefreshSaveList();
     }
 
@@ -416,7 +423,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     public void OnClick_SelectSave(string roomName)
     {
         selectedSaveRoomName = roomName;
-        SelectedSaveText.text = $"선택된 저장: {roomName}";
+        SaveSelectText.text = $"선택된 저장: {roomName}";
         SaveListPanel.SetActive(false);
     }
 
@@ -530,33 +537,61 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     private void CreateRoom(SaveData data)
     {
+        // SaveData 저장
         SaveSystem.Save(data, currentUserId);
 
-        string roomName = string.IsNullOrEmpty(RoomInput.text) ? "Room" + UnityEngine.Random.Range(0, 100) : RoomInput.text;
-        RoomOptions options = new RoomOptions { MaxPlayers = 2 };
-        ExitGames.Client.Photon.Hashtable roomProps = new ExitGames.Client.Photon.Hashtable();
-        roomProps["SaveData"] = JsonUtility.ToJson(data);
-        options.CustomRoomProperties = roomProps;
-        options.CustomRoomPropertiesForLobby = new string[] { "SaveData" };
+        // 새로운 RoomData 생성
+        currentRoomData = new RoomData();
+        currentRoomData.LoadFromSaveData(data); // SaveData 기반으로 초기화하는 메서드 필요
+
+        string roomName = string.IsNullOrEmpty(data.roomName) ? "Room" + UnityEngine.Random.Range(0, 100) : data.roomName;
+
+        RoomOptions options = new RoomOptions
+        {
+            MaxPlayers = 2,
+            IsVisible = true,
+            IsOpen = true,
+            CustomRoomProperties = new ExitGames.Client.Photon.Hashtable { { "SaveData", JsonUtility.ToJson(data) } },
+            CustomRoomPropertiesForLobby = new string[] { "SaveData" }
+        };
 
         PhotonNetwork.CreateRoom(roomName, options);
     }
+    
 
     public void JoinRandomRoom() => PhotonNetwork.JoinRandomRoom();
     public void LeaveRoom() => PhotonNetwork.LeaveRoom();
 
     public override void OnJoinedRoom()
     {
+       if (!CanJoinRoom(currentUserId))
+        {
+            Debug.LogWarning("방이 이미 가득 찼습니다.");
+            PhotonNetwork.LeaveRoom();
+            return;
+        }
+
         RoomPanel.SetActive(true);
         RoomRenewal();
         ChatInput.text = "";
         for (int i = 0; i < ChatText.Length; i++) ChatText[i].text = "";
 
         StartBtn.interactable = PhotonNetwork.IsMasterClient;
-        Debug.Log("Room joined: " + PhotonNetwork.CurrentRoom.Name);
 
         SetupJobButtons();
         RefreshPlayerSlots();
+
+        int slotIndex = GetSlotIndex(currentUserId);
+        if (slotIndex >= 0 && currentRoomData.jobIndices[slotIndex] >= 0)
+        {
+            var props = PhotonNetwork.LocalPlayer.CustomProperties
+                        ?? new ExitGames.Client.Photon.Hashtable();
+
+            props["JobIndex"] = currentRoomData.jobIndices[slotIndex];
+            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+
+            Debug.Log($"[OnJoinedRoom] 직업 복원됨: {currentRoomData.jobIndices[slotIndex]}");
+        }
     }
 
     public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
@@ -568,6 +603,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
     {
+        currentRoomData.RemovePlayer(otherPlayer.UserId);
         RoomRenewal();
         ChatRPC("System", "<color=yellow>" + otherPlayer.NickName + "님이 퇴장하셨습니다.</color>");
         RefreshPlayerSlots();
@@ -586,6 +622,19 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         RoomInfoText.text = PhotonNetwork.CurrentRoom.Name + " / " + PhotonNetwork.CurrentRoom.PlayerCount + "/" + PhotonNetwork.CurrentRoom.MaxPlayers;
     }
 
+    private bool CanJoinRoom(string userId)
+    {
+        if (currentRoomData.IsFull())
+        {
+            Debug.Log("방이 가득 찼습니다.");
+            return false;
+        }
+
+        int slotIndex;
+        bool added = currentRoomData.AddPlayer(userId, -1, out slotIndex); // 직업 미선택 상태
+        return added;
+    }
+    
     public void StartGame()
     {
         // 마스터 클라이언트만 실행 가능
@@ -685,8 +734,18 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         props["JobIndex"] = index;
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
 
+        // RoomData에 반영
+        currentRoomData.jobIndices[GetSlotIndex(currentUserId)] = index;
+
         JobBtns[index].GetComponent<Image>().color = Color.green;
         RefreshJobButtons();
+    }
+
+    private int GetSlotIndex(string userId)
+    {
+        for (int i = 0; i < currentRoomData.playerIds.Length; i++)
+            if (currentRoomData.playerIds[i] == userId) return i;
+        return -1;
     }
 
     public void CancelJob()
@@ -696,6 +755,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         ExitGames.Client.Photon.Hashtable props = new();
         props["JobIndex"] = null;
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+        currentRoomData.ResetJob(currentUserId);
         RefreshJobButtons();
         RefreshPlayerSlots();
     }

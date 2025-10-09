@@ -550,7 +550,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a84ec6341c85b2449bfae9321bb3abd7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  autoSaveInterval: 10
+  autoSaveInterval: 1
 --- !u!4 &797756021
 Transform:
   m_ObjectHideFlags: 0
@@ -1340,6 +1340,14 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 238344373}
+    - target: {fileID: 2905758427526575573, guid: 211fecf452163bc49b4f12f43ccad3ab, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 23.77002
+      objectReference: {fileID: 0}
+    - target: {fileID: 2905758427526575573, guid: 211fecf452163bc49b4f12f43ccad3ab, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 27.212646
+      objectReference: {fileID: 0}
     - target: {fileID: 3123824522720770632, guid: 211fecf452163bc49b4f12f43ccad3ab, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
