@@ -56,6 +56,19 @@ MonoBehaviour:
   - PunRPC_SetItemProperties
   - PunRPC_SpawnItemFromPool
   - PunRPC_TryToPickup
+  - PunRPC_ActivateMonster
+  - PunRPC_ReturnMonster
+  - RequestTakeDamage
+  - RPC_ActivateMonster
+  - RPC_DeactivateMonster
+  - TakeDamage
+  - RPC_AddToPoolAndDeactivate
+  - RPC_ActivateMonsterFromPool
+  - RPC_ClearAllMonsters
+  - RPC_ReturnMonsterToPool
+  - PunRPC_Master_InstantiateMonster
+  - PunRPC_MonsterDeath
+  - PunRPC_MonsterDamaged
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

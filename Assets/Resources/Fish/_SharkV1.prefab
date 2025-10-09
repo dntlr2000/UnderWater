@@ -50,7 +50,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 7195ce3486cad4143bd73d5f1874582a, type: 3}
       propertyPath: m_Name
-      value: SharkV1
+      value: _SharkV1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 7195ce3486cad4143bd73d5f1874582a, type: 3}
+      propertyPath: m_Layer
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 7195ce3486cad4143bd73d5f1874582a, type: 3}
       propertyPath: m_TagString
@@ -69,6 +73,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7195ce3486cad4143bd73d5f1874582a, type: 3}
       insertIndex: -1
       addedObject: {fileID: -5622271723025267695}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7195ce3486cad4143bd73d5f1874582a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4237461370065666325}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7195ce3486cad4143bd73d5f1874582a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7937231216336038825}
   m_SourcePrefab: {fileID: 100100000, guid: 7195ce3486cad4143bd73d5f1874582a, type: 3}
 --- !u!1 &2481737945546529250 stripped
 GameObject:
@@ -87,6 +97,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aea7e54f90ded9547a7a2298e67b1854, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cursorType: Item
+  objectName: Shark
+  player: {fileID: 0}
+  usePhoton: 0
   moveSpeed: 5
   health: 100
   atkPower: 5
@@ -98,14 +112,14 @@ MonoBehaviour:
   attackCooldown: 1
   waterAreaCenter: {fileID: 0}
   waterAreaRadius: 10
-  dropItemPrefab: {fileID: 5499226335458221130, guid: ad5963ba44c953b41beb2488d266b2bf, type: 3}
+  dropItemID: 2
   detectionRadius: 8
   loseTargetDistance: 8
   detectionLayers:
     serializedVersion: 2
     m_Bits: 256
   yawOffset: 0
-  runOnlyOnMaster: 0
+  runOnlyOnMaster: 1
   prefabReference: {fileID: 0}
 --- !u!54 &6639983193208047608
 Rigidbody:
@@ -157,3 +171,42 @@ CapsuleCollider:
   m_Height: 1.8705173
   m_Direction: 1
   m_Center: {x: -0.020836353, y: 0.2958555, z: 0}
+--- !u!114 &4237461370065666325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2481737945546529250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents:
+  - {fileID: 7937231216336038825}
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
+--- !u!114 &7937231216336038825
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2481737945546529250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 627855c7f81362d41938ffe0b1475957, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SynchronizePosition: 1
+  m_SynchronizeRotation: 1
+  m_SynchronizeScale: 0
+  m_UseLocal: 1

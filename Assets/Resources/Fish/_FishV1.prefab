@@ -50,7 +50,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: c41089af0c83b284dabba5a325fd5b55, type: 3}
       propertyPath: m_Name
-      value: FishV1
+      value: _FishV1
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: c41089af0c83b284dabba5a325fd5b55, type: 3}
       propertyPath: m_TagString
@@ -69,6 +69,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c41089af0c83b284dabba5a325fd5b55, type: 3}
       insertIndex: -1
       addedObject: {fileID: -3281089932168983405}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c41089af0c83b284dabba5a325fd5b55, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6295411663391283408}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c41089af0c83b284dabba5a325fd5b55, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -5475533558609461803}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c41089af0c83b284dabba5a325fd5b55, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -6922788727584325343}
   m_SourcePrefab: {fileID: 100100000, guid: c41089af0c83b284dabba5a325fd5b55, type: 3}
 --- !u!1 &8684196987250108431 stripped
 GameObject:
@@ -87,6 +96,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aea7e54f90ded9547a7a2298e67b1854, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cursorType: Set CursorType Name
+  objectName: Object Name
+  player: {fileID: 0}
+  usePhoton: 0
   moveSpeed: 5
   health: 50
   atkPower: 0
@@ -98,14 +111,14 @@ MonoBehaviour:
   attackCooldown: 1
   waterAreaCenter: {fileID: 0}
   waterAreaRadius: 50
-  dropItemPrefab: {fileID: 5499226335458221130, guid: ad5963ba44c953b41beb2488d266b2bf, type: 3}
+  dropItemID: -1
   detectionRadius: 8
   loseTargetDistance: 8
   detectionLayers:
     serializedVersion: 2
     m_Bits: 256
   yawOffset: 0
-  runOnlyOnMaster: 0
+  runOnlyOnMaster: 1
   prefabReference: {fileID: 0}
 --- !u!54 &7878964036163408432
 Rigidbody:
@@ -157,3 +170,59 @@ CapsuleCollider:
   m_Height: 0.30905968
   m_Direction: 1
   m_Center: {x: 0.0056705624, y: -0.022156887, z: 0}
+--- !u!114 &6295411663391283408
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8684196987250108431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents:
+  - {fileID: -5475533558609461803}
+  - {fileID: -6922788727584325343}
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
+--- !u!114 &-5475533558609461803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8684196987250108431}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 627855c7f81362d41938ffe0b1475957, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SynchronizePosition: 1
+  m_SynchronizeRotation: 1
+  m_SynchronizeScale: 0
+  m_UseLocal: 1
+--- !u!114 &-6922788727584325343
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8684196987250108431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64179f3720bbfe947b7724caa67b7c1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SynchronizeVelocity: 1
+  m_SynchronizeAngularVelocity: 0
+  m_TeleportEnabled: 0
+  m_TeleportIfDistanceGreaterThan: 3

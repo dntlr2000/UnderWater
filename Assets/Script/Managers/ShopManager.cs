@@ -25,6 +25,18 @@ public class ShopManager : MonoBehaviour
     int[] shopItems; //상점에 팔 아이템 ID 저장
     int[] shopPrice; //상점 품목 별 가격
 
+    public RawImage comfirmScreen;
+    public TextMeshProUGUI ItemNameText; //구매 또는 판매임을 알리는 텍스트
+    public TextMeshProUGUI amountText;
+    public TextMeshProUGUI priceText;
+    public int amount;
+    protected int price;
+    //protected bool ifBuyComfirm;
+    public Button buyComfirmButton;
+    public Button sellComfirmButton;
+    public Scrollbar amountBar;
+
+
     private void Start()
     {
         //database = new ItemDatabase();
@@ -58,7 +70,7 @@ public class ShopManager : MonoBehaviour
         }
     }
 
-    void UpdateMoneyData()
+    public void UpdateMoneyData()
     {
         if (inventory == null)
         {
@@ -81,14 +93,14 @@ public class ShopManager : MonoBehaviour
         {
             return;
         }
-        if (inventory.GetMoneyData() < shopPrice[selectedID])
+        if (inventory.GetMoneyData() < shopPrice[selectedID] * amount)
         {
             Debug.Log("돈이 부족합니다!");
             return;
         }
 
-        inventory.GetMoney(-shopPrice[selectedID]);
-        inventory.GetItem(shopItems[selectedID]);
+        inventory.GetMoney(-shopPrice[selectedID] * amount);
+        inventory.GetItem(shopItems[selectedID], amount);
         UpdateMoneyData();
 
     }
@@ -105,6 +117,7 @@ public class ShopManager : MonoBehaviour
             Debug.Log("선택된 아이템이 없습니다.");
             return;
         }
+        if (amount > inventory.GetQuantity(selectedID)) return;
 
         inventory.GetMoney(ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * amount);
         inventory.RemoveItem(selectedID, amount);
@@ -276,6 +289,7 @@ public class ShopManager : MonoBehaviour
 
         shopItems[0] = 0;
         shopItems[1] = 1;
+        shopItems[2] = 2;
 
         for (int i = 0; i < shopItems.Length; i++)
         {
@@ -288,6 +302,53 @@ public class ShopManager : MonoBehaviour
     public int GetItemId(int shopId)
     {
         return ItemDatabase.Instance.items[shopId].itemId;
+    }
+
+    public void SetComfirmScreen(bool ifBuy)
+    {
+       
+        comfirmScreen.gameObject.SetActive(true);
+
+        if (ifBuy) //구매 모드
+        {
+            ItemNameText.text = ItemDatabase.Instance.items[shopItems[selectedID]].itemName;
+            sellComfirmButton.gameObject.SetActive(false);
+            buyComfirmButton.gameObject.SetActive(true);
+        }
+
+        if (!ifBuy) //판매 모드
+        {
+            ItemNameText.text = ItemDatabase.Instance.items[inventory.GetItemID(selectedID)].itemName;
+            sellComfirmButton.gameObject.SetActive(true);
+            buyComfirmButton.gameObject.SetActive(false);
+        }
+        amount = 1;
+        amountBar.value = 0;
+        amountText.text = "1 / 10";
+        priceText.text = "\\ " + (shopPrice[selectedID] * amount);
+    }
+
+    public void DisableComfirmScreen()
+    {
+        comfirmScreen.gameObject.SetActive(false);
+        return;
+    }
+
+    public void ComfirmBuy()
+    {
+        BuyItem(amount);
+    }
+
+    public void ComfirmSell()
+    {
+        SellItem(amount);
+    }
+
+    public void onScrollAmountChanged()
+    {
+        amount = Mathf.RoundToInt(amountBar.value * (amountBar.numberOfSteps - 1)) + 1;
+        amountText.text = $"{amount} / 10";
+        priceText.text = "\\ " + (shopPrice[selectedID] * amount);
     }
 }
 

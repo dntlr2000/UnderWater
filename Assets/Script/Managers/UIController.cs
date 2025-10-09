@@ -198,10 +198,15 @@ public class UIController : MonoBehaviour
         {
             shop.gameObject.SetActive(true);
             shop.ifShopOn = true;
+            shop.UpdateMoneyData();
+            
         }
 
         else
         {
+            shop.DisableComfirmScreen();
+            shop.SetBuyMenu(false);
+            shop.SetSellMenu(false);
             shop.gameObject.SetActive(false);
             shop.ifShopOn = false;
         }
@@ -219,10 +224,14 @@ public class UIController : MonoBehaviour
         }
         else
         {
+            StorageBox storage = FindAnyObjectByType<StorageBox>();
+            storage.DisableComfirmScreen();
             storageBox.SetActive(false);
             LockCursor(true);
             Rotatable(true);
             //boxScript.ifBoxOpen = false;
+            
+            //storage.ifBoxOpen= false;
         }
     }
 }

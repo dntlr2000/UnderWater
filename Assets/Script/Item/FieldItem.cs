@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class FieldItem : InteractableObject//, Interactable
 {
-    public bool getAble = true;
+    //public bool getAble = true;
     public int itemID; //연관된 아이템 DB의 아이디
     public int amount; //개수
     //public int durability = -1;
@@ -26,14 +26,14 @@ public class FieldItem : InteractableObject//, Interactable
         //Debug.Log("Item Detected");
         if (GetInteractionType() == InteractionType.Instant)
         {
-            if (getAble && Input.GetMouseButtonDown(1))
+            if (isInteractable && Input.GetMouseButtonDown(1))
             {
                 //Debug.Log("아이템 습득 시도");
                 GetItem();
                 RPC_Deactivate();
             }
 
-            if (getAble && Input.GetKey(KeyCode.E))
+            if (isInteractable && Input.GetKey(KeyCode.E))
             {
                 UpdateGuage(true, holdDuration);
             }
@@ -44,7 +44,7 @@ public class FieldItem : InteractableObject//, Interactable
         }
         else
         {
-            if (getAble && Input.GetMouseButton(1))
+            if (isInteractable && Input.GetMouseButton(1))
             {
                 UpdateGuage(true, holdDuration);
             }
@@ -60,7 +60,7 @@ public class FieldItem : InteractableObject//, Interactable
     {
         // 게이지가 다 차면 아이템 습득을 '요청'합니다.
         RequestGetItem();
-        getAble = false;
+        isInteractable = false;
 
     }
 
@@ -85,7 +85,7 @@ public class FieldItem : InteractableObject//, Interactable
 
     public void RequestGetItem()
     {
-        if (!getAble) return;
+        if (!isInteractable) return;
 
         // 자신의 인벤토리를 찾아 PhotonView ID를 마스터에게 보냅니다.
         // 마스터는 이 ID를 보고 누구에게 아이템을 줘야 할지 알 수 있습니다.
@@ -113,7 +113,7 @@ public class FieldItem : InteractableObject//, Interactable
     IEnumerator WaitforGetable()
     {
         yield return new WaitForSeconds(2f);
-        getAble = true;
+        isInteractable = true;
     }
 
     [PunRPC]

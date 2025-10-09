@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using Photon.Pun;
 
 
 [System.Serializable]
@@ -20,11 +21,16 @@ public class MonsterManager : MonoBehaviour
     private Dictionary<GameObject, Queue<GameObject>> monsterPools = new Dictionary<GameObject, Queue<GameObject>>();
     private List<Monster> activeMonsters = new List<Monster>();
 
+    private PhotonView photonView;
+
     private void Awake()
     {
-        if (Instance == null) 
+        if (Instance == null)
+        {
             Instance = this;
-        else 
+            photonView = GetComponent<PhotonView>();
+        }
+        else
             Destroy(gameObject);
     }
 
@@ -64,7 +70,7 @@ public class MonsterManager : MonoBehaviour
     /// <summary>
     /// 몬스터 스폰
     /// </summary>
-    public Monster SpawnMonster(GameObject prefab, Vector3 position)
+    public Monster SpawnMonsterPool(GameObject prefab, Vector3 position)
     {
         GameObject obj;
 
@@ -106,13 +112,13 @@ public class MonsterManager : MonoBehaviour
     public void ReturnMonster(GameObject prefab, Monster monster)
     {
         if (monster == null) return;
-/*        Debug.Log($"[Return] {monster.name} 반환됨 / prefab={(prefab != null ? prefab.name : "null")}");*/
+        /*        Debug.Log($"[Return] {monster.name} 반환됨 / prefab={(prefab != null ? prefab.name : "null")}");*/
         monster.gameObject.SetActive(false);
         activeMonsters.Remove(monster);
 
         if (prefab == null)
         {
-/*            Debug.LogError($"{monster.name} 의 prefabReference가 null! (반납 실패)");*/
+            /*            Debug.LogError($"{monster.name} 의 prefabReference가 null! (반납 실패)");*/
             return;
         }
 
@@ -132,4 +138,52 @@ public class MonsterManager : MonoBehaviour
             ReturnMonster(monster.prefabReference, monster);
         }
     }
+
+    public void SpawnMonsterPhoton(string MonsterName, int amount, Vector3 Location)
+    {
+        if (photonView == null)
+        {
+            photonView = GetComponent<PhotonView>();
+            if (photonView == null) { Debug.LogError("PhotonView가 존재하지 않습니다!"); }
+        }
+
+
+        photonView.RPC("PunRPC_Master_InstantiateMonster", RpcTarget.MasterClient, MonsterName, amount, Location);
+    }
+
+
+    [PunRPC]
+    public void PunRPC_Master_InstantiateMonster(string MonsterName, int amount, Vector3 location)
+    {
+        if (!PhotonNetwork.IsMasterClient)
+        {
+            return;
+        }
+
+        string prefabPath = $"Fish/_{MonsterName}";
+        if (Resources.Load(prefabPath) == null)
+        {
+            prefabPath = "Fish/_FishV1";
+        }
+        for (int i = 0; i < amount; i++)
+        {
+            GameObject generated = PhotonNetwork.Instantiate(prefabPath, location, Quaternion.identity);
+
+            if (generated != null)
+            {
+                PhotonView generatedPV = generated.GetComponent<PhotonView>();
+                if (generatedPV != null)
+                {
+                    //
+                }
+                else
+                {
+                    Debug.LogError($"Generated '{prefabPath}' is missing a PhotonView component.");
+                }
+            }
+        }
+        
+    }
+
+
 }

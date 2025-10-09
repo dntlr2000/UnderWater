@@ -21,7 +21,7 @@ public class MonsterSpawner : MonoBehaviour
         {
             // 살짝 위치를 달리해서 겹치지 않게 함 (원하는 방식으로 수정 가능)
             Vector3 spawnPos = basePosition + new Vector3(i * 1.5f, 0, 0);
-            Monster monster = MonsterManager.Instance.SpawnMonster(prefab, spawnPos);
+            MonsterManager.Instance.SpawnMonsterPool(prefab, spawnPos);
         }
     }
 }

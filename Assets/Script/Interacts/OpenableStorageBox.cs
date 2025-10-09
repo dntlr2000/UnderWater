@@ -126,14 +126,14 @@ public class OpenableStorageBox : InteractableObject
     }
 
     [PunRPC]
-    public void PunRPC_RequestWithdrawItem(int boxSlot, int requesterViewID, PhotonMessageInfo info)
+    public void PunRPC_RequestWithdrawItem(int boxSlot, int requesterViewID, int amount, PhotonMessageInfo info)
     {
         if (!PhotonNetwork.IsMasterClient) return;
 
         int itemID = storageData.id[boxSlot];
         int quantity = storageData.quantity[boxSlot];
 
-        if (itemID == -1) return;
+        if (itemID == -1 || quantity < amount) return;
 
         // 아이템을 꺼낼 수 있는지 유효성 검사
         // 아직 미구현 상태 (InventoryFrame에 일부 구현이 되어 있긴 한데 보강 필요)
@@ -143,11 +143,12 @@ public class OpenableStorageBox : InteractableObject
         if (requesterPhotonView != null)
         {
             // 2. 해당 플레이어에게만 아이템을 주도록 RPC를 보냅니다.
-            requesterPhotonView.RPC("PunRPC_AddItem", info.Sender, itemID, quantity);
+            requesterPhotonView.RPC("PunRPC_AddItem", info.Sender, itemID, amount);
 
             // 3. 창고에서 아이템을 제거합니다.
-            storageData.id[boxSlot] = -1;
-            storageData.quantity[boxSlot] = 0;
+            //storageData.id[boxSlot] = -1;
+            //storageData.quantity[boxSlot] = 0;
+            storageData.RemoveItem(boxSlot, amount);
 
             // 4. 변경된 창고 데이터를 모든 클라이언트에게 동기화합니다.
             SyncDataToAll();

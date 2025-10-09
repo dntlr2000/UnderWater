@@ -1,5 +1,6 @@
 using UnityEngine;
 using Photon.Pun;
+using System.Collections;
 
 public enum MonsterBehaviorType
 {
@@ -26,7 +27,8 @@ public class Monster : Character
     public float waterAreaRadius = 10f;
 
     [Header("아이템 드랍")]
-    public GameObject dropItemPrefab;
+    //public GameObject dropItemPrefab;
+    public int dropItemID = -1;
 
     [Header("탐지 설정")]
     [Tooltip("플레이어를 최초 인식하는 범위(트리거 반경).")]
@@ -58,10 +60,14 @@ public class Monster : Character
 
     private SphereCollider detectionTrigger;
 
+    private bool canAttackOther = true;
+
     public void Init(GameObject prefab) => prefabReference = prefab;
 
-    private void Awake()
+
+    protected override void Awake()
     {
+        base.Awake();
         mrb = GetComponent<Rigidbody>();
         mrb.interpolation = RigidbodyInterpolation.Interpolate; // 이동 부드럽게
         mrb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ; // 수평 유지
@@ -114,7 +120,7 @@ public class Monster : Character
 
         if (!IsInWater())
         {
-            TakeDamage(waterDamagePerSecond * Time.fixedDeltaTime);
+            RequestForTakeDamage(waterDamagePerSecond * Time.fixedDeltaTime);
 
             //물 안으로 복귀 시도
             MoveTowardsWater();
@@ -217,17 +223,25 @@ public class Monster : Character
         if (target != null)
         {
             var player = target.GetComponent<Player>();
-            if (player != null)
+            if (player != null && canAttackOther)
             {
                 Debug.Log("플레이어를 공격했습니다. 체력이 깎입니다.");
+                StartCoroutine(AttackCooltime(1f));
                 // player.TakeDamage(atkPower);
             }
         }
     }
 
-    public override void TakeDamage(float damage)
+    public override void Interact() //상호작용
     {
-        base.TakeDamage(damage);
+        if (GetInteractionType() == InteractionType.Instant)
+        {
+            if (Input.GetMouseButtonDown(0)) //좌클
+            {
+                RequestForTakeDamage(10f);
+            }
+        }
+
     }
 
     protected override void Death()
@@ -239,10 +253,13 @@ public class Monster : Character
             return;
         }
 
-        if (dropItemPrefab != null)
+        //if (dropItemPrefab != null)
+        if (dropItemID != -1)
         {
-            Instantiate(dropItemPrefab, transform.position, Quaternion.identity);
+            //Instantiate(dropItemPrefab, transform.position, Quaternion.identity);
+            ItemDatabase.Instance.GenerateItemPhoton(dropItemID, 3, transform.position);
         }
+
 
         // 오브젝트 풀 사용 시
         if (MonsterManager.Instance != null && prefabReference != null)
@@ -310,4 +327,93 @@ public class Monster : Character
         Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 #endif
+    IEnumerator AttackCooltime(float time)
+    {
+        canAttackOther = false;
+        yield return new WaitForSeconds(time);
+        canAttackOther = true;
+    }
+
+    public override InteractionType GetInteractionType() => InteractionType.Instant;
+
+
+    [PunRPC]
+    public void PunRPC_Master_InstantiateDroppedItem(int itemID, int amount, Vector3 location)
+    {
+        if (!PhotonNetwork.IsMasterClient)
+        {
+            return;
+        }
+
+        string prefabPath = $"FieldItem/Object{itemID}";
+        if (Resources.Load(prefabPath) == null)
+        {
+            prefabPath = "FieldItem/Object1";
+        }
+        GameObject droppedItem = PhotonNetwork.Instantiate(prefabPath, location, Quaternion.identity);
+
+        if (droppedItem != null)
+        {
+            PhotonView itemView = droppedItem.GetComponent<PhotonView>();
+            if (itemView != null)
+            {
+                itemView.RPC("PunRPC_SetItemProperties", RpcTarget.All, itemID, amount);
+            }
+            else
+            {
+                Debug.LogError($"Dropped item prefab '{prefabPath}' is missing a PhotonView component.");
+            }
+        }
+    }
+
+    public override void TakeDamage(float damage)
+    {
+        health -= damage;
+        //Debug.Log($"{gameObject}가 {damage}만큼의 피해를 입었습니다.");
+
+        if (health <= 0)
+        {
+            Debug.Log("체력이 0이하가 되었으므로 사망 처리 시작");
+            RequestForDeath();
+        }
+    }
+
+    public void RequestForDeath()
+    {
+            pv.RPC("PunRPC_MonsterDeath", RpcTarget.MasterClient);
+    }
+
+    [PunRPC]
+    private void PunRPC_MonsterDeath(PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+
+        if (gameObject == null) return;
+
+
+        if (dropItemID != -1)
+        {
+            ItemDatabase.Instance.GenerateItemPhoton(dropItemID, 3, transform.position);
+        }
+        PhotonNetwork.Destroy(this.gameObject);
+    }
+
+    public void RequestForTakeDamage(float damage)
+    {
+        PhotonView playerPhotonView = player.gameObject.GetComponent<PhotonView>();
+
+        pv.RPC("PunRPC_MonsterDamaged", RpcTarget.MasterClient, damage);
+        
+    }
+
+    [PunRPC]
+    private void PunRPC_MonsterDamaged(float damage, PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient) return;
+
+        if (gameObject == null) return;
+
+
+        TakeDamage(damage);
+    }
 }

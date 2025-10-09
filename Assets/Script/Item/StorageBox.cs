@@ -1,6 +1,7 @@
 using Photon.Pun;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class StorageBox : InventoryFrame
 {
@@ -19,6 +20,13 @@ public class StorageBox : InventoryFrame
     private PhotonView linkedPhotonView;
 
     //public bool usingPhoton = false;
+    public RawImage comfirmScreen;
+    public TextMeshProUGUI ItemNameText; //구매 또는 판매임을 알리는 텍스트
+    public TextMeshProUGUI amountText;
+    public int amount;
+    public Button depositComfirmButton;
+    public Button withdrawComfirmButton;
+    public Scrollbar amountBar;
 
     private void Start()
     {
@@ -122,7 +130,7 @@ public class StorageBox : InventoryFrame
     }
 
 
-    public void StorageItem(int index)
+    public void StorageItem(int index, int amount)
     {
         if (inventory.GetItemID(index) == -1 || inventory.GetQuantity(index) <= 0) return;
 
@@ -130,13 +138,16 @@ public class StorageBox : InventoryFrame
         int itemID = inventory.GetItemID(index);
         int quantity = inventory.GetQuantity(index);
 
+        if (quantity < amount) return;
+
         if (linkedPhotonView != null)
         {
             // 마스터 클라이언트에게 아이템을 보관해달라고 요청
-            linkedPhotonView.RPC("PunRPC_RequestStoreItem", RpcTarget.MasterClient, index, itemID, quantity);
+            linkedPhotonView.RPC("PunRPC_RequestStoreItem", RpcTarget.MasterClient, index, itemID, amount);
 
             // 요청을 보낸 후, 클라이언트 측의 인벤토리에서 아이템을 즉시 제거하여 반응성을 높임
-            inventory.RemoveAllItem(index);
+            //inventory.RemoveAllItem(index);
+            inventory.RemoveItem(index, amount);
             UpdateInventoryMenu(); // 인벤토리 UI 즉시 업데이트
         }
 
@@ -146,12 +157,14 @@ public class StorageBox : InventoryFrame
 
     public void StorageItem()
     {
-        StorageItem(inventoryIndex);
+        StorageItem(inventoryIndex, amount);
     }
 
-    public void WithdrawItem(int index)
+    public void WithdrawItem(int index, int amount)
     {
         if (GetItemID(index) == -1 || GetQuantity(index) <= 0) return;
+
+        if (GetQuantity(index) < amount) return;
 
         if (linkedPhotonView != null)
         {
@@ -160,7 +173,7 @@ public class StorageBox : InventoryFrame
             if (playerPhotonView != null)
             {
                 // 요청 시 플레이어의 PhotonView ID를 함께 넘겨줍니다.
-                linkedPhotonView.RPC("PunRPC_RequestWithdrawItem", RpcTarget.MasterClient, index, playerPhotonView.ViewID);
+                linkedPhotonView.RPC("PunRPC_RequestWithdrawItem", RpcTarget.MasterClient, index, playerPhotonView.ViewID, amount);
             }
             else
             {
@@ -173,7 +186,7 @@ public class StorageBox : InventoryFrame
 
     public void WithdrawItem()
     {
-        WithdrawItem(boxIndex);
+        WithdrawItem(boxIndex, amount);
     }
 
 
@@ -305,6 +318,44 @@ public class StorageBox : InventoryFrame
         base.GenerateData(); 
     }
 
+
+    public void SetComfirmScreen(bool ifDeposit)
+    {
+        if (inventory.GetItemID(inventoryIndex) == -1 && ifDeposit) return;
+        if (GetItemID(boxIndex) == -1 && !ifDeposit) return;
+        comfirmScreen.gameObject.SetActive(true);
+
+        if (ifDeposit) //보관 모드
+        {
+            ItemNameText.text = ItemDatabase.Instance.items[inventory.GetItemID(inventoryIndex)].itemName;
+            withdrawComfirmButton.gameObject.SetActive(false);
+            depositComfirmButton.gameObject.SetActive(true);
+        }
+
+        if (!ifDeposit) //반출 모드
+        {
+            ItemNameText.text = ItemDatabase.Instance.items[GetItemID(boxIndex)].itemName;
+            withdrawComfirmButton.gameObject.SetActive(true);
+            depositComfirmButton.gameObject.SetActive(false);
+        }
+        amount = 1;
+        amountBar.value = 0;
+        amountText.text = "1 / 10";
+        //priceText.text = "\\ " + (shopPrice[selectedID] * amount);
+    }
+
+    public void DisableComfirmScreen()
+    {
+        comfirmScreen.gameObject.SetActive(false);
+        return;
+    }
+
+    public void onScrollAmountChanged()
+    {
+        amount = Mathf.RoundToInt(amountBar.value * (amountBar.numberOfSteps - 1)) + 1;
+        amountText.text = $"{amount} / 10";
+        //priceText.text = "\\ " + (shopPrice[selectedID] * amount);
+    }
 
 
 }

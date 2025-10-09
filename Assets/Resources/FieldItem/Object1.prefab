@@ -187,11 +187,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cursorType: Item
-  interactionId: Item
   objectName: Item Box
   player: {fileID: 0}
   usePhoton: 1
-  getAble: 0
   itemID: 1
   amount: 1
   ifPool: 1

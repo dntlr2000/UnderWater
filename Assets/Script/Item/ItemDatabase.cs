@@ -70,6 +70,12 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         items[1].price = 100;
         //items[1].fieldItemName = "1";
 
+        items[2].itemName = "Drink Can";
+        items[2].weight = 0;
+        items[2].durability = 99;
+        items[2].interactable = false;
+        items[2].price = 200;
+
 
         LoadIcons(); //¾ÆÀÌÅÛ ¾ÆÀÌÄÜµéÀ» ¸ÕÀú ÀüºÎ ·Îµù
 
@@ -140,6 +146,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         Debug.Log($"#Item {items[itemId].itemName} used.");
 
         Inventory inventory = FindAnyObjectByType<Inventory>(); //GetItem() »ç¿ëÇÏ±â À§ÇØ
+        Player player = inventory.player; //»óÅÂ º¯°æ ¹Ý¿µÇÏ±â À§ÇØ
         if (inventory == null) { Debug.LogWarning($"ItemDatabase¿¡¼­ ÀÎº¥Åä¸® ½ºÅ©¸³Æ®¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù."); return -1; }
 
         if (itemId == 0)
@@ -154,6 +161,11 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
             quantity -= 1;
         }
 
+        else if (itemId == 2)
+        {
+            quantity-= 1;
+            player.getFood(10, 10);
+        }
 
         return quantity; //¼Ò¸ðÇü ¾ÆÀÌÅÛÀÎ °æ¿ì quantityÀÇ °ªÀ» ¼Ò¸ðµÈ ¸¸Å­ »©°í ¹ÝÈ¯¹Þµµ·Ï ÇÔ
     }
@@ -186,7 +198,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         if (itemId == -1) Debug.LogError("Àß¸øµÈ °ª ÀÔ·Â");
         return items[itemId].price;
     }
-
+    /*
     public GameObject generateFieldItem(int itemId, Vector3 Location, int quantity = 1, bool ifPool = false)
     {
         string resourcesPath = "FieldItem/Object" + itemId;
@@ -218,6 +230,24 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         return go;
     }
 
+    public GameObject generateFieldItem(GameObject prefab, Vector3 Location, int quantity, bool ifPool = false)
+    {
+        GameObject go = Instantiate(prefab, Location, Quaternion.identity);
+        //go.name = $"Item + {itemId}";
+
+        //¼Ó¼º ÁöÁ¤
+        FieldItem fieldScript = go.GetComponent<FieldItem>();
+        if (fieldScript != null)
+        {
+            //fieldScript.itemID = itemId;
+            fieldScript.amount = quantity;
+            fieldScript.ifPool = ifPool;
+        }
+
+        return go;
+    }
+    */ //GenerateItem(Æ÷Åæ ¾Æ´Ñ°Å)
+
     public void GenerateItemPhoton(int itemID, int amount, Vector3 Location)
     {
         if (photonView == null) { 
@@ -233,6 +263,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
 
         photonView.RPC("PunRPC_Master_InstantiateDroppedItem", RpcTarget.MasterClient, itemIDToDrop, quantityToDrop, dropLocation);
     }
+
 
     [PunRPC]
     public void PunRPC_Master_InstantiateDroppedItem(int itemID, int amount, Vector3 location)

@@ -226,7 +226,7 @@ public class InventoryData
         if (quantity[slot] <= 0) //아이템이 비워짐
         {
             quantity[slot] = 0;
-            id[0] = -1;
+            id[slot] = -1;
         }
     }
 
