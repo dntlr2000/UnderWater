@@ -42,13 +42,41 @@ public class SaveManager : MonoBehaviour
         }
     }
 
-    private Player FindPlayerController(string userId)
+    private string GetStablePlayerId(Photon.Realtime.Player p)
     {
+        // 우선 UserId, 없으면 ActorNumber, 없으면 NickName (최후)
+        if (!string.IsNullOrEmpty(p.UserId)) return p.UserId;
+        if (p.ActorNumber > 0) return $"Actor_{p.ActorNumber}";
+        if (!string.IsNullOrEmpty(p.NickName)) return p.NickName;
+        return $"Unknown_{p.ActorNumber}";
+    }
+
+    private Player FindPlayerController(string stableId)
+    {
+        if (string.IsNullOrEmpty(stableId)) return null;
+
+        // 먼저 시도: UserId 매칭 (일반적)
         foreach (var pc in UnityEngine.Object.FindObjectsByType<Player>(UnityEngine.FindObjectsSortMode.None))
         {
-            if (pc.photonView != null && pc.photonView.Owner.UserId == userId)
-                return pc;
+            if (pc.photonView == null) continue;
+            var owner = pc.photonView.Owner;
+            if (owner != null)
+            {
+                // owner.UserId 우선 비교
+                if (!string.IsNullOrEmpty(owner.UserId) && owner.UserId == stableId) return pc;
+
+                // ActorNumber 비교 (we stored as "Actor_x" maybe)
+                if (stableId.StartsWith("Actor_"))
+                {
+                    if (stableId == $"Actor_{owner.ActorNumber}") return pc;
+                }
+
+                // 닉네임 비교 (fallback)
+                if (!string.IsNullOrEmpty(owner.NickName) && owner.NickName == stableId) return pc;
+            }
         }
+
+        // 못 찾으면 null 반환
         return null;
     }
 
@@ -105,60 +133,58 @@ public class SaveManager : MonoBehaviour
     private SaveData CollectSaveData()
     {
         string roomName = PhotonNetwork.CurrentRoom?.Name ?? "Room";
-        string userId = NetworkManager.Instance.currentUserId;
+        string userId = NetworkManager.Instance?.currentUserId;
 
         SaveData data = SaveSystem.Load(userId, roomName) ?? new SaveData(roomName);
 
-        if (data.players == null)
-            data.players = new List<PlayerData>();
-        if (data.jobAssignments == null)
-            data.jobAssignments = new Dictionary<string, int>();
-        if (data.worldProgress == null)
-            data.worldProgress = new WorldProgress();
+        data.players = data.players ?? new List<PlayerData>();
+        data.jobAssignments = data.jobAssignments ?? new Dictionary<string, int>();
+        data.worldProgress = data.worldProgress ?? new WorldProgress();
 
         data.saveId = data.saveId ?? Guid.NewGuid().ToString();
         data.roomName = roomName;
         data.createdDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
 
         data.players.Clear();
+        data.jobAssignments.Clear();
 
         foreach (var photonPlayer in PhotonNetwork.PlayerList)
         {
             PlayerData pd = new PlayerData();
-            pd.playerId = photonPlayer.UserId;
 
-            // 씬에서 Player 찾기
-            Player pc = FindPlayerController(pd.playerId);
+            // stable id 확보 (UserId 우선, 없으면 ActorNumber 기반)
+            string stableId = GetStablePlayerId(photonPlayer);
+            pd.playerId = stableId;
+
+            // 씬에서 Player 찾기 (FindPlayerController는 stableId 규칙을 이해함)
+            Player pc = FindPlayerController(stableId);
             if (pc != null)
             {
                 pd.position = new PlayerLocation(pc.transform.position);
                 pd.jobIndex = (int)(pc.JobIndex ?? -1);
-                /*pd.items = pc.Items?.ToArray();*/
+                // pd.items = pc.Items?.ToArray();
             }
             else
             {
-                // Player 오브젝트가 없으면 기본값
                 pd.position = new PlayerLocation(Vector3.zero);
                 pd.jobIndex = -1;
             }
 
             data.players.Add(pd);
 
-            // 직업 정보도 jobAssignments에 저장
-            data.jobAssignments[pd.playerId] = pd.jobIndex;
+            // jobAssignments에 저장: key는 stableId (null/빈 문자열 차단)
+            if (!string.IsNullOrEmpty(stableId))
+            {
+                // 덮어쓰기 허용(최신 값)
+                data.jobAssignments[stableId] = pd.jobIndex;
+            }
         }
 
-        // 퀘스트 진행도 반영
-        if (data.worldProgress == null)
-            data.worldProgress = new WorldProgress();
+        // worldProgress 처리 (기존 로직 유지)
         if (QuestManager.Instance != null)
         {
             var activeQuests = QuestManager.Instance.GetActiveQuests();
-            if (activeQuests.Count > 0)
-                data.worldProgress.QuestID = activeQuests[0].questID;
-            else
-                data.worldProgress.QuestID = "None"; // 또는 기본값
-
+            data.worldProgress.QuestID = (activeQuests.Count > 0) ? activeQuests[0].questID : "None";
             data.worldProgress.Difficulty = QuestManager.Instance.Difficulty;
         }
         else
@@ -176,30 +202,38 @@ public class SaveManager : MonoBehaviour
 
         foreach (var pd in data.players)
         {
-            if (pd == null) continue;
+            if (pd == null || string.IsNullOrEmpty(pd.playerId)) continue;
 
-            // Photon 플레이어 찾기
-            var photonPlayer = PhotonNetwork.PlayerList
-                .FirstOrDefault(p => p.UserId == pd.playerId || p.NickName == pd.playerId);
+            // 1) UserId 일치 시도
+            var photonPlayer = PhotonNetwork.PlayerList.FirstOrDefault(p => !string.IsNullOrEmpty(p.UserId) && p.UserId == pd.playerId);
+
+            // 2) ActorNumber 기반 ("Actor_{num}")
+            if (photonPlayer == null && pd.playerId.StartsWith("Actor_"))
+            {
+                if (int.TryParse(pd.playerId.Replace("Actor_", ""), out int actorNum))
+                    photonPlayer = PhotonNetwork.PlayerList.FirstOrDefault(p => p.ActorNumber == actorNum);
+            }
+
+            // 3) NickName 매칭 (fallback)
+            if (photonPlayer == null)
+                photonPlayer = PhotonNetwork.PlayerList.FirstOrDefault(p => p.NickName == pd.playerId);
+
             if (photonPlayer == null) continue;
 
-            // 로컬 플레이어인지 확인
+            // 로컬 플레이어에게만 적용 (원래 로직 유지)
             if (photonPlayer.IsLocal)
             {
                 Player localPlayer = Player.localPlayer;
-                if (localPlayer != null)
-                {
-                    // 직업 동기화
-                    if (data.jobAssignments.TryGetValue(pd.playerId, out int jobIndex))
-                    {
-                        localPlayer.SetJob(jobIndex);
-                    }
+                if (localPlayer == null) continue;
 
-                    // 위치 동기화
-                    if (pd.position != null)
-                    {
-                        localPlayer.TeleportTo(pd.position.ToVector3());
-                    }
+                if (data.jobAssignments.TryGetValue(pd.playerId, out int jobIndex))
+                {
+                    localPlayer.SetJob(jobIndex);
+                }
+
+                if (pd.position != null)
+                {
+                    localPlayer.TeleportTo(pd.position.ToVector3());
                 }
             }
         }

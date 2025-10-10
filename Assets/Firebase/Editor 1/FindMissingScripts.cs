@@ -1,6 +1,8 @@
-﻿using UnityEngine;
-using UnityEditor;
+﻿#if UNITY_EDITOR
+using UnityEditor; // MenuItem 사용을 위해 필요
+using UnityEngine;
 using UnityEngine.SceneManagement;
+
 
 public class FindMissingScripts : MonoBehaviour
 {
@@ -40,3 +42,4 @@ public class FindMissingScripts : MonoBehaviour
             : GetFullPath(go.transform.parent.gameObject) + "/" + go.name;
     }
 }
+#endif

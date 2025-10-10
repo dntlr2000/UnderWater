@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 using System.IO;
@@ -29,3 +30,4 @@ public class FindMissingScriptsInAssets
         Debug.Log($" ÃÑ {missingCount}°³ÀÇ ÇÁ¸®ÆÕ¿¡¼­ Missing Script°¡ ¹ß°ßµÊ.");
     }
 }
+#endif

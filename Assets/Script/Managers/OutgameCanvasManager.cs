@@ -92,88 +92,112 @@ public class OutgameCanvasManager : MonoBehaviour
 
     private void SetupButtonEvents()
     {
-        LoginBtn.onClick.AddListener(() => NetworkManager.Instance.Login(EmailInput.text, PasswordInput.text));
-        RegisterBtn.onClick.AddListener(ShowRegisterPanel);
+        LoginBtn.onClick.AddListener(() =>
+        {
+            NetworkManager.Instance.Login(EmailInput.text, PasswordInput.text);
+        });
+
+        RegisterBtn.onClick.AddListener(() =>
+        {
+            ShowRegisterPanel();
+        });
+
         RegisterConfirmBtn.onClick.AddListener(() =>
-            NetworkManager.Instance.Register(RegisterEmailInput.text, RegisterPasswordInput.text, RegisterPasswordConfirmInput.text));
-        BackToLoginBtn.onClick.AddListener(ShowLoginPanel);
+        {
+            if (RegisterPasswordInput.text != RegisterPasswordConfirmInput.text)
+            {
+                SetRegisterStatus("비밀번호가 일치하지 않습니다.");
+                return;
+            }
+            NetworkManager.Instance.Register(RegisterEmailInput.text, RegisterPasswordInput.text);
+        });
 
-        NicknameConfirmBtn.onClick.AddListener(() =>
-            NetworkManager.Instance.ConfirmNickname(NicknameInput.text));
+        BackToLoginBtn.onClick.AddListener(() => ShowLoginPanel());
 
-        SettingsBtn.onClick.AddListener(() => SettingsBtn.gameObject.SetActive(!SettingsBtn.gameObject.activeSelf));
         LogoutBtn.onClick.AddListener(() => NetworkManager.Instance.Logout());
         ExitGameBtn.onClick.AddListener(() => Application.Quit());
-
-        ProfileBtn.onClick.AddListener(() =>
-        {
-            ProfilePanel.SetActive(true);
-            ProfileNicknameInput.text = NetworkManager.Instance.currentNickname;
-        });
-        ProfileSaveBtn.onClick.AddListener(() =>
-            NetworkManager.Instance.SaveProfileNickname(ProfileNicknameInput.text));
-
-        LoadGameBtn.onClick.AddListener(() => NetworkManager.Instance.LoadGame());
+        SettingsBtn.onClick.AddListener(() => ShowSettingsPanel());
     }
 
-    #region UI Control Methods
     public void ShowLoginPanel()
     {
+        HideAllPanels();
         LoginPanel.SetActive(true);
-        RegisterPanel.SetActive(false);
-        NicknamePanel.SetActive(false);
-        LobbyPanel.SetActive(false);
     }
 
     public void ShowRegisterPanel()
     {
+        HideAllPanels();
         RegisterPanel.SetActive(true);
-        LoginPanel.SetActive(false);
     }
 
     public void ShowNicknamePanel()
     {
+        HideAllPanels();
         NicknamePanel.SetActive(true);
-        LoginPanel.SetActive(false);
     }
 
-    public void HideNicknamePanel() => NicknamePanel.SetActive(false);
-    public void ShowLobbyPanel()
+    public void ShowLobbyPanel(string nickname)
     {
+        HideAllPanels();
         LobbyPanel.SetActive(true);
+        WelcomeText.text = $"{nickname}님 환영합니다!";
+    }
+
+    public void ShowRoomPanel()
+    {
+        HideAllPanels();
+        RoomPanel.SetActive(true);
+    }
+
+    public void ShowSettingsPanel()
+    {
+        SettingsPanel.SetActive(true);
+    }
+
+    public void ShowProfilePanel()
+    {
+        ProfilePanel.SetActive(true);
+    }
+
+    public void HideSettingPanel()
+    {
+        ProfilePanel.SetActive(false);
+    }
+
+    public void HideProfilePanel()
+    {
+        ProfilePanel.SetActive(false);
+    }
+
+    private void HideAllPanels()
+    {
         LoginPanel.SetActive(false);
+        RegisterPanel.SetActive(false);
         NicknamePanel.SetActive(false);
+        LobbyPanel.SetActive(false);
+        RoomPanel.SetActive(false);
+        JobSelectPanel.SetActive(false);
+        SettingsPanel.SetActive(false);
+        ProfilePanel.SetActive(false);
     }
 
-    public void HideProfilePanel() => ProfilePanel.SetActive(false);
-    public void UpdateWelcomeText(string name) => WelcomeText.text = $"{name}님 환영합니다.";
-    #endregion
-
-    #region Save List
-    public void RefreshSaveList()
+    public void SetStatus(string msg)
     {
-        if (SaveManager.Instance == null) return;
-        foreach (Transform child in SaveListContent)
-            Destroy(child.gameObject);
-
-        string userId = NetworkManager.Instance.currentUserId;
-        if (string.IsNullOrEmpty(userId)) return;
-
-        List<string> saves = SaveSystem.GetRoomNames(userId);
-        foreach (var roomName in saves)
-        {
-            var btnObj = Instantiate(SaveBtnPrefab, SaveListContent);
-            btnObj.GetComponentInChildren<Text>().text = roomName;
-            string captured = roomName;
-            btnObj.GetComponent<Button>().onClick.AddListener(() => OnClick_SelectSave(captured));
-        }
+        if (StatusText != null)
+            StatusText.text = msg;
     }
 
-    public void OnClick_SelectSave(string roomName)
+    public void SetLoginStatus(string msg)
     {
-        SaveSelectText.text = $"선택된 저장: {roomName}";
-        SaveListPanel.SetActive(false);
+        if (LoginStatusText != null)
+            LoginStatusText.text = msg;
     }
-    #endregion
+
+    public void SetRegisterStatus(string msg)
+    {
+        if (RegisterStatusText != null)
+            RegisterStatusText.text = msg;
+    }
 }
 */

@@ -1730,6 +1730,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 540143742}
     - target: {fileID: 7329042424541274025, guid: d091d80f677b3e64dbc25b1c1bb26fbf, type: 3}
+      propertyPath: SaveSelectText
+      value: 
+      objectReference: {fileID: 1494295035}
+    - target: {fileID: 7329042424541274025, guid: d091d80f677b3e64dbc25b1c1bb26fbf, type: 3}
       propertyPath: LoginStatusText
       value: 
       objectReference: {fileID: 666077249}
