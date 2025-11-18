@@ -45,6 +45,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     #region Player States & Layers
     [Header("States")]
     public bool isUnderwater = false;
+    protected bool onGround = false;
+
     public float runSpeedMultiply = 3f;
 
     public LayerMask groundLayer;
@@ -194,7 +196,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         {
             Jump();
         }
-        thirdViewAnimator.RequestSetAirState(!grounded);
 
     }
     private void FixedUpdate()
@@ -216,6 +217,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             SetUnderwater(true);
             thirdViewAnimator.RequestSetWaterState(true);
         }
+        /*
+        if (other.CompareTag("Ground"))
+        {
+            onGround = true;
+            thirdViewAnimator.RequestSetAirState(true);
+        }
+        */
     }
 
     private void OnTriggerExit(Collider other)
@@ -225,6 +233,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             SetUnderwater(false);
             thirdViewAnimator.RequestSetWaterState(false);
         }
+        /*
+        if (other.CompareTag("Ground"))
+        {
+            onGround = false;
+            thirdViewAnimator.RequestSetAirState(false);
+        }
+        */
     }
     #endregion
 
@@ -298,7 +313,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     void RotateView()
     {
-        // Mouse X → 플레이어 회전
+        if (!photonView.IsMine) return;
+            // Mouse X → 플레이어 회전
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivityX * Time.deltaTime;
         horizontalAngle += mouseX;
         transform.rotation = Quaternion.Euler(0, horizontalAngle, 0);
@@ -393,6 +409,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         float radius = 0.3f;
         Vector3 position = transform.position + Vector3.down * 0.1f;
         return Physics.CheckSphere(position, radius, groundLayer);
+        
+        //return onGround;
     }
 
     private void SetUnderwater(bool underwater)

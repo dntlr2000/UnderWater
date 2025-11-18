@@ -17,6 +17,7 @@ public class EngineerAnimator : MonoBehaviour
 
     void Start()
     {
+
     }
 
     // Update is called once per frame
@@ -78,10 +79,6 @@ public class EngineerAnimator : MonoBehaviour
     {
         if (rb == null) rb = GetComponent<Rigidbody>();
         animator.SetFloat("yVelocity", rb.linearVelocity.y);
-    }
-    public void ApplyVelocityY(float yVel)
-    {
-        animator.SetFloat("yVelocity", yVel);
     }
     #endregion
 
@@ -232,18 +229,20 @@ public class EngineerAnimator : MonoBehaviour
 
     public void RequestApplyVelocityY()
     {
-        // --- 수정: 로컬 속도 값을 읽어서 RPC로 전송 ---
-        if (rb == null) rb = GetComponent<Rigidbody>();
-        float yVel = rb.linearVelocity.y;
-        pv.RPC("PunRPC_ApplyVelocityY", RpcTarget.Others, yVel); // yVel 값을 함께 전송
-        // --------------------------------------------
+        //PhotonView playerPhotonView = gameObject.GetComponent<PhotonView>();
+
+        pv.RPC("PunRPC_ApplyVelocityY", RpcTarget.Others);
+
     }
     [PunRPC]
-    private void PunRPC_ApplyVelocityY(float yVel, PhotonMessageInfo info) // yVel 값을 받음
+    private void PunRPC_ApplyVelocityY(PhotonMessageInfo info)
     {
+        //if (!PhotonNetwork.IsMasterClient) return;
+
         if (gameObject == null) return;
 
-        ApplyVelocityY(yVel); // Rigidbody를 읽는 대신 받은 값으로 애니메이션 적용
+
+        ApplyVelocityY();
     }
     #endregion
 

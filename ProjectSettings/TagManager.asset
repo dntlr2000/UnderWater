@@ -8,6 +8,7 @@ TagManager:
   - Ping
   - Bullet
   - Water
+  - Ground
   layers:
   - Default
   - TransparentFX
