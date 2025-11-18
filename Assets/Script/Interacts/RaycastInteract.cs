@@ -48,7 +48,15 @@ public class RaycastInteract : MonoBehaviour
             if (interactable != null)
             {
                 //currentTarget = interactable; 
-                interactionUI.SetCursor(interactable.GetCursorType()); //정상 반영됨
+                string cursorType = interactable.GetCursorType();
+                interactionUI.SetCursor(cursorType); //정상 반영됨
+                if (cursorType == "Item" || cursorType == "Door")
+                {
+                    inventory.canUseItem = false;
+                }
+                else { 
+                    inventory.canUseItem = true;
+                }
 
                 //interactionUI.ShowCursor();              
                 if (interactable is InteractableObject io) //플레이어 정보 전달
@@ -60,11 +68,6 @@ public class RaycastInteract : MonoBehaviour
                 interactable.Interact(); //해당 인터페이스를 구현한 클래스의 Interact 메서드를 불러온다.
                 //ResetInteractionState();
                 return;
-            }
-
-            else
-            {
-
             }
 
         }
@@ -79,6 +82,7 @@ public class RaycastInteract : MonoBehaviour
         //holdTimer = 0f;
         interactionUI.UpdateGauge(0f);
         //currentTarget = null;
+        inventory.canUseItem = true;
     }
 
     public void ResetInteractionState()

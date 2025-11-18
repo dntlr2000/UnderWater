@@ -61,6 +61,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         items[0].weight = 0; 
         items[0].durability = 99;
         items[0].interactable = true;
+        items[0].damage = 10f;
         
 
         items[1].itemName = "Item Box";
@@ -68,6 +69,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         items[1].durability = 99;
         items[1].interactable = false;
         items[1].price = 100;
+        items[1].damage = 10f;
         //items[1].fieldItemName = "1";
 
         items[2].itemName = "Drink Can";
@@ -75,7 +77,14 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         items[2].durability = 99;
         items[2].interactable = false;
         items[2].price = 200;
+        items[2].damage = 10f;
 
+        items[3].itemName = "Weapon";
+        items[3].weight = 0;
+        items[3].durability = 99;
+        items[3].interactable = false;
+        items[3].price = 300;
+        items[3].damage = 50f;
 
         LoadIcons(); //¾ÆÀÌÅÛ ¾ÆÀÌÄÜµéÀ» ¸ÕÀú ÀüºÎ ·Îµù
 
@@ -155,16 +164,21 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
             quantity -= 1;
         }
 
-        else if (itemId == 1)
+        else if (itemId == 1) //ÀÓ½Ã ¾ÆÀÌÅÛ ¹Ú½º
         {   
             inventory.GetItem(0, 3);
             quantity -= 1;
         }
 
-        else if (itemId == 2)
+        else if (itemId == 2) //ÀÓ½Ã À½·á¼ö
         {
             quantity-= 1;
             player.getFood(10, 10);
+        }
+
+        else if (itemId == 3) //ÀÓ½Ã Ä®
+        {
+            //¾Æ¹« ±â´É ¾øÀ½. ³»±¸µµ ÇöÀç Á¸Àç ¾ÈÇÔ
         }
 
         return quantity; //¼Ò¸ðÇü ¾ÆÀÌÅÛÀÎ °æ¿ì quantityÀÇ °ªÀ» ¼Ò¸ðµÈ ¸¸Å­ »©°í ¹ÝÈ¯¹Þµµ·Ï ÇÔ
@@ -248,6 +262,12 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
     }
     */ //GenerateItem(Æ÷Åæ ¾Æ´Ñ°Å)
 
+    public float getWeaponDamage(int itemId)
+    {
+        if (itemId == -1) return 10f; //±âº» °ø°Ý·Â
+        return items[itemId].damage;
+    }
+
     public void GenerateItemPhoton(int itemID, int amount, Vector3 Location)
     {
         if (photonView == null) { 
@@ -305,6 +325,7 @@ public struct ItemData
     public float weight; //¾È¾µ °Í °°À¸¸é »èÁ¦
     public float durability; //³»±¸µµ. ¾ÆÁ÷ »ó¼¼ ºÎºÐÀº ¹Ì±¸Çö
     public bool interactable; //µé°í ÀÖÀ» ¶§ ÇÊµåÀÇ ¿ÀºêÁ§Æ®¿Í »óÈ£ÀÛ¿ëÇÒ ¼ö ÀÖ´Â ¾ÆÀÌÅÛÀÎÁö ÆÇ´Ü ¿©ºÎ ex: ¼Ò¸ðÇü ¾ÆÀÌÅÛ
+    public float damage;
 
     //public string itemFileName;
     //public string fieldItemName;

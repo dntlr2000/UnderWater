@@ -238,7 +238,7 @@ public class Monster : Character
         {
             if (Input.GetMouseButtonDown(0)) //абе╛
             {
-                RequestForTakeDamage(10f);
+                RequestForTakeDamage(GetDamageValueFromInventory());
             }
         }
 

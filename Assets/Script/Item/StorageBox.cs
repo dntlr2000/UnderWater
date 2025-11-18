@@ -138,12 +138,19 @@ public class StorageBox : InventoryFrame
         int itemID = inventory.GetItemID(index);
         int quantity = inventory.GetQuantity(index);
 
-        if (quantity < amount) return;
+        int trueAmount = amount;
+
+        if (quantity < amount)
+        {
+            Debug.Log("보관하려는 개수가 소지 개수보다 많으므로 소지 개수로 재조정됩니다. ");
+            trueAmount = quantity;
+        };
+        if (quantity <= 0) return;
 
         if (linkedPhotonView != null)
         {
             // 마스터 클라이언트에게 아이템을 보관해달라고 요청
-            linkedPhotonView.RPC("PunRPC_RequestStoreItem", RpcTarget.MasterClient, index, itemID, amount);
+            linkedPhotonView.RPC("PunRPC_RequestStoreItem", RpcTarget.MasterClient, index, itemID, trueAmount);
 
             // 요청을 보낸 후, 클라이언트 측의 인벤토리에서 아이템을 즉시 제거하여 반응성을 높임
             //inventory.RemoveAllItem(index);
@@ -157,6 +164,7 @@ public class StorageBox : InventoryFrame
 
     public void StorageItem()
     {
+        if (inventoryIndex == -1) return;
         StorageItem(inventoryIndex, amount);
     }
 
@@ -164,7 +172,16 @@ public class StorageBox : InventoryFrame
     {
         if (GetItemID(index) == -1 || GetQuantity(index) <= 0) return;
 
-        if (GetQuantity(index) < amount) return;
+        int quantity = GetQuantity(index);
+        int trueAmount = amount;
+
+        if (quantity < amount)
+        {
+            trueAmount= quantity;
+            Debug.Log("꺼내려는 개수가 실제로 보관되어 있는 아이템의 개수보다 많으므로 재조정됩니다.");
+        };
+
+        if (quantity <= 0) return;
 
         if (linkedPhotonView != null)
         {
@@ -173,7 +190,7 @@ public class StorageBox : InventoryFrame
             if (playerPhotonView != null)
             {
                 // 요청 시 플레이어의 PhotonView ID를 함께 넘겨줍니다.
-                linkedPhotonView.RPC("PunRPC_RequestWithdrawItem", RpcTarget.MasterClient, index, playerPhotonView.ViewID, amount);
+                linkedPhotonView.RPC("PunRPC_RequestWithdrawItem", RpcTarget.MasterClient, index, playerPhotonView.ViewID, trueAmount);
             }
             else
             {
@@ -186,6 +203,7 @@ public class StorageBox : InventoryFrame
 
     public void WithdrawItem()
     {
+        if (boxIndex== -1) return;
         WithdrawItem(boxIndex, amount);
     }
 
@@ -194,7 +212,9 @@ public class StorageBox : InventoryFrame
     public void StorageMoney()
     {
         SetExchangeMoney();
-        if (exchangeMoney <= 0 || inventory.GetMoneyData() < exchangeMoney) return;
+        int trueExchangeMoney = exchangeMoney;
+        if (exchangeMoney <= 0) return;
+        if (inventory.GetMoneyData() < exchangeMoney) trueExchangeMoney = inventory.GetMoneyData();
 
         if (linkedPhotonView != null)
         {
@@ -202,10 +222,10 @@ public class StorageBox : InventoryFrame
             if (playerPhotonView != null)
             {
                 // 주석을 풀고 RPC를 호출합니다.
-                linkedPhotonView.RPC("PunRPC_RequestDepositMoney", RpcTarget.MasterClient, exchangeMoney, playerPhotonView.ViewID);
+                linkedPhotonView.RPC("PunRPC_RequestDepositMoney", RpcTarget.MasterClient, trueExchangeMoney, playerPhotonView.ViewID);
 
                 // 로컬 돈 즉시 차감 (반응성을 위해)
-                inventory.GetMoney(-exchangeMoney);
+                inventory.GetMoney(-trueExchangeMoney);
                 UpdateInventoryMenu();
                 inputField.text = "0";
                 exchangeMoney = 0;
@@ -217,12 +237,12 @@ public class StorageBox : InventoryFrame
     {
         SetExchangeMoney();
         if (exchangeMoney <= 0) return;
-
+        int trueExchangeMoney = exchangeMoney;
         // 로컬에서 미리 체크 (선택사항, 더 나은 UX를 위함)
         if (GetMoneyData() < exchangeMoney)
         {
             Debug.Log("UI에 표시된 잔액이 부족합니다.");
-            return;
+            trueExchangeMoney = GetMoneyData();
         }
 
         if (linkedPhotonView != null)
@@ -231,7 +251,7 @@ public class StorageBox : InventoryFrame
             if (playerPhotonView != null)
             {
                 // 로컬 데이터를 직접 바꾸는 대신, 마스터에게 출금을 요청합니다.
-                linkedPhotonView.RPC("PunRPC_RequestWithdrawMoney", RpcTarget.MasterClient, exchangeMoney, playerPhotonView.ViewID);
+                linkedPhotonView.RPC("PunRPC_RequestWithdrawMoney", RpcTarget.MasterClient, trueExchangeMoney, playerPhotonView.ViewID);
                 inputField.text = "0";
                 exchangeMoney = 0;
             }
@@ -273,6 +293,9 @@ public class StorageBox : InventoryFrame
         if (boxIndex != -1) boxUI.SetColors(boxIndex);
         boxIndex = _index;
         boxUI.SetColors(_index, 110, 123, 150);
+
+        if (inventoryIndex != -1) ItemUI.SetColors(inventoryIndex);
+        inventoryIndex = -1;
     }
 
     public void SetInventorytIndex(int _index)
@@ -280,6 +303,9 @@ public class StorageBox : InventoryFrame
         if (inventoryIndex != -1)ItemUI.SetColors(inventoryIndex);
         inventoryIndex = _index;
         ItemUI.SetColors(_index, 110, 123, 150);
+
+        if (boxIndex != -1) boxUI.SetColors(boxIndex);
+        boxIndex = -1;
     }
 
 
@@ -321,8 +347,19 @@ public class StorageBox : InventoryFrame
 
     public void SetComfirmScreen(bool ifDeposit)
     {
-        if (inventory.GetItemID(inventoryIndex) == -1 && ifDeposit) return;
-        if (GetItemID(boxIndex) == -1 && !ifDeposit) return;
+        //comfirmScreen 오브젝트가 활성화 되어야 스크립트를 사용할 수 있으므로 예외처리 후에 활성화, 그리고 보관/반출 모드 적용
+        if (ifDeposit) //보관 모드
+        {
+            if (inventoryIndex == -1) return;
+            if (inventory.GetItemID(inventoryIndex) == -1) return;
+        }
+
+        if (!ifDeposit) //반출 모드
+        {
+            if (boxIndex== -1) return;
+            if (GetItemID(boxIndex) == -1) return;
+        }
+
         comfirmScreen.gameObject.SetActive(true);
 
         if (ifDeposit) //보관 모드

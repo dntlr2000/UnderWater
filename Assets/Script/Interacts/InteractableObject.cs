@@ -162,5 +162,13 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
         }
     }
 
+    protected float GetDamageValueFromInventory()
+    {
+        float value;
+        if (inventory == null) inventory = FindAnyObjectByType<Inventory>();
+        value = inventory.getPowerFromItem();
+
+        return value;
+    }
 
 }

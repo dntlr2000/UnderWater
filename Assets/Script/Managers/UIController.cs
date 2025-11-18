@@ -200,6 +200,7 @@ public class UIController : MonoBehaviour
             shop.ifShopOn = true;
             shop.UpdateMoneyData();
             
+            
         }
 
         else
@@ -207,6 +208,7 @@ public class UIController : MonoBehaviour
             shop.DisableComfirmScreen();
             shop.SetBuyMenu(false);
             shop.SetSellMenu(false);
+            shop.ResetSlot();
             shop.gameObject.SetActive(false);
             shop.ifShopOn = false;
         }

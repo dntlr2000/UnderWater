@@ -122,7 +122,7 @@ public class OpenableStorageBox : InteractableObject
             }
         }
 
-        Debug.LogWarning("Ã¢°í°¡ °¡µæ Ã¡½À´Ï´Ù.");
+        //Debug.LogWarning("Ã¢°í°¡ °¡µæ Ã¡½À´Ï´Ù.");
     }
 
     [PunRPC]

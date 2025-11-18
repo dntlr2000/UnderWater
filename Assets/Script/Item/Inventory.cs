@@ -12,6 +12,8 @@ public class Inventory : InventoryFrame
     //private bool showInventory = false; //ItemUI에서 일단 가져와봄 Update 부하를 줄이기 위해 ItemUI의 메서드를 여기로 옮길 수 있음
     PhotonView photonView;
 
+    public bool canUseItem = true;
+
     protected void Awake()
     {
         photonView = GetComponent<PhotonView>();
@@ -104,7 +106,7 @@ public class Inventory : InventoryFrame
         if (Input.GetMouseButtonDown(1))
         {
             if (inventoryData.id[index] < 0) return;
-
+            if (!canUseItem) return;
             inventoryData.useItem(index);
             ItemUI.SetQuantity(index, inventoryData.quantity[index]);
             if (inventoryData.quantity[index] <= 0)
@@ -119,6 +121,11 @@ public class Inventory : InventoryFrame
     private void FixedUpdate()
     {
         
+    }
+
+    public float getPowerFromItem()
+    {
+        return ItemDatabase.Instance.getWeaponDamage(inventoryData.id[index]);
     }
 
     protected void IndexSetter()

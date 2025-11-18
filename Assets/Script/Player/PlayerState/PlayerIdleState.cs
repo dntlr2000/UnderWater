@@ -22,6 +22,7 @@ public class PlayerIdleState : PlayerState
         if (player.isUnderwater)
         {
             stateMachine.ChangeState(new PlayerSwimIdleState(player, stateMachine));
+            //player.thirdViewAnimator.RequestSetWaterState(true);
             return;
         }
 
@@ -29,18 +30,29 @@ public class PlayerIdleState : PlayerState
         if (moveInput > 0.1f)
         {
             if (Input.GetKey(KeyCode.LeftShift))
+            {
+
                 stateMachine.ChangeState(new PlayerRunState(player, stateMachine));
+            }
             else
                 stateMachine.ChangeState(new PlayerWalkState(player, stateMachine));
         }
 
         if (player.health <= 0)
+        {
             stateMachine.ChangeState(new PlayerDieState(player, stateMachine));
+            //player.thirdViewAnimator.RequestSetDownState(true);
+        }
+
+        player.thirdViewAnimator.RequestSetWaterState(false);
+        player.thirdViewAnimator.RequestSetMoveState(false, false);
+
     }
 }
 
 public class PlayerWalkState : PlayerState
 {
+
     public PlayerWalkState(Player player, PlayerStateMachine stateMachine)
         : base(player, stateMachine, "Walk") { }
     public override void Update()
@@ -53,9 +65,17 @@ public class PlayerWalkState : PlayerState
 
         float moveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")).magnitude;
         if (moveInput <= 0.1f)
+        {
             stateMachine.ChangeState(new PlayerIdleState(player, stateMachine));
+        }
         else if ((Input.GetKey(KeyCode.LeftShift)))
+        {
             stateMachine.ChangeState(new PlayerRunState(player, stateMachine));
+        }
+        player.thirdViewAnimator.RequestSetWaterState(false);
+        player.thirdViewAnimator.RequestSetMoveState(true, false);
+
+        player.thirdViewAnimator.RequestSetDownState(false);
 
     }
 }
@@ -77,6 +97,8 @@ public class PlayerRunState : PlayerState
         {
             stateMachine.ChangeState(new PlayerWalkState(player, stateMachine));
         }
+        player.thirdViewAnimator.RequestSetWaterState(false);
+        player.thirdViewAnimator.RequestSetMoveState(true, true);
     }
 }
 
@@ -103,6 +125,10 @@ public class PlayerSwimIdleState : PlayerState
             else
                 stateMachine.ChangeState(new PlayerSwimMoveState(player, stateMachine));
         }
+        player.thirdViewAnimator.RequestSetWaterState(true);
+        player.thirdViewAnimator.RequestSetMoveState(false, false);
+
+        player.thirdViewAnimator.RequestSetDownState(false);
     }
 }
 
@@ -130,6 +156,8 @@ public class PlayerSwimMoveState : PlayerState
         {
             stateMachine.ChangeState(new PlayerSwimFastState(player, stateMachine));
         }
+        player.thirdViewAnimator.RequestSetWaterState(true);
+        player.thirdViewAnimator.RequestSetMoveState(true, false);
     }
 }
 
@@ -150,6 +178,8 @@ public class PlayerSwimFastState : PlayerState
         {
             stateMachine.ChangeState(new PlayerSwimMoveState(player, stateMachine));
         }
+        player.thirdViewAnimator.RequestSetWaterState(true);
+        player.thirdViewAnimator.RequestSetMoveState(true, true);
     }
 }
 
@@ -163,11 +193,14 @@ public class PlayerAttackState : PlayerState
         // 공격 모션이 끝나면 원래 상태로 복귀
         if (!player.animator.GetCurrentAnimatorStateInfo(0).IsName("Attack"))
         {
+            player.thirdViewAnimator.RequestResetTrigger();
             if (player.isUnderwater)
                 stateMachine.ChangeState(new PlayerSwimIdleState(player, stateMachine));
             else
                 stateMachine.ChangeState(new PlayerIdleState(player, stateMachine));
+            return;
         }
+        player.thirdViewAnimator.RequestSetAttackState(0); //트리거 형식이라 Update랑은 안맞음 ->리셋 트리거로 어떻게든 해봄
     }
 }
 
@@ -180,5 +213,6 @@ public class PlayerDieState : PlayerState
     {
         base.Enter();
         player.isBusy = true; // 죽으면 조작 불가
+        player.thirdViewAnimator.RequestSetDownState(true);
     }
 }
