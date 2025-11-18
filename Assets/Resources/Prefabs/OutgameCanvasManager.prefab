@@ -1,0 +1,137 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5299138360169957606
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7448578706006487385}
+  - component: {fileID: 8542606051167444094}
+  m_Layer: 0
+  m_Name: OutgameCanvasManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7448578706006487385
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5299138360169957606}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8542606051167444094
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5299138360169957606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98aa348507879a48ab68f8e220b7d21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  LoginPanel: {fileID: 0}
+  EmailInput: {fileID: 0}
+  PasswordInput: {fileID: 0}
+  LoginBtn: {fileID: 0}
+  RegisterBtn: {fileID: 0}
+  LoginStatusText: {fileID: 0}
+  RegisterPanel: {fileID: 0}
+  RegisterEmailInput: {fileID: 0}
+  RegisterPasswordInput: {fileID: 0}
+  RegisterPasswordConfirmInput: {fileID: 0}
+  RegisterConfirmBtn: {fileID: 0}
+  BackToLoginBtn: {fileID: 0}
+  RegisterStatusText: {fileID: 0}
+  NicknamePanel: {fileID: 0}
+  NicknameInput: {fileID: 0}
+  NicknameConfirmBtn: {fileID: 0}
+  NicknameStatusText: {fileID: 0}
+  LobbyPanel: {fileID: 0}
+  RoomInput: {fileID: 0}
+  WelcomeText: {fileID: 0}
+  LobbyInfoText: {fileID: 0}
+  CellBtn:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  PreviousBtn: {fileID: 0}
+  NextBtn: {fileID: 0}
+  SettingsBtn: {fileID: 0}
+  LoadGameBtn: {fileID: 0}
+  SaveSelectText: {fileID: 0}
+  SaveListPanel: {fileID: 0}
+  SaveListContent: {fileID: 0}
+  SaveBtnPrefab: {fileID: 8046619416615970518, guid: 7ad8a5bfcf65c244381dac79867b777e, type: 3}
+  RoomPanel: {fileID: 0}
+  ListText: {fileID: 0}
+  RoomInfoText: {fileID: 0}
+  ChatText:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  ChatInput: {fileID: 0}
+  ChatSendBtn: {fileID: 0}
+  StartBtn: {fileID: 0}
+  JobSelectPanel: {fileID: 0}
+  JobBtns:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  JobIcons:
+  - {fileID: 21300000, guid: 91c4c869eccb14e44a7522169770c9b7, type: 3}
+  - {fileID: 21300000, guid: fd88e80e2d2de8c4c8795716eff22354, type: 3}
+  - {fileID: 21300000, guid: d8843bf6fcec94d459c3b7e87dbaef3f, type: 3}
+  - {fileID: 21300000, guid: b7f9b711173d986498ff9b3a842fe3cd, type: 3}
+  PlayerSlots:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  PlayerJobIcons:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  PlayerSlotNames:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  PlayerSlotJobs:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  SettingsPanel: {fileID: 0}
+  LogoutBtn: {fileID: 0}
+  ExitGameBtn: {fileID: 0}
+  ProfileBtn: {fileID: 0}
+  ProfilePanel: {fileID: 0}
+  ProfileNicknameInput: {fileID: 0}
+  ProfileSaveBtn: {fileID: 0}
+  ProfileStatusText: {fileID: 0}
+  StatusText: {fileID: 0}

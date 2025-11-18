@@ -1,4 +1,4 @@
-using System;
+/*using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,7 +25,14 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         InitializeUI();
         InitializePhoton();
         InitializeSaveManager();
+
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.OnSaveDataChanged -= OnSaveDataChangedHandler;
+            SaveManager.OnSaveDataChanged += OnSaveDataChangedHandler;
+        }
     }
+
     #endregion
 
     #region UI References
@@ -103,6 +110,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     [Header("ETC")]
     public Text StatusText;
     public PhotonView PV;
+    public bool isLoadedFromSave = false;
     #endregion
 
     #region Firebase
@@ -246,6 +254,60 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     }
 
     public void ToggleSaveList() => SaveListPanel.SetActive(!SaveListPanel.activeSelf);
+
+    // 이벤트 핸들러: SaveManager에서 변경된 SaveData JSON을 받아 Photon RPC로 전체 전송
+    private void OnSaveDataChangedHandler(string saveJson)
+    {
+        if (!PhotonNetwork.IsMasterClient) return; // 마스터만 브로드캐스트
+        if (PV == null)
+        {
+            Debug.LogWarning("[NetworkManager] PV(PhotonView)가 없음 - 브로드캐스트 실패");
+            return;
+        }
+
+        try
+        {
+            PV.RPC("RPC_BroadcastSaveData", RpcTarget.All, saveJson);
+            Debug.Log("[NetworkManager] SaveData 전체 브로드캐스트 실행");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[NetworkManager] SaveData 브로드캐스트 실패: " + ex);
+        }
+    }
+
+    // RPC: 모든 클라이언트가 수신 -> 로컬 SaveManager에 적용
+    [PunRPC]
+    public void RPC_BroadcastSaveData(string saveJson)
+    {
+        SaveData data = null;
+        try
+        {
+            data = JsonUtility.FromJson<SaveData>(saveJson);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("[NetworkManager] SaveData 역직렬화 실패: " + ex);
+            return;
+        }
+
+        if (SaveManager.Instance == null)
+        {
+            Debug.LogWarning("[NetworkManager] SaveManager가 없어 SaveData 적용 불가");
+            return;
+        }
+
+        SaveManager.Instance.SetCurrentSave(data);
+        SaveManager.Instance.ApplySaveData(data);
+
+        Debug.Log("[NetworkManager] 수신된 SaveData를 로컬에 적용 완료");
+    }
+
+    // OnDestroy 또는 OnDisable에서 이벤트 해제
+    private void OnDestroy()
+    {
+        SaveManager.OnSaveDataChanged -= OnSaveDataChangedHandler;
+    }
     #endregion
 
     #region Login / Register
@@ -454,7 +516,14 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         if (string.IsNullOrEmpty(currentUserId) || string.IsNullOrEmpty(selectedSaveRoomName)) return;
 
         var data = SaveSystem.Load(currentUserId, selectedSaveRoomName);
-        if (data != null) CreateRoom(data);
+        if (data != null)
+        {
+            // 저장 데이터를 SaveManager에 세팅
+            if (SaveManager.Instance != null)
+                SaveManager.Instance.SetCurrentSave(data);
+
+            CreateRoom(data);
+        }
     }
 
     private SaveData CreateNewSave(string roomName)
@@ -483,11 +552,27 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             MaxPlayers = 2,
             IsVisible = true,
             IsOpen = true,
-            CustomRoomProperties = new ExitGames.Client.Photon.Hashtable { { "SaveData", JsonUtility.ToJson(data) } },
-            CustomRoomPropertiesForLobby = new string[] { "SaveData" }
+            CustomRoomProperties = new ExitGames.Client.Photon.Hashtable
+            {
+                { "SaveOwner", currentUserId },
+                { "CreatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") }
+            }
         };
 
         PhotonNetwork.CreateRoom(roomName, options);
+        Debug.Log($"[NetworkManager] 방 생성 요청: {roomName}");
+    }
+
+    public override void OnCreatedRoom()
+    {
+        Debug.Log($"[NetworkManager] 방 생성 완료: {PhotonNetwork.CurrentRoom.Name}");
+
+        // SaveManager가 있으면 현재 Save 세팅
+        if (SaveManager.Instance != null && SaveManager.Instance.GetCurrentSave() == null)
+        {
+            SaveData data = new SaveData(PhotonNetwork.CurrentRoom.Name);
+            SaveManager.Instance.SetCurrentSave(data);
+        }
     }
     #endregion
 
@@ -529,6 +614,13 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         var props = PhotonNetwork.LocalPlayer.CustomProperties ?? new ExitGames.Client.Photon.Hashtable();
 
         bool hasJob = props.ContainsKey("JobIndex") && props["JobIndex"] != null;
+
+        if (isLoadedFromSave)
+        {
+            // 저장에서 불러온 경우 직업 변경/취소 금지
+            Debug.Log("[NetworkManager] 저장된 직업 불러오기 상태: 직업 변경 불가");
+            return;
+        }
 
         if (hasJob && (int)props["JobIndex"] == index) // 취소
         {
@@ -603,7 +695,7 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             bool isMyJob = PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object myJob) &&
                            myJob != null && (int)myJob == i;
 
-            JobBtns[i].interactable = !isTakenByOther && (!PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("JobIndex") || isMyJob);
+            JobBtns[i].interactable = !isTakenByOther && (!PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("JobIndex") || isMyJob) && !isLoadedFromSave;
 
             var img = JobBtns[i].GetComponent<Image>();
             if (img != null) img.color = isMyJob ? Color.green : Color.white;
@@ -648,6 +740,45 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             }
         }
     }
+
+    private void ApplySavedJobs()
+    {
+        var save = SaveManager.Instance.GetCurrentSave();
+        if (save == null) return;
+
+        string userId = NetworkManager.Instance.currentUserId;
+        var myPlayer = save.players.FirstOrDefault(p => p.playerId == userId);
+
+        if (myPlayer != null)
+        {
+            Debug.Log($"LocalPlayer.UserId: {PhotonNetwork.LocalPlayer.UserId}");
+            Debug.Log($"Saved playerId: {myPlayer.playerId}");
+
+            // 내 저장된 직업 적용
+            var props = PhotonNetwork.LocalPlayer.CustomProperties;
+            props["JobIndex"] = myPlayer.jobIndex;
+            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+
+            // 저장에서 불러온 경우, 취소/선택 제한
+            isLoadedFromSave = myPlayer.jobIndex >= 0;
+        }
+
+        // 다른 플레이어 직업 반영
+        foreach (var pd in save.players)
+        {
+            if (pd.playerId == userId) continue;
+            var photonPlayer = PhotonNetwork.PlayerList.FirstOrDefault(p => p.UserId == pd.playerId);
+            if (photonPlayer != null)
+            {
+                var props = photonPlayer.CustomProperties;
+                props["JobIndex"] = pd.jobIndex;
+                photonPlayer.SetCustomProperties(props);
+            }
+        }
+
+        RefreshJobButtons();
+        RefreshPlayerSlots();
+    }
     #endregion
     #region Room Join / Leave / Start
     public void JoinRandomRoom() => PhotonNetwork.JoinRandomRoom();
@@ -655,42 +786,43 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public override void OnJoinedRoom()
     {
-        if (currentRoomData == null)
-            currentRoomData = new RoomData(PhotonNetwork.CurrentRoom.MaxPlayers);
-        
+        Debug.Log("[NetworkManager] OnJoinedRoom 호출됨");
 
-        currentRoomData.LoadFromRoomProperties();
-
-        if (!currentRoomData.playerIds.Contains(currentUserId))
-        {
-            if (!currentRoomData.AddPlayer(currentUserId, -1, out _))
-            {
-                Debug.LogWarning("방이 가득 찼습니다.");
-                PhotonNetwork.LeaveRoom();
-                return;
-            }
-            currentRoomData.SaveToRoomProperties();
-        }
-
+        // RoomPanel / LobbyPanel 처리
+        LobbyPanel.SetActive(false);
         RoomPanel.SetActive(true);
-        RoomRenewal();
-        ClearChat();
 
-        StartBtn.interactable = PhotonNetwork.IsMasterClient;
-
-        SetupJobButtons();
-        RefreshPlayerSlots();
-
-        int slotIndex = GetSlotIndex(currentUserId);
-        if (slotIndex >= 0 && currentRoomData.jobIndices[slotIndex] >= 0)
+        // SaveManager 존재 확인
+        if (SaveManager.Instance == null)
         {
-            var props = PhotonNetwork.LocalPlayer.CustomProperties ?? new ExitGames.Client.Photon.Hashtable();
-            props["JobIndex"] = currentRoomData.jobIndices[slotIndex];
-            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
-            currentRoomData.SaveToRoomProperties();
+            Debug.LogWarning("[NetworkManager] SaveManager 없음 → 생성 중");
+            GameObject go = new GameObject("SaveManager");
+            go.AddComponent<SaveManager>();
         }
 
-        Debug.Log($"RoomData IsFull: {currentRoomData.IsFull()}, PhotonPlayerCount: {PhotonNetwork.CurrentRoom.PlayerCount}");
+        var save = SaveManager.Instance.GetCurrentSave();
+        if (save == null)
+        {
+            // 마스터는 방 생성 시 SaveData를 만든 상태이므로 세팅
+            if (PhotonNetwork.IsMasterClient)
+            {
+                save = new SaveData(PhotonNetwork.CurrentRoom.Name);
+                SaveManager.Instance.SetCurrentSave(save);
+                Debug.Log("[NetworkManager] Master가 새로운 SaveData를 생성했습니다.");
+            }
+            else
+            {
+                Debug.Log("[NetworkManager] 비마스터는 SaveData를 아직 수신하지 않았습니다.");
+            }
+        }
+
+        // 마스터는 전체 Save 브로드캐스트 시작
+        if (PhotonNetwork.IsMasterClient)
+        {
+            string json = JsonUtility.ToJson(save);
+            PV.RPC("RPC_BroadcastSaveData", RpcTarget.All, json);
+            Debug.Log("[NetworkManager] Master가 SaveData를 전체에 브로드캐스트함");
+        }
     }
 
     public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
@@ -794,4 +926,4 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             LobbyInfoText.text = $"{PhotonNetwork.CountOfPlayers - PhotonNetwork.CountOfPlayersInRooms}로비 / {PhotonNetwork.CountOfPlayers}접속";
     }
     #endregion
-}
+}*/

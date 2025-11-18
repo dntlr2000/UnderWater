@@ -1,38 +1,89 @@
 using Photon.Pun;
 using System;
-using UnityEngine;
-using Firebase.Database;
-using Firebase.Extensions;
-using Firebase;
-using Photon.Pun.Demo.PunBasics;
 using System.Linq;
 using System.Collections.Generic;
+using UnityEngine;
+using Firebase.Database;
+using Firebase;
+using ExitGames.Client.Photon;
+using Photon.Realtime;
+using UnityEngine.SceneManagement;
 
-public class SaveManager : MonoBehaviour
+public class SaveManager : MonoBehaviourPun, IOnEventCallback
 {
-    public static SaveManager Instance { get; private set; }
+    private static SaveManager _instance;
+    public static SaveManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindAnyObjectByType<SaveManager>();
+            }
+            if (_instance == null)
+            {
+                Debug.LogWarning("[SaveManager] 인스턴스가 없어 자동으로 생성합니다.");
+                GameObject go = new GameObject("SaveManager");
+                _instance = go.AddComponent<SaveManager>();
+
+                // 생성 시 PhotonView가 없으면 RPC가 불가능하므로 경고
+                if (go.GetComponent<PhotonView>() == null)
+                    Debug.LogError("[SaveManager] 자동 생성된 객체에 PhotonView가 없습니다! 에디터에서 확인하세요.");
+            }
+            return _instance;
+        }
+    }
+
+    private string GetMyCurrentId()
+    {
+        // 1. 포톤에 등록된 ID 확인
+        if (PhotonNetwork.AuthValues != null && !string.IsNullOrEmpty(PhotonNetwork.AuthValues.UserId))
+        {
+            return PhotonNetwork.AuthValues.UserId;
+        }
+
+        // 2. 포톤에 없으면 AuthManager에게 확인
+        if (AuthManager.Instance != null && !string.IsNullOrEmpty(AuthManager.Instance.currentUserId))
+        {
+            return AuthManager.Instance.currentUserId;
+        }
+
+        return null;
+    }
+
     public DatabaseReference dbRef;
+    private SaveData currentSave;
+
+    public bool IsDataReady => currentSave != null;
+    [HideInInspector] public bool isGameLoadedFromSave = false;
+
+    public static event Action<string> OnSaveDataChanged;
+    private Dictionary<string, PlayerData> runtimePlayerCache = new();
+
+    public float autoSaveInterval = 1f;
+    private float timer;
+    private AuthManager AuthMngr => AuthManager.Instance;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
             return;
         }
-        Instance = this;
+        _instance = this;
         DontDestroyOnLoad(gameObject);
 
-        dbRef = FirebaseDatabase.GetInstance(FirebaseApp.DefaultInstance,
-            "https://theoverflown-5908d-default-rtdb.firebaseio.com/").RootReference;
+        if (FirebaseApp.DefaultInstance != null)
+        {
+            dbRef = FirebaseDatabase.GetInstance(FirebaseApp.DefaultInstance,
+                "https://theoverflown-5908d-default-rtdb.firebaseio.com/").RootReference;
+        }
     }
 
-    public float autoSaveInterval = 1f;
-    private float timer;
-
-    void Update()
+    private void Update()
     {
-        if (!PhotonNetwork.IsMasterClient) return;
+        if (!PhotonNetwork.IsMasterClient || !PhotonNetwork.InRoom) return;
 
         timer += Time.deltaTime;
         if (timer >= autoSaveInterval)
@@ -42,200 +93,257 @@ public class SaveManager : MonoBehaviour
         }
     }
 
-    private string GetStablePlayerId(Photon.Realtime.Player p)
+    private void OnEnable()
     {
-        // 우선 UserId, 없으면 ActorNumber, 없으면 NickName (최후)
-        if (!string.IsNullOrEmpty(p.UserId)) return p.UserId;
-        if (p.ActorNumber > 0) return $"Actor_{p.ActorNumber}";
-        if (!string.IsNullOrEmpty(p.NickName)) return p.NickName;
-        return $"Unknown_{p.ActorNumber}";
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        PhotonNetwork.AddCallbackTarget(this);
     }
 
-    private Player FindPlayerController(string stableId)
+    private void OnDisable()
     {
-        if (string.IsNullOrEmpty(stableId)) return null;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        PhotonNetwork.RemoveCallbackTarget(this);
+    }
 
-        // 먼저 시도: UserId 매칭 (일반적)
-        foreach (var pc in UnityEngine.Object.FindObjectsByType<Player>(UnityEngine.FindObjectsSortMode.None))
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (_instance == null)
         {
-            if (pc.photonView == null) continue;
-            var owner = pc.photonView.Owner;
-            if (owner != null)
+            _instance = this;
+        }
+    }
+
+    #region SaveData Get/Set Logic
+
+    public void SetCurrentSave(SaveData save)
+    {
+        currentSave = save;
+        RefreshRuntimeCache();
+        Debug.Log($"[SaveManager] SaveData 설정 완료. (Room: {save?.roomName ?? "NULL"})");
+    }
+
+    public SaveData GetCurrentSave() => currentSave;
+
+    private void RefreshRuntimeCache()
+    {
+        runtimePlayerCache.Clear();
+        if (currentSave?.players != null)
+        {
+            foreach (var pd in currentSave.players)
             {
-                // owner.UserId 우선 비교
-                if (!string.IsNullOrEmpty(owner.UserId) && owner.UserId == stableId) return pc;
-
-                // ActorNumber 비교 (we stored as "Actor_x" maybe)
-                if (stableId.StartsWith("Actor_"))
-                {
-                    if (stableId == $"Actor_{owner.ActorNumber}") return pc;
-                }
-
-                // 닉네임 비교 (fallback)
-                if (!string.IsNullOrEmpty(owner.NickName) && owner.NickName == stableId) return pc;
+                if (pd != null && !string.IsNullOrEmpty(pd.playerId))
+                    runtimePlayerCache[pd.playerId] = pd;
             }
         }
-
-        // 못 찾으면 null 반환
-        return null;
     }
 
+    public void UpdateLocalPlayerJob(string userId, string nickname, int newJobIndex)
+    {
+        if (string.IsNullOrEmpty(userId)) userId = GetMyCurrentId();
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            Debug.LogError($"[SaveManager] ID가 없어 직업 변경 실패. (Nick: {nickname})");
+            return;
+        }
+
+        // 1. 방장이면 -> 즉시 처리
+        if (PhotonNetwork.IsMasterClient)
+        {
+            ProcessJobUpdate(userId, nickname, newJobIndex);
+        }
+        // 2. 게스트면 -> 방장에게 RPC 요청
+        else
+        {
+            if (photonView != null)
+            {
+                photonView.RPC(nameof(RPC_RequestJobChange), RpcTarget.MasterClient, userId, nickname, newJobIndex);
+            }
+            else
+            {
+                Debug.LogError("[SaveManager] PhotonView가 컴포넌트에 없습니다! RPC 실패.");
+            }
+        }
+    }
+
+    public void UpdatePlayerCache(PlayerData pd)
+    {
+        if (pd == null || string.IsNullOrEmpty(pd.playerId)) return;
+
+        if (currentSave == null)
+            currentSave = new SaveData(PhotonNetwork.CurrentRoom?.Name ?? "Room");
+
+        var existing = currentSave.players.FirstOrDefault(p => p.playerId == pd.playerId);
+
+        if (existing != null)
+        {
+            existing.position = pd.position;
+            existing.items = pd.items;
+            if (pd.jobIndex != -1)
+            {
+                existing.jobIndex = pd.jobIndex;
+            }
+        }
+        else
+        {
+            currentSave.players.Add(pd);
+        }
+
+        runtimePlayerCache[pd.playerId] = existing ?? pd;
+    }
+
+    private void BroadcastSaveData()
+    {
+        try
+        {
+            string json = JsonUtility.ToJson(currentSave);
+            OnSaveDataChanged?.Invoke(json);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[SaveManager] 데이터 직렬화 오류: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    #region Game Save Logic
 
     public void SaveGame()
     {
         if (!PhotonNetwork.IsMasterClient) return;
+        if (AuthMngr == null || string.IsNullOrEmpty(AuthMngr.currentUserId)) return;
 
         SaveData data = CollectSaveData();
-        string userId = NetworkManager.Instance.currentUserId;
-        string nickname = NetworkManager.Instance.currentNickname;
-
-
-        if (string.IsNullOrEmpty(userId))
+        if (data != null)
         {
-            Debug.LogWarning("[SaveManager] 로그인된 유저가 없습니다.");
-            return;
+            SaveSystem.Save(data, AuthMngr.currentUserId);
         }
-
-        // 1. 로컬 저장
-        SaveSystem.Save(data, userId);
-        Debug.Log("[SaveManager] 로컬 저장 완료: " + Application.persistentDataPath);
-
-        // 2. Firebase 저장
-        SaveUserInfoToFirebase(userId, nickname);
-        SaveGameToFirebase(userId, data);
-    }
-
-    private void SaveUserInfoToFirebase(string userId, string nickname)
-    {
-        dbRef.Child("users").Child(userId).Child("nickname").SetValueAsync(nickname)
-            .ContinueWithOnMainThread(task =>
-            {
-                if (task.IsCompleted)
-                    Debug.Log("[SaveManager] Firebase 유저 정보 저장 완료");
-                else
-                    Debug.LogError("[SaveManager] Firebase 유저 정보 저장 실패: " + task.Exception);
-            });
-    }
-
-    private void SaveGameToFirebase(string userId, SaveData data)
-    {
-        string json = JsonUtility.ToJson(data);
-        dbRef.Child("saves").Child(userId).Child(data.saveId).SetRawJsonValueAsync(json)
-            .ContinueWithOnMainThread(task =>
-            {
-                if (task.IsCompleted)
-                    Debug.Log("[SaveManager] Firebase 클라우드 세이브 완료");
-                else
-                    Debug.LogError("[SaveManager] Firebase 세이브 실패: " + task.Exception);
-            });
     }
 
     private SaveData CollectSaveData()
     {
-        string roomName = PhotonNetwork.CurrentRoom?.Name ?? "Room";
-        string userId = NetworkManager.Instance?.currentUserId;
+        if (currentSave == null) return null;
 
-        SaveData data = SaveSystem.Load(userId, roomName) ?? new SaveData(roomName);
+        currentSave.players = runtimePlayerCache.Values.ToList();
+        currentSave.jobAssignments = currentSave.players.ToDictionary(p => p.playerId, p => p.jobIndex);
+        currentSave.createdDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
 
-        data.players = data.players ?? new List<PlayerData>();
-        data.jobAssignments = data.jobAssignments ?? new Dictionary<string, int>();
-        data.worldProgress = data.worldProgress ?? new WorldProgress();
-
-        data.saveId = data.saveId ?? Guid.NewGuid().ToString();
-        data.roomName = roomName;
-        data.createdDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-
-        data.players.Clear();
-        data.jobAssignments.Clear();
-
-        foreach (var photonPlayer in PhotonNetwork.PlayerList)
-        {
-            PlayerData pd = new PlayerData();
-
-            // stable id 확보 (UserId 우선, 없으면 ActorNumber 기반)
-            string stableId = GetStablePlayerId(photonPlayer);
-            pd.playerId = stableId;
-
-            // 씬에서 Player 찾기 (FindPlayerController는 stableId 규칙을 이해함)
-            Player pc = FindPlayerController(stableId);
-            if (pc != null)
-            {
-                pd.position = new PlayerLocation(pc.transform.position);
-                pd.jobIndex = (int)(pc.JobIndex ?? -1);
-                // pd.items = pc.Items?.ToArray();
-            }
-            else
-            {
-                pd.position = new PlayerLocation(Vector3.zero);
-                pd.jobIndex = -1;
-            }
-
-            data.players.Add(pd);
-
-            // jobAssignments에 저장: key는 stableId (null/빈 문자열 차단)
-            if (!string.IsNullOrEmpty(stableId))
-            {
-                // 덮어쓰기 허용(최신 값)
-                data.jobAssignments[stableId] = pd.jobIndex;
-            }
-        }
-
-        // worldProgress 처리 (기존 로직 유지)
-        if (QuestManager.Instance != null)
-        {
-            var activeQuests = QuestManager.Instance.GetActiveQuests();
-            data.worldProgress.QuestID = (activeQuests.Count > 0) ? activeQuests[0].questID : "None";
-            data.worldProgress.Difficulty = QuestManager.Instance.Difficulty;
-        }
-        else
-        {
-            Debug.LogWarning("[SaveManager] QuestManager.Instance가 null입니다. Quest 정보 저장 생략.");
-        }
-
-        return data;
+        return currentSave;
     }
 
-    public void ApplySaveData(SaveData data)
+    #endregion
+
+    #region Utility & Accessors
+
+    public int? GetSavedJob(string userId)
     {
-        if (data == null) return;
-        if (data.players == null || data.jobAssignments == null) return;
+        if (string.IsNullOrEmpty(userId) || currentSave == null) return -1;
+        var pd = currentSave.players.FirstOrDefault(p => p.playerId == userId);
+        return pd?.jobIndex ?? -1;
+    }
 
-        foreach (var pd in data.players)
+    public bool CanChangeJob(string userId)
+    {
+        if (isGameLoadedFromSave) return false;
+        var pd = currentSave?.players.FirstOrDefault(p => p.playerId == userId);
+        return pd == null || pd.jobIndex < 0;
+    }
+
+    #endregion
+
+    #region Photon Event Callback
+
+    public void OnEvent(EventData photonEvent)
+    {
+        if (photonEvent.Code != 101) return;
+
+        object[] data = (object[])photonEvent.CustomData;
+        string playerId = (string)data[0];
+        Vector3 pos = (Vector3)data[1];
+        int jobIndex = (int)data[2];
+
+        int? savedJob = GetSavedJob(playerId);
+        if (savedJob.HasValue && savedJob.Value != -1 && jobIndex == 0)
         {
-            if (pd == null || string.IsNullOrEmpty(pd.playerId)) continue;
+            jobIndex = savedJob.Value; // 기존 저장된 직업 유지
+        }
 
-            // 1) UserId 일치 시도
-            var photonPlayer = PhotonNetwork.PlayerList.FirstOrDefault(p => !string.IsNullOrEmpty(p.UserId) && p.UserId == pd.playerId);
+        PlayerData pd = new PlayerData
+        {
+            playerId = playerId,
+            position = new PlayerLocation(pos),
+            jobIndex = jobIndex
+        };
 
-            // 2) ActorNumber 기반 ("Actor_{num}")
-            if (photonPlayer == null && pd.playerId.StartsWith("Actor_"))
+        if (PhotonNetwork.IsMasterClient)
+        {
+            UpdatePlayerCache(pd);
+        }
+    }
+
+    #endregion
+
+    public void HandleBroadcastedSaveData(string json)
+    {
+        SaveData loadedData = JsonUtility.FromJson<SaveData>(json);
+
+        SetCurrentSave(loadedData);
+        isGameLoadedFromSave = true;
+
+        if (AuthMngr != null && !string.IsNullOrEmpty(AuthMngr.currentUserId))
+        {
+            int loadedJob = GetSavedJob(AuthMngr.currentUserId) ?? -1;
+            if (RoomManager.Instance != null)
             {
-                if (int.TryParse(pd.playerId.Replace("Actor_", ""), out int actorNum))
-                    photonPlayer = PhotonNetwork.PlayerList.FirstOrDefault(p => p.ActorNumber == actorNum);
-            }
-
-            // 3) NickName 매칭 (fallback)
-            if (photonPlayer == null)
-                photonPlayer = PhotonNetwork.PlayerList.FirstOrDefault(p => p.NickName == pd.playerId);
-
-            if (photonPlayer == null) continue;
-
-            // 로컬 플레이어에게만 적용 (원래 로직 유지)
-            if (photonPlayer.IsLocal)
-            {
-                Player localPlayer = Player.localPlayer;
-                if (localPlayer == null) continue;
-
-                if (data.jobAssignments.TryGetValue(pd.playerId, out int jobIndex))
-                {
-                    localPlayer.SetJob(jobIndex);
-                }
-
-                if (pd.position != null)
-                {
-                    localPlayer.TeleportTo(pd.position.ToVector3());
-                }
+                RoomManager.Instance.ApplyLoadedJobToPhoton(loadedJob);
             }
         }
+    }
+
+    // RPC 함수 (방장만 수신)
+    [PunRPC]
+    private void RPC_RequestJobChange(string userId, string nickname, int newJobIndex)
+    {
+        Debug.Log($"[SaveManager] RPC 수신: {nickname}님이 직업 {newJobIndex} 선택");
+        ProcessJobUpdate(userId, nickname, newJobIndex);
+    }
+
+    // 내부 처리 함수
+    private void ProcessJobUpdate(string userId, string nickname, int newJobIndex)
+    {
+        if (currentSave == null)
+        {
+            currentSave = new SaveData(PhotonNetwork.CurrentRoom?.Name ?? "Room");
+            currentSave.players = new List<PlayerData>();
+            currentSave.jobAssignments = new Dictionary<string, int>();
+        }
+
+        if (currentSave.players == null) currentSave.players = new List<PlayerData>();
+        if (currentSave.jobAssignments == null) currentSave.jobAssignments = new Dictionary<string, int>();
+
+        PlayerData pd = currentSave.players.FirstOrDefault(p => p.playerId == userId);
+        if (pd == null)
+        {
+            pd = new PlayerData { playerId = userId, playerName = nickname, position = new PlayerLocation(Vector3.zero) };
+            currentSave.players.Add(pd);
+        }
+        pd.jobIndex = newJobIndex;
+        runtimePlayerCache[userId] = pd;
+
+        if (newJobIndex >= 0)
+        {
+            if (currentSave.jobAssignments.ContainsKey(userId))
+                currentSave.jobAssignments[userId] = newJobIndex;
+            else
+                currentSave.jobAssignments.Add(userId, newJobIndex);
+        }
+        else if (currentSave.jobAssignments.ContainsKey(userId))
+        {
+            currentSave.jobAssignments.Remove(userId);
+        }
+
+        // 방장이 변경 사항을 모두에게 알림
+        BroadcastSaveData();
     }
 }

@@ -1103,7 +1103,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d942c5664648614483b1b6d6bdd1cac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 5368671032790062748, guid: 77e02d5ab299c54449bea4f64793d867, type: 3}
 --- !u!4 &1265618391
 Transform:
   m_ObjectHideFlags: 0
@@ -1584,7 +1583,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!82 &1842067642
 AudioSource:
   m_ObjectHideFlags: 0

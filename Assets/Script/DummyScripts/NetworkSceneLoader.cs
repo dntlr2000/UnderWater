@@ -1,4 +1,4 @@
-using UnityEngine;
+/*using UnityEngine;
 
 public class NetworkSceneLoader : MonoBehaviour
 {
@@ -14,3 +14,4 @@ public class NetworkSceneLoader : MonoBehaviour
         }
     }
 }
+*/

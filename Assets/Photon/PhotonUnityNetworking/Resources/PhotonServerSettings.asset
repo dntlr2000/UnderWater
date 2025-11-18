@@ -69,6 +69,10 @@ MonoBehaviour:
   - PunRPC_Master_InstantiateMonster
   - PunRPC_MonsterDeath
   - PunRPC_MonsterDamaged
+  - RPC_SendPlayerInfoToMaster
+  - RPC_BroadcastSaveData
+  - RPC_ReceiveChat
+  - RPC_RequestJobChange
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
