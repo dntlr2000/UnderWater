@@ -17,8 +17,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     private Vector3 initialPosition;
     private Rigidbody rb;
-    private bool isMoving = false;
-    private bool isRunning = false;
+    public bool isMoving = false;
+    public bool isRunning = false;
     #endregion
 
     #region Camera Settings
@@ -36,8 +36,10 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     #region Animation
     [Header("Animation")]
     public Animator animator;
-    public PlayerStateMachine stateMachine;
+    //public PlayerStateMachine stateMachine;
     public bool isBusy = false;
+
+    public EngineerAnimator thirdViewAnimator;
     #endregion
 
     #region Player States & Layers
@@ -61,6 +63,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     public float stamina = 100f;    //스테미너
 
     private bool isSleep = false;
+    public bool isFainted = false;
+    public bool onSit = false;
     #endregion
 
     #region Job Data
@@ -100,10 +104,11 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     {
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
+        thirdViewAnimator = GetComponent<EngineerAnimator>();
         rb.useGravity = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
 
-        stateMachine = new PlayerStateMachine();
+        //stateMachine = new PlayerStateMachine();
 
         if (photonView.IsMine)
         {
@@ -150,7 +155,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             cameraTransform = Camera.main.transform;
 
         UpdateWaterSurfaceHeight();
-        stateMachine.Initialize(new PlayerIdleState(this, stateMachine));
+        //stateMachine.Initialize(new PlayerIdleState(this, stateMachine));
     }
 
     private void Update()
@@ -166,11 +171,11 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             }
         }
 
-        stateMachine.currentState.Update();
+        //stateMachine.currentState.Update();
 
         if (Input.GetMouseButtonDown(0) && !isBusy)
         {
-            stateMachine.ChangeState(new PlayerAttackState(this, stateMachine));
+            //stateMachine.ChangeState(new PlayerAttackState(this, stateMachine));
         }
 
         if (canMoveCamera)
@@ -189,6 +194,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         {
             Jump();
         }
+        thirdViewAnimator.RequestSetAirState(!grounded);
 
     }
     private void FixedUpdate()
@@ -208,6 +214,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (other.CompareTag("Water"))
         {
             SetUnderwater(true);
+            thirdViewAnimator.RequestSetWaterState(true);
         }
     }
 
@@ -216,6 +223,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (other.CompareTag("Water"))
         {
             SetUnderwater(false);
+            thirdViewAnimator.RequestSetWaterState(false);
         }
     }
     #endregion
@@ -238,6 +246,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     private void Jump()
     {
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, 5f, rb.linearVelocity.z);
+        thirdViewAnimator.RequestSetJumpState(true);
     }
 
     private void GroundMove()
@@ -252,11 +261,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
             rb.linearVelocity = targetVelocity;
             isMoving = true; //Run 메서드와 연계
+            thirdViewAnimator.RequestSetMoveState(true, isRunning);
         }
         else
         {
             rb.linearVelocity = new Vector3(0, rb.linearVelocity.y + gravity * Time.fixedDeltaTime, 0);
             isMoving = false;
+            thirdViewAnimator.RequestSetMoveState(false, false);
         }
     }
 
@@ -273,6 +284,16 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         moveDir += Vector3.up * verticalInput;
 
         rb.linearVelocity = moveDir.normalized * swimSpeed;
+
+        if (input == Vector3.zero)
+        {
+            thirdViewAnimator.RequestSetMoveState(false, false);
+        }
+        else
+        {
+            thirdViewAnimator.RequestSetMoveState(true, isRunning);
+        }
+
     }
 
     void RotateView()
@@ -385,6 +406,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             StartCoroutine(useOxygen());
         else
             StopCoroutine(useOxygen());
+
+        thirdViewAnimator.RequestSetWaterState(underwater);
     }
 
     private void UpdateWaterSurfaceHeight()

@@ -73,6 +73,15 @@ MonoBehaviour:
   - RPC_BroadcastSaveData
   - RPC_ReceiveChat
   - RPC_RequestJobChange
+  - PunRPC_ApplyVelocityY
+  - PunRPC_ResetTrigger
+  - PunRPC_SetAirState
+  - PunRPC_SetAttackState
+  - PunRPC_SetDownState
+  - PunRPC_SetJumpState
+  - PunRPC_SetMoveState
+  - PunRPC_SetSitState
+  - PunRPC_SetWaterState
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
