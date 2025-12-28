@@ -60,7 +60,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
     public static event Action<string> OnSaveDataChanged;
     private Dictionary<string, PlayerData> runtimePlayerCache = new();
 
-    public float autoSaveInterval = 1f;
+    public float autoSaveInterval = 5f;
     private float timer;
     private AuthManager AuthMngr => AuthManager.Instance;
 
@@ -181,15 +181,22 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             existing.items = pd.items;
             if (pd.jobIndex != -1)
             {
-                existing.jobIndex = pd.jobIndex;
-            }
-        }
-        else
-        {
-            currentSave.players.Add(pd);
-        }
+                existing.position = pd.position;
+                existing.items = pd.items;
+                if (pd.jobIndex != -1) existing.jobIndex = pd.jobIndex;
 
-        runtimePlayerCache[pd.playerId] = existing ?? pd;
+                if (pd.completedQuestIds != null && pd.completedQuestIds.Count > 0)
+                    existing.completedQuestIds = pd.completedQuestIds;
+                if (pd.activeQuests != null && pd.activeQuests.Count > 0)
+                    existing.activeQuests = pd.activeQuests;
+            }
+            else
+            {
+                currentSave.players.Add(pd);
+                existing = pd; // 신규 추가된 객체 참조
+            }
+            runtimePlayerCache[pd.playerId] = existing;
+        }
     }
 
     private void BroadcastSaveData()
@@ -213,6 +220,20 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
     {
         if (!PhotonNetwork.IsMasterClient) return;
         if (AuthMngr == null || string.IsNullOrEmpty(AuthMngr.currentUserId)) return;
+
+        if (QuestManager.Instance != null)
+        {
+            var questData = QuestManager.Instance.GetQuestSaveData();
+
+            PlayerData myData = runtimePlayerCache.ContainsKey(AuthMngr.currentUserId)
+                ? runtimePlayerCache[AuthMngr.currentUserId]
+                : new PlayerData { playerId = AuthMngr.currentUserId };
+
+            myData.completedQuestIds = questData.completed;
+            myData.activeQuests = questData.active;
+
+            UpdatePlayerCache(myData);
+        }
 
         SaveData data = CollectSaveData();
         if (data != null)
@@ -293,11 +314,51 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
         if (AuthMngr != null && !string.IsNullOrEmpty(AuthMngr.currentUserId))
         {
+            string myId = AuthMngr.currentUserId;
+
             int loadedJob = GetSavedJob(AuthMngr.currentUserId) ?? -1;
             if (RoomManager.Instance != null)
             {
                 RoomManager.Instance.ApplyLoadedJobToPhoton(loadedJob);
             }
+        }
+    }
+
+    public void LoadQuestDataToManager()
+    {
+        if (QuestManager.Instance == null || RoomManager.Instance == null) return;
+        if (AuthMngr == null || string.IsNullOrEmpty(AuthMngr.currentUserId)) return;
+
+        string myId = AuthMngr.currentUserId;
+
+        // 내 데이터 찾기
+        PlayerData myData = null;
+        if (runtimePlayerCache.ContainsKey(myId))
+        {
+            myData = runtimePlayerCache[myId];
+        }
+        // 만약 캐시에 없으면 원본 save에서 찾기 시도
+        else if (currentSave != null)
+        {
+            myData = currentSave.players.FirstOrDefault(p => p.playerId == myId);
+        }
+
+        if (myData != null)
+        {
+            // 직업 정보 (퀘스트 해금 조건 체크용)
+            JobData myJobData = null;
+            int jobIndex = GetSavedJob(myId) ?? -1;
+            if (jobIndex >= 0 && jobIndex < RoomManager.Instance.jobDatas.Length)
+            {
+                myJobData = RoomManager.Instance.jobDatas[jobIndex];
+            }
+
+            Debug.Log($"[SaveManager] 저장된 퀘스트 데이터 복구 시작 (ID: {myId})");
+            QuestManager.Instance.LoadQuestSaveData(myData.completedQuestIds, myData.activeQuests, myJobData);
+        }
+        else
+        {
+            Debug.LogWarning("[SaveManager] 복구할 퀘스트 플레이어 데이터를 찾지 못했습니다.");
         }
     }
 

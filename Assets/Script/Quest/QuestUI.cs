@@ -31,33 +31,44 @@ public class QuestUI : MonoBehaviour
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
 
+        isActive = false;
         questWindow.SetActive(false);
+
         completeButton.gameObject.SetActive(false);
         completeButton.onClick.AddListener(OnCompleteButtonClicked);
     }
 
-    public void ToggleQuestWindow()
+    private void Start()
     {
-        //isActive = questWindow.activeSelf; //isActive에서 이름 변경
-        questWindow.SetActive(!isActive);
-        if (questWindow.activeSelf)
+        if (QuestManager.Instance != null)
         {
-            RefreshQuestList();
-
-            // 퀘스트 창이 열리면 마우스 커서 보이게
-            //Cursor.lockState = CursorLockMode.None;
-            //Cursor.visible = true;
-        }
-        else
-        {
-            // 퀘스트 창이 닫히면 마우스 커서 숨기고 잠그기
-            //Cursor.lockState = CursorLockMode.Locked;
-            //Cursor.visible = false;
+            QuestManager.Instance.OnQuestListUpdated += RefreshQuestList;
         }
     }
 
-    void RefreshQuestList()
+    private void OnDestroy()
     {
+        if (QuestManager.Instance != null)
+        {
+            QuestManager.Instance.OnQuestListUpdated -= RefreshQuestList;
+        }
+    }
+
+    public void ToggleQuestWindow()
+    {
+        isActive = !isActive;
+        questWindow.SetActive(isActive);
+
+        if (isActive)
+        {
+            RefreshQuestList();
+        }
+    }
+
+    public void RefreshQuestList()
+    {
+        //if (!isActive) return;
+
         foreach (Transform child in contentParent)
         {
             Destroy(child.gameObject);
@@ -75,7 +86,7 @@ public class QuestUI : MonoBehaviour
             GameObject item = Instantiate(questItemPrefab, contentParent);
 
             TMP_Text text = item.GetComponentInChildren<TMP_Text>();
-            text.text = quest.title;
+            if (text != null) text.text = quest.title;
 
             Button btn = item.GetComponent<Button>();
             if (btn != null)
@@ -84,8 +95,11 @@ public class QuestUI : MonoBehaviour
             }
         }
 
-        // 아무것도 없으면 상세 비움
-        if (activeQuests.Count == 0)
+        if (currentSelectedQuest != null && activeQuests.Contains(currentSelectedQuest))
+        {
+            ShowQuestDetail(currentSelectedQuest);
+        }
+        else
         {
             ClearQuestDetail();
         }
@@ -118,30 +132,28 @@ public class QuestUI : MonoBehaviour
         }
         rewardsText.text = string.Join("\n", rewardTexts);
 
+        completeButton.gameObject.SetActive(true);
+        completeButton.interactable = allObjectivesComplete;
+
         completeButton.onClick.RemoveAllListeners();
         completeButton.onClick.AddListener(() =>
         {
             QuestManager.Instance.CompleteQuest(quest);
-            RefreshQuestList(); // 목록 다시 로드
         });
-        bool canComplete = quest.objectives.TrueForAll(obj => obj.currentAmount >= obj.targetAmount);
-        completeButton.interactable = canComplete;
     }
 
     void OnCompleteButtonClicked()
     {
-        if (currentSelectedQuest != null)
-        {
-            QuestManager.Instance.CompleteQuest(currentSelectedQuest);
-            RefreshQuestList(); // 완료되면 새로고침
-        }
+        // 중복 방지를 위해 ShowQuestDetail 내부 리스너 사용 권장, 여기는 비워두거나 제거
     }
 
     void ClearQuestDetail()
     {
+        currentSelectedQuest = null;
         titleText.text = "";
         descriptionText.text = "";
         objectivesText.text = "";
         rewardsText.text = "";
+        completeButton.gameObject.SetActive(false);
     }
 }

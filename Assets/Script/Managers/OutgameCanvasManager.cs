@@ -14,6 +14,9 @@ public class OutgameCanvasManager : MonoBehaviour
     public Button LoginBtn;
     public Button RegisterBtn;
     public Text LoginStatusText;
+
+    public Button ShowPasswordBtn;
+    private bool isPasswordVisible = false;
     #endregion
 
     #region Register UI
@@ -100,7 +103,40 @@ public class OutgameCanvasManager : MonoBehaviour
     private void Start()
     {
         SetupButtonEvents();
+
+        if (PasswordInput != null)
+        {
+            PasswordInput.inputType = InputField.InputType.Password;
+            PasswordInput.ForceLabelUpdate();
+        }
     }
+
+    private void Update()
+    {
+        // 로그인 패널이 활성화되어 있을 때만 동작
+        if (LoginPanel != null && LoginPanel.activeSelf)
+        {
+            // 1. Tab 키: 이메일 -> 비밀번호 포커스 이동
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                if (EmailInput.isFocused)
+                {
+                    PasswordInput.Select();
+                }
+            }
+
+            // 2. Enter 키: 로그인 시도
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            {
+                // 엔터키 누르면 로그인 함수 호출
+                if (AuthManager.Instance != null && !AuthManager.Instance.isLoginProcessing)
+                {
+                    AuthManager.Instance.TryLogin(EmailInput.text, PasswordInput.text);
+                }
+            }
+        }
+    }
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
@@ -112,7 +148,10 @@ public class OutgameCanvasManager : MonoBehaviour
     {
         // 로그인 / 회원가입
         LoginBtn.onClick.AddListener(() =>
-            AuthManager._instance.TryLogin(EmailInput.text, PasswordInput.text));
+        {
+            if (!AuthManager.Instance.isLoginProcessing)
+                AuthManager.Instance.TryLogin(EmailInput.text, PasswordInput.text);
+        });
         RegisterBtn.onClick.AddListener(() => ShowRegisterPanel());
         RegisterConfirmBtn.onClick.AddListener(() =>
         {
@@ -124,6 +163,12 @@ public class OutgameCanvasManager : MonoBehaviour
             AuthManager._instance.TryRegister(RegisterEmailInput.text, RegisterPasswordInput.text);
         });
         BackToLoginBtn.onClick.AddListener(() => ShowLoginPanel());
+
+        //비밀번호 보이기/숨기기 버튼 리스너
+        if (ShowPasswordBtn != null)
+        {
+            ShowPasswordBtn.onClick.AddListener(TogglePasswordVisibility);
+        }
 
         // 닉네임
         NicknameConfirmBtn.onClick.AddListener(() =>
@@ -174,6 +219,22 @@ public class OutgameCanvasManager : MonoBehaviour
             AuthManager._instance.TrySetNickname(ProfileNicknameInput.text));
     }
 
+    public void TogglePasswordVisibility()
+    {
+        isPasswordVisible = !isPasswordVisible;
+
+        if (PasswordInput != null)
+        {
+            // InputField의 inputType을 변경하여 텍스트 표시 방식 전환
+            PasswordInput.inputType = isPasswordVisible
+                ? InputField.InputType.Standard
+                : InputField.InputType.Password;
+
+            // 변경 사항 즉시 반영을 위해 강제 업데이트
+            PasswordInput.ForceLabelUpdate();
+        }
+    }
+
     #region Panel Control
     public void HideAllPanels()
     {
@@ -186,7 +247,19 @@ public class OutgameCanvasManager : MonoBehaviour
         ProfilePanel.SetActive(false);
     }
 
-    public void ShowLoginPanel() { HideAllPanels(); LoginPanel.SetActive(true); }
+    public void ShowLoginPanel()
+    {
+        HideAllPanels();
+        LoginPanel.SetActive(true);
+
+        // 로그인 패널 열릴 때 비밀번호 초기화
+        isPasswordVisible = false;
+        if (PasswordInput != null)
+        {
+            PasswordInput.text = "";
+            PasswordInput.inputType = InputField.InputType.Password;
+        }
+    }
     public void ShowRegisterPanel() { HideAllPanels(); RegisterPanel.SetActive(true); }
     public void ShowNicknamePanel() { HideAllPanels(); NicknamePanel.SetActive(true); }
 

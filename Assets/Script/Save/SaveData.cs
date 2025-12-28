@@ -10,8 +10,6 @@ public class SaveData
     public string createdDate;    // 저장일자 (yyyy-MM-dd HH:mm:ss)
 
     public int dayCount;  // 예: 게임 진행 시간/일수
-    // Dictionary는 JsonUtility.ToJson으로 직렬화되지 않습니다.
-    // 하지만 Unity 에디터 외부에서 사용하거나 Firebase 저장을 위해 유지한다고 가정합니다.
     public Dictionary<string, int> jobAssignments = new(); // PlayerID (UserId) → JobIndex 
 
     public List<PlayerData> players = new(); // 플레이어별 데이터
@@ -37,6 +35,9 @@ public class PlayerData
     public PlayerLocation position;
     public Item[] items; // 게임 내 아이템 구조체
     public int jobIndex; // 선택된 직업 인덱스
+
+    public List<string> completedQuestIds = new List<string>(); // 완료된 퀘스트 ID 목록
+    public List<QuestProgressData> activeQuests = new List<QuestProgressData>(); // 현재 진행중인 퀘스트 정보
 }
 
 [Serializable]
@@ -53,6 +54,13 @@ public class Item
 {
     public int itemId;
     public int amount;
+}
+
+[Serializable]
+public class QuestProgressData
+{
+    public string questId;
+    public int[] objectiveCounts; // 각 목표별 현재 달성 수
 }
 
 [Serializable]

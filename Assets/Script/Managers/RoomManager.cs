@@ -23,21 +23,27 @@ public class RoomManager : MonoBehaviourPunCallbacks
     [HideInInspector] public bool isLoadedFromSave = false;
     public JobData[] jobDatas;
 
+    private bool CheckIsLoadedGameRoom()
+    {
+        if (PhotonNetwork.CurrentRoom != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("IsLoadedGame"))
+        {
+            return (bool)PhotonNetwork.CurrentRoom.CustomProperties["IsLoadedGame"];
+        }
+        return false;
+    }
+
     #region Room Join / Leave / Start
 
-    // [수정 1] 입장 시 데이터 강제 로드 및 직업 고정 로직 강화
     public override void OnJoinedRoom()
     {
         OutgameCanvasManager.Instance.ShowRoomPanel();
-        Debug.Log($"[RoomManager] 방 입장 완료. ID: {AuthMngr.currentUserId}");
+
+        Debug.Log($"[RoomManager] 방 입장 완료. ID(Firebase): {AuthMngr.currentUserId}");
 
         // 1. 방 속성(Room Properties)에 저장 데이터가 있는지 확인
         bool hasSaveData = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("SaveData");
-        bool isLoadedGameRoom = false;
-        if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("IsLoadedGame"))
-        {
-            isLoadedGameRoom = (bool)PhotonNetwork.CurrentRoom.CustomProperties["IsLoadedGame"];
-        }
+        bool isLoadedGameRoom = CheckIsLoadedGameRoom();
 
         // 2. 데이터가 있다면 즉시 로컬 SaveManager에 주입 (수신 대기하지 않음)
         if (hasSaveData && SaveMngr != null)
@@ -58,6 +64,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
         if (SaveMngr != null)
         {
             mySavedJobIndex = SaveMngr.GetSavedJob(AuthMngr.currentUserId) ?? -1;
+            Debug.Log($"[RoomManager] 로드된 데이터에서 내 직업 확인: {mySavedJobIndex} (ID: {AuthMngr.currentUserId})");
         }
 
         // 5. 직업 설정 분기
@@ -73,7 +80,6 @@ public class RoomManager : MonoBehaviourPunCallbacks
             else
             {
                 // 로드된 게임이지만 내 정보가 없으면(신규 유저) -1
-                SetLocalPlayerJobProperty(-1);
                 Debug.Log("[RoomManager] 저장된 데이터에 내 정보가 없습니다. (신규 참가)");
             }
         }
@@ -95,6 +101,21 @@ public class RoomManager : MonoBehaviourPunCallbacks
     {
         RoomRenewal();
         ChatRPC("System", $"<color=yellow>{newPlayer.NickName}님이 참가하셨습니다.</color>");
+
+        if (PhotonNetwork.IsMasterClient && SaveMngr != null && SaveMngr.isGameLoadedFromSave)
+        {
+            // 방장이 가진 최신 SaveData에서 새로 들어온 플레이어의 ID 검색
+            int savedJob = SaveMngr.GetSavedJob(newPlayer.UserId) ?? -1;
+
+            if (savedJob != -1)
+            {
+                Debug.Log($"[RoomManager] (Master) 입장한 {newPlayer.NickName}의 저장된 직업({savedJob})을 찾아 강제 설정합니다.");
+
+                // 타겟 플레이어의 커스텀 프로퍼티를 방장이 직접 수정 (권한 행사)
+                ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobIndex", savedJob } };
+                newPlayer.SetCustomProperties(props);
+            }
+        }
         RefreshPlayerSlots();
     }
 
@@ -221,32 +242,32 @@ public class RoomManager : MonoBehaviourPunCallbacks
         RefreshPlayerSlots();
     }
 
-    // [수정 2] 직업 선택 시도 시 강제 차단 로직
     public void SelectJob(int index)
     {
         if (jobDatas == null || index < 0 || index >= jobDatas.Length) return;
 
         int currentSavedJob = SaveMngr?.GetSavedJob(AuthMngr.currentUserId) ?? -1;
-        bool isGameLoaded = SaveMngr != null && SaveMngr.isGameLoadedFromSave;
+
+        bool isRoomLoaded = CheckIsLoadedGameRoom();
 
         // 1. 로드된 게임이고, 내 직업이 데이터에 존재한다면 -> 절대 변경 불가
-        if (isGameLoaded && currentSavedJob != -1)
+        if (isRoomLoaded)
         {
-            if (index != currentSavedJob)
+            if (currentSavedJob != -1)
             {
-                OutgameCanvasManager.Instance.SetStatus("저장된 게임에서는 직업을 변경할 수 없습니다.");
-                // 혹시 모르니 다시 내 원래 직업으로 프로퍼티 갱신 (해킹 방지)
-                SetLocalPlayerJobProperty(currentSavedJob);
+                if (index != currentSavedJob)
+                    OutgameCanvasManager.Instance.SetStatus("저장된 게임에서는 직업을 변경할 수 없습니다.");
+                return;
             }
-            return; // 아무것도 하지 않고 종료
-        }
-
-        // ... (이하 새 게임일 때 로직 유지) ...
-        if (currentSavedJob == index)
-        {
-            SetLocalPlayerJobProperty(-1);
-            OutgameCanvasManager.Instance.SetStatus("직업 선택을 취소했습니다.");
-            return;
+            if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object val))
+            {
+                int propJob = (int)val;
+                if (propJob != -1 && propJob != index)
+                {
+                    OutgameCanvasManager.Instance.SetStatus("저장된 정보 동기화 중입니다. 변경할 수 없습니다.");
+                    return;
+                }
+            }
         }
 
         bool isTakenByOther = false;
@@ -268,21 +289,38 @@ public class RoomManager : MonoBehaviourPunCallbacks
             return;
         }
 
-        SetLocalPlayerJobProperty(index);
-        OutgameCanvasManager.Instance.SetStatus($"{jobDatas[index].jobName}을(를) 선택했습니다.");
+        // 3. [토글 로직] 현재 내가 선택한 상태인지 확인 (Photon Property 기준)
+        int myCurrentPropJob = -1;
+        if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object val2))
+        {
+            myCurrentPropJob = (int)val2;
+        }
+
+        if (myCurrentPropJob == index)
+        {
+            SetLocalPlayerJobProperty(-1);
+            OutgameCanvasManager.Instance.SetStatus("직업 선택을 취소했습니다.");
+        }
+        else
+        {
+            // 새로운 직업 선택
+            SetLocalPlayerJobProperty(index);
+            OutgameCanvasManager.Instance.SetStatus($"{jobDatas[index].jobName}을(를) 선택했습니다.");
+        }
     }
 
-    // [수정 3] UI 버튼 상태 갱신 (저장된 직업이 있으면 비활성화)
     public void RefreshJobButtons()
     {
         if (OutgameCanvasManager.Instance == null || OutgameCanvasManager.Instance.JobBtns == null) return;
         OutgameCanvasManager canvas = OutgameCanvasManager.Instance;
 
         // 내가 고정되어야 하는 상태인지 확인
+        bool isRoomLoaded = CheckIsLoadedGameRoom();
+
         bool isMyJobFixed = false;
         int myFixedJobIndex = -1;
 
-        if (SaveMngr != null && SaveMngr.isGameLoadedFromSave)
+        if (isRoomLoaded && SaveMngr != null)
         {
             int savedJob = SaveMngr.GetSavedJob(AuthMngr.currentUserId) ?? -1;
             if (savedJob != -1)
@@ -290,6 +328,12 @@ public class RoomManager : MonoBehaviourPunCallbacks
                 isMyJobFixed = true;
                 myFixedJobIndex = savedJob;
             }
+        }
+
+        int myCurrentPropJob = -1;
+        if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object val))
+        {
+            myCurrentPropJob = (int)val;
         }
 
         for (int i = 0; i < canvas.JobBtns.Length; i++)
@@ -310,9 +354,8 @@ public class RoomManager : MonoBehaviourPunCallbacks
                 }
             }
 
-            // 내 현재 직업 (속성 or 저장 데이터)
-            int myCurrentJob = SaveMngr?.GetSavedJob(AuthMngr.currentUserId) ?? -1;
-            bool isThisButtonMyJob = (myCurrentJob == i);
+            // 고정된 상태라면 fixedIndex, 아니면 프로퍼티 상의 Index
+            bool isThisButtonMyJob = isMyJobFixed ? (myFixedJobIndex == i) : (myCurrentPropJob == i);
 
             if (isMyJobFixed)
             {
@@ -321,19 +364,25 @@ public class RoomManager : MonoBehaviourPunCallbacks
             }
             else
             {
-                // [새 게임 상태]
-                bool hasSelectedAny = myCurrentJob >= 0;
-                // 남이 안 가져갔고, (내가 아직 선택 안 했거나 || 내가 선택한 바로 그 버튼이면) 활성화
-                canvas.JobBtns[i].interactable = !isTakenByOther && (!hasSelectedAny || isThisButtonMyJob);
+                canvas.JobBtns[i].interactable = !isTakenByOther;
             }
 
             // 색상 처리 (고정 상태라도 내 직업은 초록색으로 표시)
             var img = canvas.JobBtns[i].GetComponent<Image>();
             if (img != null)
             {
-                if (isThisButtonMyJob) img.color = Color.green;
-                else if (isTakenByOther) img.color = Color.gray;
-                else img.color = Color.white;
+                if (isThisButtonMyJob)
+                {
+                    img.color = Color.green; // 내 직업 (고정됨 or 선택함)
+                }
+                else if (isTakenByOther)
+                {
+                    img.color = Color.gray; // 남이 가져감
+                }
+                else
+                {
+                    img.color = Color.white; // 선택 가능
+                }
             }
         }
     }

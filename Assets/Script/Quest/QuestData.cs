@@ -11,7 +11,8 @@ public enum ObjectiveType
     FindStoryItem, // 스토리 아이템 수집
     CookFood,      // 요리
     CraftItem,     // 제작
-    DismantleItem  // 분해
+    DismantleItem,  // 분해
+    PressKey
 }
 
 public enum RewardType

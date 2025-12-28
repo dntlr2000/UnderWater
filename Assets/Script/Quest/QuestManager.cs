@@ -1,11 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
-using NUnit.Framework;
+using System.Linq;
 using UnityEngine;
+using System;
 
 public class QuestManager : MonoBehaviour
 {
     public static QuestManager Instance;
+
+    public event Action OnQuestListUpdated;
 
     public int CurrentQuestId => activeQuests.Count > 0 ? int.Parse(activeQuests[0].questID) : 0;
     public int Difficulty => 1;
@@ -25,41 +28,74 @@ public class QuestManager : MonoBehaviour
     public void RegisterLocalPlayer(Player player)
     {
         localPlayer = player;
+        // 플레이어 등록 시점에 바로 퀘스트 갱신 시도
+        if (localPlayer.currentJob != null)
+        {
+            TryUnlockQuests(localPlayer.currentJob);
+        }
     }
 
-    private void Start()
+    public void InitStartingQuests()
     {
-        if (allQuests.Count > 0)
-            AddQuest(allQuests[0]);
-    }
-
-    public void InitQuestsForPlayer(Player player)
-    {
-        RegisterLocalPlayer(player);
-        TryUnlockQuests(player.currentJob);
+        // 1번 퀘스트(혹은 조건 없는 퀘스트) 자동 수주
+        foreach (var quest in allQuests)
+        {
+            // 선행 퀘스트가 없고, 수동 해금도 아니며, 메인 퀘스트인 경우
+            if (quest.prerequisiteQuest == null && quest.questType == QuestType.Main)
+            {
+                AddQuest(quest);
+            }
+        }
     }
 
     public void TryUnlockQuests(JobData jobData)
     {
+        if (jobData == null) return;
+
+        bool changed = false;
+
         foreach (var quest in allQuests)
         {
-            if (completedQuests.Contains(quest.questID) || activeQuests.Contains(quest))
+            // 이미 완료했거나 진행 중이면 패스
+            if (completedQuests.Contains(quest.questID) || activeQuests.Any(q => q.questID == quest.questID))
                 continue;
 
+            // 선행 퀘스트 조건 및 해금 플래그 확인
             if (quest.IsUnlocked)
             {
+                // 공통 퀘스트이거나, 내 직업과 일치하는 직업 퀘스트인 경우
                 if (quest.questType == QuestType.Main ||
                    (quest.questType == QuestType.Job && quest.requiredJob == jobData.jobType))
                 {
                     AddQuest(quest);
+                    changed = true;
                 }
             }
         }
+
+        if (changed) NotifyUIUpdate();
     }
+
     public void AddQuest(QuestData quest)
     {
+        if (activeQuests.Any(q => q.questID == quest.questID)) return;
+
+        // 진행 데이터 초기화 (이전에 하던게 아니면)
+        foreach (var obj in quest.objectives)
+        {
+            // 불러오기 시에는 값을 덮어씌울 것이므로 여기선 0으로 초기화해도 무방
+            // 단, LoadQuestSaveData에서 값을 채워넣어야 함.
+            if (!IsQuestInProgress(quest.questID))
+                obj.currentAmount = 0;
+        }
+
         activeQuests.Add(quest);
+        Debug.Log($"[QuestManager] 퀘스트 수주: {quest.title}");
+
+        NotifyUIUpdate();
     }
+
+    private bool IsQuestInProgress(string id) => activeQuests.Any(q => q.questID == id);
 
     public void CompleteQuest(QuestData quest)
     {
@@ -79,29 +115,30 @@ public class QuestManager : MonoBehaviour
         {
             Debug.LogWarning("로컬 플레이어 또는 직업 정보가 없습니다.");
         }
+
+        SaveManager.Instance.SaveGame();
+
+        NotifyUIUpdate();
+    }
+
+    private void NotifyUIUpdate()
+    {
+        OnQuestListUpdated?.Invoke();
     }
 
     public bool IsQuestCompleted(QuestData quest)
     {
+        if (quest == null) return false;
         return completedQuests.Contains(quest.questID);
     }
-    public List<QuestData> GetActiveQuests()
-    {
-        return activeQuests;
-    }
+    public List<QuestData> GetActiveQuests() => activeQuests;
 
     public List<QuestData> GetActiveQuestsForPlayer(Player player)
     {
-        List<QuestData> playerQuests = new List<QuestData>();
-        foreach (var quest in activeQuests)
-        {
-            if (quest.questType == QuestType.Main ||
-            (quest.questType == QuestType.Job && quest.requiredJob == player.CurrentJobType))
-            {
-                playerQuests.Add(quest);
-            }
-        }
-        return playerQuests;
+        return activeQuests.Where(q =>
+            q.questType == QuestType.Main ||
+            (q.questType == QuestType.Job && player != null && q.requiredJob == player.CurrentJobType)
+        ).ToList();
     }
 
     private void GrantRewards(QuestData quest)
@@ -133,4 +170,93 @@ public class QuestManager : MonoBehaviour
         }
     }
 
+    public (List<string> completed, List<QuestProgressData> active) GetQuestSaveData()
+    {
+        List<string> completedList = completedQuests.ToList();
+        List<QuestProgressData> activeList = new List<QuestProgressData>();
+
+        foreach (var q in activeQuests)
+        {
+            QuestProgressData progress = new QuestProgressData
+            {
+                questId = q.questID,
+                objectiveCounts = q.objectives.Select(o => o.currentAmount).ToArray()
+            };
+            activeList.Add(progress);
+        }
+
+        return (completedList, activeList);
+    }
+
+    // 저장된 데이터를 받아 퀘스트 상태 복구
+    public void LoadQuestSaveData(List<string> completed, List<QuestProgressData> active, JobData jobData)
+    {
+        // 1. 완료 목록 복구
+        completedQuests.Clear();
+        if (completed != null)
+        {
+            foreach (var id in completed) completedQuests.Add(id);
+        }
+
+        // 2. 진행 중 목록 복구
+        activeQuests.Clear();
+        if (active != null)
+        {
+            foreach (var progress in active)
+            {
+                // ID로 원본 퀘스트 데이터 찾기
+                QuestData original = allQuests.FirstOrDefault(q => q.questID == progress.questId);
+                if (original != null)
+                {
+                    // 목표 진행도 복구
+                    for (int i = 0; i < original.objectives.Count; i++)
+                    {
+                        if (i < progress.objectiveCounts.Length)
+                        {
+                            original.objectives[i].currentAmount = progress.objectiveCounts[i];
+                        }
+                    }
+                    activeQuests.Add(original);
+                }
+            }
+        }
+
+        // 3. 데이터 로드 후, 혹시 해금되어야 할 새 퀘스트가 있는지 체크
+        if (jobData != null)
+        {
+            TryUnlockQuests(jobData);
+        }
+
+        NotifyUIUpdate();
+
+        Debug.Log($"[QuestManager] 퀘스트 데이터 로드 완료. (완료: {completedQuests.Count}, 진행중: {activeQuests.Count})");
+    }
+
+    public void ReportObjectiveProgress(ObjectiveType type, int amount = 1)
+    {
+        bool progressChanged = false;
+
+        foreach (var quest in activeQuests)
+        {
+            foreach (var obj in quest.objectives)
+            {
+                // 목표 타입이 일치하고, 아직 달성하지 못했다면
+                if (obj.type == type && obj.currentAmount < obj.targetAmount)
+                {
+                    obj.currentAmount += amount;
+                    // 최대치를 넘지 않게 고정
+                    if (obj.currentAmount > obj.targetAmount)
+                        obj.currentAmount = obj.targetAmount;
+
+                    progressChanged = true;
+                }
+            }
+        }
+        if (progressChanged)
+        {
+            NotifyUIUpdate();
+            // 실시간 저장을 원하면 여기서 SaveManager.Instance.SaveGame(); 호출
+        }
+
+    }
 }

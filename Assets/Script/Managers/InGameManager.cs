@@ -40,6 +40,9 @@ public class InGameManager : MonoBehaviourPunCallbacks
     void SpawnPlayer()
     {
         string myUserId = PhotonNetwork.LocalPlayer.UserId;
+
+        if (AuthManager.Instance != null) myUserId = AuthManager.Instance.currentUserId;
+
         int finalJobIndex = -1;
         Vector3 spawnPos = new Vector3(0, 7f, 0);
 
@@ -104,6 +107,24 @@ public class InGameManager : MonoBehaviourPunCallbacks
                         PhotonNetwork.LocalPlayer.NickName,
                         finalJobIndex,
                         spawnPos);
+                }
+            }
+
+            if (QuestManager.Instance != null)
+            {
+                QuestManager.Instance.RegisterLocalPlayer(player);
+
+                if (SaveManager.Instance.isGameLoadedFromSave)
+                {
+                    Debug.Log("[InGameManager] 저장된 게임 감지 -> 퀘스트 데이터 로드 요청");
+                    // 저장된 데이터를 QuestManager에 주입
+                    SaveManager.Instance.LoadQuestDataToManager();
+                }
+                else
+                {
+                    Debug.Log("[InGameManager] 새 게임 감지 -> 기본 퀘스트 초기화");
+                    // 새 게임용 기본 퀘스트 시작
+                    QuestManager.Instance.InitStartingQuests();
                 }
             }
         }
