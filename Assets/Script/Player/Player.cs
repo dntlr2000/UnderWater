@@ -17,8 +17,10 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     private Vector3 initialPosition;
     private Rigidbody rb;
-    public bool isMoving = false;
-    public bool isRunning = false;
+
+    private GameObject otherPlayer;
+    private float pushRadius = 1.0f; //플레이어 끼리 미는 판정 거리
+    private float pushForce = 3f; //플레이어끼리 미는 판정 힘
     #endregion
 
     #region Camera Settings
@@ -37,36 +39,28 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     [Header("Animation")]
     public Animator animator;
     //public PlayerStateMachine stateMachine;
-    public bool isBusy = false;
+    //public bool isBusy = false;
 
     public EngineerAnimator thirdViewAnimator;
     #endregion
 
     #region Player States & Layers
     [Header("States")]
-    public bool isUnderwater = false;
-    protected bool onGround = false;
+
+    public bool isMoving; //Condition으로 옮기려 했으나 Player에 연계되는 메서드가 많아 보류
+    public bool isRunning; //위와 동일
+    //public bool isJumping = false;
+
+    public Condition condition;
 
     public float runSpeedMultiply = 3f;
 
     public LayerMask groundLayer;
     public LayerMask waterLayer;
     public float checkDistance = 2f;
-    public float waterSurfaceY = 7f;
-    #endregion
+    //public float waterSurfaceY = 7f;
+    //public Coroutine BusyCoroutine;
 
-    #region Player Condition
-    [Header("Condition")]
-    public float health = 100f;    //체력
-    public float hunger = 100f;    //허기
-    public float thirst = 100f;    //수분
-    public float oxygen = 100f;    //산소
-    public float fatigue = 0f;    //피로도
-    public float stamina = 100f;    //스테미너
-
-    private bool isSleep = false;
-    public bool isFainted = false;
-    public bool onSit = false;
     #endregion
 
     #region Job Data
@@ -75,19 +69,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     public JobType CurrentJobType => currentJob.jobType;
     public static Player localPlayer; // **유지**
     private int initialJob = -1;
-    #endregion
-
-    #region UI References
-    [Header("각 상태에 대응되는 바UI")]
-    public StateUICollection stateUICollection;
-
-    StateUIManager healthBar;
-    StateUIManager hungerBar;
-    StateUIManager thirstBar;
-    StateUIManager oxygenBar;
-    StateUIManager fatigueBar;
-    StateUIManager staminaBar;
-
     #endregion
 
     #region Able Only Player
@@ -115,6 +96,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (photonView.IsMine)
         {
             localPlayer = this;
+            Inventory inventory = FindAnyObjectByType<Inventory>();
+            inventory.player = this;
         }
     }
 
@@ -136,12 +119,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
                 // PhotonNetwork.LocalPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "JobIndex", initialJob } }); 
             }
 
-            SetStateBar();
-            StartCoroutine(getHungry());
+            if (condition == null) condition = new Condition(this);
 
 
             RaycastInteract raycastInteract = GetComponent<RaycastInteract>();
             if (raycastInteract != null) raycastInteract.enabled = true;
+
+            StartCoroutine(condition.getHungry());
         }
         else
         {
@@ -156,8 +140,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (cameraTransform == null)
             cameraTransform = Camera.main.transform;
 
-        UpdateWaterSurfaceHeight();
-        //stateMachine.Initialize(new PlayerIdleState(this, stateMachine));
     }
 
     private void Update()
@@ -173,73 +155,117 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             }
         }
 
-        //stateMachine.currentState.Update();
-
-        if (Input.GetMouseButtonDown(0) && !isBusy)
+        if (photonView.IsMine)
         {
-            //stateMachine.ChangeState(new PlayerAttackState(this, stateMachine));
-        }
+            //stateMachine.currentState.Update();
 
-        if (canMoveCamera)
-            RotateView();
+            if (Input.GetMouseButtonDown(0)) //공격 애니메이션 출력은 별개의 스크립트/메서드해서 할듯
+            {
+                //stateMachine.ChangeState(new PlayerAttackState(this, stateMachine));
+                Attack(1f);
+            }
 
-        if (!isBusy)
-            Animate();
+            if (canMoveCamera)
+                RotateView();
 
+            //if (!isBusy)
+            //Animate();
 
-        if (!isUnderwater)
-            Run();
+            bool grounded = IsGrounded();
 
-        bool grounded = IsGrounded();
-        // 예시: 땅에 있을 때만 점프 가능
-        if (grounded && Input.GetKeyDown(KeyCode.Space))
-        {
-            Jump();
+            if (grounded && Input.GetKeyDown(KeyCode.Space))
+            {
+                Jump();
+            }
+            /*
+            if (!grounded && !isJumping)
+            {
+                rb.AddForce(Vector3.down * 20f, ForceMode.Acceleration);
+                //isJumping = true; //부하를 줄이기 + 어색함을 줄이기 위해 위해 상시 적용을 피하고 싶은데 지금으로선 달리 방법이 없다..
+            }
+            */
         }
 
     }
     private void FixedUpdate()
     {
-        if (!photonView.IsMine || isBusy) return;
+        if (!photonView.IsMine)
+        {
+            rb.linearVelocity = Vector3.zero; //부들대는 현상 제거용
+        }
 
-        CheckWaterState();
+        if (!photonView.IsMine || condition.isFainted) return;
 
-        if (isUnderwater)
+        condition.Run();
+        if (condition.isUnderwater)
             SwimMove();
         else
             GroundMove();
+        HandlePlayerPushing();
+        condition.restoreBreath();
+
+        //StopPhysics();
+    }
+
+    public void StopPhysics()
+    {
+        //Vector3 vel = rb.linearVelocity;
+        //if (rb != null) rb.linearVelocity = Vector3.zero;
+        isMoving = false;
     }
 
     private void OnTriggerEnter(Collider other)
     {
+        if (!photonView.IsMine) return;
         if (other.CompareTag("Water"))
         {
             SetUnderwater(true);
             thirdViewAnimator.RequestSetWaterState(true);
         }
-        /*
-        if (other.CompareTag("Ground"))
+
+    }
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (!photonView.IsMine) return;
+
+        if (collision.gameObject.CompareTag("Ground"))
         {
-            onGround = true;
-            thirdViewAnimator.RequestSetAirState(true);
+
+            condition.onGround = true;
+            thirdViewAnimator.RequestSetAirState(false);
+            //isJumping = false;
         }
-        */
+        
+        
+        //if (collision.gameObject.CompareTag("Player")) //Edit -> Project Settings -> Physics -> Settings -> LayerCollisionMatrix에서 끌 수 있다
+        //{
+        //    Player target = collision.gameObject.GetComponent<Player>();
+        //    if (target == this) return;
+        //    otherPlayer = target.gameObject;
+        //    Physics.IgnoreCollision(GetComponent<Collider>(), target.gameObject.GetComponent<Collider>(), true);
+        //}
+        
     }
 
     private void OnTriggerExit(Collider other)
     {
+        if (!photonView.IsMine) return;
         if (other.CompareTag("Water"))
         {
             SetUnderwater(false);
             thirdViewAnimator.RequestSetWaterState(false);
         }
-        /*
-        if (other.CompareTag("Ground"))
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (!photonView.IsMine) return;
+        if (collision.gameObject.CompareTag("Ground"))
         {
-            onGround = false;
-            thirdViewAnimator.RequestSetAirState(false);
+            condition.onGround = false;
+            thirdViewAnimator.RequestSetAirState(true);
+
         }
-        */
     }
     #endregion
 
@@ -260,6 +286,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     #region Movement Methods
     private void Jump()
     {
+        //isJumping = true;
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, 5f, rb.linearVelocity.z);
         thirdViewAnimator.RequestSetJumpState(true);
     }
@@ -284,6 +311,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             isMoving = false;
             thirdViewAnimator.RequestSetMoveState(false, false);
         }
+
     }
 
     private void SwimMove()
@@ -310,11 +338,10 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
 
     }
-
     void RotateView()
     {
         if (!photonView.IsMine) return;
-            // Mouse X → 플레이어 회전
+        // Mouse X → 플레이어 회전
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivityX * Time.deltaTime;
         horizontalAngle += mouseX;
         transform.rotation = Quaternion.Euler(0, horizontalAngle, 0);
@@ -382,6 +409,16 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
         Debug.Log($"[{photonView.Owner.NickName}] 스폰 완료 - 위치: {spawnPos}, JobIndex: {jobIndex}");
     }
+
+    public void Attack(float duration = 0.5f)
+    {
+        if (condition.GetIsBusy()) return;
+        //condition.SetInteractable(); //1회용 허가증 발행
+        if (condition.BusyCoroutine != null) StopCoroutine(condition.BusyCoroutine); //공격 딜레이
+        condition.BusyCoroutine = StartCoroutine(condition.BusyRoutine(duration));
+        thirdViewAnimator.RequestSetAttackState(0);
+
+    }
     #endregion
 
     #region Animation Mathods
@@ -395,173 +432,25 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     #endregion
 
     #region Water & Ground Check
-    private void CheckWaterState()
-    {
-        if (cameraTransform != null)
-        {
-            bool nowUnderwater = cameraTransform.position.y < waterSurfaceY;
-            if (nowUnderwater != isUnderwater)
-                SetUnderwater(nowUnderwater);
-        }
-    }
+
     public bool IsGrounded()
     {
-        float radius = 0.3f;
-        Vector3 position = transform.position + Vector3.down * 0.1f;
-        return Physics.CheckSphere(position, radius, groundLayer);
-        
-        //return onGround;
+        return condition.onGround;
     }
 
     private void SetUnderwater(bool underwater)
     {
-        if (isUnderwater == underwater || !photonView.IsMine) return;
+        if (!photonView.IsMine || condition.isUnderwater == underwater) return;
 
-        isUnderwater = underwater;
-        /*        Debug.Log(underwater ? "Entered water" : "Exited water");*/
-
+        condition.isUnderwater = underwater;
         if (underwater)
-            StartCoroutine(useOxygen());
+            StartCoroutine(condition.useOxygen());
         else
-            StopCoroutine(useOxygen());
+            StopCoroutine(condition.useOxygen());
 
         thirdViewAnimator.RequestSetWaterState(underwater);
     }
 
-    private void UpdateWaterSurfaceHeight()
-    {
-        GameObject water = GameObject.FindWithTag("Water");
-        if (water != null)
-        {
-            Collider waterCollider = water.GetComponent<Collider>();
-            waterSurfaceY = (waterCollider != null) ? waterCollider.bounds.max.y : water.transform.position.y;
-        }
-    }
-    #endregion
-
-    #region Status Bars & UI
-    private void SetStateBar()
-    {
-        stateUICollection = FindAnyObjectByType<StateUICollection>();
-        if (stateUICollection == null) return;
-
-        healthBar = stateUICollection.healthBar;
-        hungerBar = stateUICollection.hungerBar;
-        thirstBar = stateUICollection.thirstBar;
-        oxygenBar = stateUICollection.oxygenBar;
-        fatigueBar = stateUICollection.fatigueBar;
-        staminaBar = stateUICollection.staminaBar;
-
-        UIController uIController = FindAnyObjectByType<UIController>();
-        OptionManager optionScript = FindAnyObjectByType<OptionManager>();
-        if (uIController != null) uIController.playerScript = this;
-        if (optionScript != null) optionScript.player = this;
-
-        SetBarUI();
-    }
-
-    public void SetBarUI()
-    {
-        if (!photonView.IsMine) { return; }
-        healthBar.SetBarUI(health);
-        hungerBar.SetBarUI(hunger);
-        thirstBar.SetBarUI(thirst);
-        oxygenBar.SetBarUI(oxygen);
-        fatigueBar.SetBarUI(fatigue);
-        staminaBar.SetBarUI(stamina);
-    }
-
-    public void Damaged(float value)
-    {
-        health -= value;
-        healthBar.SetBarUI(health);
-    }
-    #endregion
-
-    #region Hunger, Oxygen, Sleep
-    public IEnumerator getHungry()
-    {
-        while (true)
-        {
-            hunger -= 1f;
-            thirst -= 1f; //일단 허기, 목마름, 피로 증가 매커니즘이 아예 동일할 것으로 생각되어 하나의 메서드 안에 통합
-            fatigue += 0.5f;
-            SetBarUI();
-            yield return new WaitForSeconds(5f);
-        }
-    }
-
-    public void getFood(float thirst, float hunger)
-    {
-        this.thirst += thirst;
-        this.hunger += hunger;
-        SetBarUI();
-    }
-
-    public IEnumerator useOxygen()
-    {
-        //산소 관련 주석을 남겨둔 이유: 좀 더 효율적인 방법이나 현재 구조로 문제가 발생할 경우 이전 구조로 되돌리기 쉽게 남겨둠. 이후에도 작동에 문제 없으면 삭제 예정
-        //oxygen -= 0.1f;
-        //yield return new WaitForSeconds(0.1f);
-
-        while (isUnderwater)
-        {
-            oxygen -= 0.1f;
-            yield return new WaitForSeconds(0.1f);
-            oxygenBar.SetBarUI(oxygen);
-
-            if (oxygen <= 0)
-            {
-                //사망처리 필요시 구현
-                break; //사?망
-            }
-        }
-    }
-
-    public void chargeOxygen(float amount)
-    {
-        oxygen += amount;
-        oxygenBar.SetBarUI(oxygen);
-    }
-
-    public IEnumerator getSleepCoroutine()
-    {
-        while (isSleep)
-        {
-            yield return new WaitForSeconds(1f);
-            if (isSleep)
-            {
-                fatigue -= 1f;
-                fatigueBar.SetBarUI(fatigue);
-            }
-        }
-    }
-    #endregion
-
-    #region Run & Stamina
-    public void Run()
-    {
-        if (stamina < 5f && isRunning == false)
-        {
-            stamina += 0.01f;
-            isRunning = false;
-            return; //뛸 수 없는 상태
-        }
-
-        if (Input.GetKey(KeyCode.LeftShift) && isMoving)
-        {
-            isRunning = true;
-            stamina -= 0.1f;
-            if (stamina < 0.1f) isRunning = false;
-        }
-        else
-        {
-            stamina = Mathf.Min(stamina + 0.05f, 100f);
-            isRunning = false;
-
-        }
-        staminaBar.SetBarUI(stamina);
-    }
     #endregion
 
     #region Save & Sync Methods
@@ -620,11 +509,11 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             },
             sendOptions: ExitGames.Client.Photon.SendOptions.SendReliable
         );
+
     }
-#endregion
+    #endregion
 
     #region Job Assignment
-    // SaveManager의 GetSavedJob()과 호환되는 JobIndex 프로퍼티
     public int? JobIndex
     {
         get
@@ -665,4 +554,57 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     }
     // ... (OnPlayerPropertiesUpdate, JobSetting 등 기존 Job 로직 유지) ...
     #endregion
+
+    private void HandlePlayerPushing()
+    {
+        // pushRadius 반경에 있는 Player 레이어의 모든 콜라이더를 탐색
+        // 1 << LayerMask.NameToLayer("Player")는 Player 레이어만 검사하겠다는 비트마스크
+        int playerLayerMask = 1 << LayerMask.NameToLayer("Player");
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, pushRadius, playerLayerMask);
+
+        foreach (var hitCollider in hitColliders)
+        {
+            if (hitCollider.gameObject == gameObject) continue;
+            if (!hitCollider.CompareTag("Player")) continue;
+
+            //거리와 방향 계산
+            Vector3 otherPosition = hitCollider.transform.position;
+            Vector3 direction = transform.position - otherPosition;
+            direction.y = 0;
+
+            float distance = direction.magnitude;
+
+            //거리가 0이면(완벽히 겹치면) 방향을 알 수 없어 에러가 나므로 임의의 방향 설정
+            if (distance == 0)
+            {
+                direction = Random.insideUnitSphere;
+                direction.y = 0;
+                distance = 0.01f;
+            }
+
+            //밀어내기 로직
+            if (distance < pushRadius)
+            {
+                //  겹친 만큼의 비율 (0 ~ 1)
+                float overlapAmount = 1f - (distance / pushRadius);
+
+                // 겹친 정도가 클수록 더 세게 밀어냄
+                Vector3 pushVector = direction.normalized * overlapAmount * pushForce * Time.fixedDeltaTime;
+
+                if (rb != null)
+                {
+                    rb.MovePosition(rb.position + pushVector);
+                }
+            }
+        }
+    }
+    /*
+    // 에디터에서 범위를 눈으로 확인하기 위한 기즈모
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, pushRadius);
+    }
+    */
+
 }

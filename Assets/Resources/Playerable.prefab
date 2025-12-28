@@ -428,6 +428,10 @@ MonoBehaviour:
     cursorSprite: {fileID: 21300000, guid: 24cd3cfcba30b614ea976e2a837aacef, type: 3}
   - cursorType: Item
     cursorSprite: {fileID: 21300000, guid: e25ff1fe73f928645af6c12233164d50, type: 3}
+  - cursorType: Key
+    cursorSprite: {fileID: 21300000, guid: c248289f6768b994c978df88ea91e317, type: 3}
+  - cursorType: Cross
+    cursorSprite: {fileID: 21300000, guid: cb56b8312b023364986131c4bfc9174b, type: 3}
   gaugeImage: {fileID: 2255142211287375803}
   gaugeUnfilledImage: {fileID: 7203881778745875289}
 --- !u!1 &3453806653155162943
@@ -588,6 +592,7 @@ GameObject:
   - component: {fileID: 4654216993199722793}
   - component: {fileID: 1819224067686749904}
   - component: {fileID: 1856746806914636969}
+  - component: {fileID: -9024019472833989526}
   m_Layer: 8
   m_Name: Playerable
   m_TagString: Player
@@ -674,23 +679,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f889b6670e7d6648b45fb1b61f6b012, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 20
-  swimSpeed: 10
+  moveSpeed: 10
+  swimSpeed: 5
   rotationSpeed: 10
   gravity: -9.8
   swimUpForce: 5
-  isMoving: 0
-  isRunning: 0
   cameraTransform: {fileID: 6171832865811880693}
   cameraPivot: {fileID: 1690134849494874969}
   mouseSensitivityX: 500
   mouseSensitivityY: 500
   canMoveCamera: 1
   animator: {fileID: 7748892893612311456}
-  isBusy: 0
   thirdViewAnimator: {fileID: 0}
-  isUnderwater: 1
-  runSpeedMultiply: 3
+  isMoving: 0
+  isRunning: 0
+  condition: {fileID: 0}
+  runSpeedMultiply: 2
   groundLayer:
     serializedVersion: 2
     m_Bits: 128
@@ -698,22 +702,12 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 16
   checkDistance: 2
-  waterSurfaceY: 7
-  health: 100
-  hunger: 100
-  thirst: 100
-  oxygen: 100
-  fatigue: 0
-  stamina: 100
-  isFainted: 0
-  onSit: 0
   currentJob: {fileID: 0}
   allJobs:
   - {fileID: 11400000, guid: 2020002d21f98b74d8684c677afe6700, type: 2}
   - {fileID: 11400000, guid: 05196aee36b459248935b95f7bf92fbb, type: 2}
   - {fileID: 11400000, guid: 8d6ac1c3b82b43d418b4d523dcd4b91d, type: 2}
   - {fileID: 11400000, guid: 26de992d9af81a74d99eee13f9139a6c, type: 2}
-  stateUICollection: {fileID: 0}
   PlayerCanvas: {fileID: 4302061794173576235}
   FirstViewLook: {fileID: 2348633237659199538}
   ThirdViewLook: {fileID: 4135656898964632311}
@@ -780,7 +774,6 @@ MonoBehaviour:
     m_Bits: 1024
   holdDuration: 1.5
   player: {fileID: 7411697451129402638}
-  isBusy: 0
 --- !u!95 &4654216993199722793
 Animator:
   serializedVersion: 7
@@ -832,6 +825,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 868733288572299694}
+--- !u!65 &-9024019472833989526
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5368671032790062748}
+  m_Material: {fileID: 13400000, guid: 6f9177e91b633f048a9e8aede68f2b35, type: 2}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.9, y: 0.5, z: 0.9}
+  m_Center: {x: 0, y: -0.12, z: 0}
 --- !u!1 &5402255817681753600
 GameObject:
   m_ObjectHideFlags: 0
@@ -1759,15 +1773,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: ea41f4c8f13ccbc4b9af9ee19b639357, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.3
+      value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ea41f4c8f13ccbc4b9af9ee19b639357, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.3
+      value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ea41f4c8f13ccbc4b9af9ee19b639357, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.3
+      value: 0.15
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ea41f4c8f13ccbc4b9af9ee19b639357, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1775,7 +1789,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ea41f4c8f13ccbc4b9af9ee19b639357, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -2.6
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ea41f4c8f13ccbc4b9af9ee19b639357, type: 3}
       propertyPath: m_LocalPosition.z

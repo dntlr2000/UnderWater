@@ -3,7 +3,6 @@ using UnityEngine;
 public class ItemSpawnerTemp : InteractableObject
 {
 
-
     public override void Interact()
     {
         if (Input.GetMouseButton(1))

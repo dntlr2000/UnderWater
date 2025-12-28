@@ -11,7 +11,7 @@ public enum PlayerStateType
     Attack,
     Die
 }
-
+/*
 public class PlayerIdleState : PlayerState
 {
     public PlayerIdleState(Player player, PlayerStateMachine stateMachine)
@@ -216,3 +216,4 @@ public class PlayerDieState : PlayerState
         player.thirdViewAnimator.RequestSetDownState(true);
     }
 }
+*/

@@ -26,7 +26,6 @@ public class OpenableStorageBox : InteractableObject
             storageData = new InventoryData(); // InventoryData 객체는 우선 생성
             storageData.GenerateData();
             storageData.LoadInventory(boxName);
-            //storageData.LoadInventory(boxName);
             Debug.Log("storageData를 생성하였습니다.");
         }
     }
@@ -62,7 +61,7 @@ public class OpenableStorageBox : InteractableObject
 
         box.gameObject.SetActive(true);
         box.SetBoxName(boxName);
-        
+
 
         // 박스를 열 때, 이 박스의 PhotonView ID를 StorageBox UI 스크립트에 넘겨줍니다.
         // 이를 통해 UI는 어떤 박스에 대한 요청을 보내야 하는지 알 수 있습니다.
@@ -89,7 +88,7 @@ public class OpenableStorageBox : InteractableObject
     }
 
     [PunRPC]
-    public void PunRPC_RequestStoreItem(int inventorySlot, int itemID, int quantity, PhotonMessageInfo info)
+    public void PunRPC_RequestStoreItem(int inventorySlot, int itemID, int quantity, float durability, PhotonMessageInfo info)
     {
         // 마스터 클라이언트가 아니면 이 요청을 무시합니다.
         if (!PhotonNetwork.IsMasterClient) return;
@@ -104,6 +103,7 @@ public class OpenableStorageBox : InteractableObject
         {
             if (storageData.id[i] == itemID)
             {
+                if (getSingularity(i)) break;
                 storageData.quantity[i] += quantity;
                 SyncDataToAll();
                 return;
@@ -117,6 +117,7 @@ public class OpenableStorageBox : InteractableObject
             {
                 storageData.id[i] = itemID;
                 storageData.quantity[i] = quantity;
+                storageData.durability[i] = durability;
                 SyncDataToAll();
                 return;
             }
@@ -132,6 +133,7 @@ public class OpenableStorageBox : InteractableObject
 
         int itemID = storageData.id[boxSlot];
         int quantity = storageData.quantity[boxSlot];
+        float durability = storageData.durability[boxSlot];
 
         if (itemID == -1 || quantity < amount) return;
 
@@ -143,7 +145,7 @@ public class OpenableStorageBox : InteractableObject
         if (requesterPhotonView != null)
         {
             // 2. 해당 플레이어에게만 아이템을 주도록 RPC를 보냅니다.
-            requesterPhotonView.RPC("PunRPC_AddItem", info.Sender, itemID, amount);
+            requesterPhotonView.RPC("PunRPC_AddItem", info.Sender, itemID, amount, durability);
 
             // 3. 창고에서 아이템을 제거합니다.
             //storageData.id[boxSlot] = -1;
@@ -220,7 +222,7 @@ public class OpenableStorageBox : InteractableObject
     {
         if (!PhotonNetwork.IsMasterClient) return;
 
-        
+
         if (storageData.money >= amount)
         {
             storageData.money -= amount;
@@ -253,5 +255,10 @@ public class OpenableStorageBox : InteractableObject
 
         Debug.Log("클라이언트로부터 최신 데이터 요청을 받아 동기화를 시작합니다.");
         SyncDataToAll();
+    }
+
+    public bool getSingularity(int index)
+    {
+        return ItemDatabase.Instance.getSingularity(storageData.id[index]);
     }
 }

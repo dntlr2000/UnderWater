@@ -24,6 +24,7 @@ public class ShopManager : MonoBehaviour
     int selectedID = -1;
 
     int[] shopItems; //상점에 팔 아이템 ID 저장
+    float[] shopDurability;
     int[] shopPrice; //상점 품목 별 가격
 
     public RawImage comfirmScreen;
@@ -103,7 +104,11 @@ public class ShopManager : MonoBehaviour
         }
 
         inventory.GetMoney(-shopPrice[selectedID] * amount);
-        inventory.GetItem(shopItems[selectedID], amount);
+        if (ItemDatabase.Instance.getSingularity(shopItems[selectedID]) == true)
+        {
+            for (int i = 0; i < amount; i++) inventory.GetItem(shopItems[selectedID], 1, shopDurability[selectedID]);
+        }  
+        else inventory.GetItem(shopItems[selectedID], amount, shopDurability[selectedID]);
         UpdateMoneyData();
 
     }
@@ -302,17 +307,26 @@ public class ShopManager : MonoBehaviour
         //level : 레벨에 따른 순차 개방 기능을 위해 구현
         shopItems = new int[10]; //임시로 2개 품목만 구현
         shopPrice = new int[10];
+        shopDurability = new float[10];
 
         for (int i = 0; i < shopItems.Length; i++)
         {
             shopItems[i] = -1;
             shopPrice[i] = 0;
+            shopDurability[i] = -1;
         }
 
         shopItems[0] = 0;
         shopItems[1] = 1;
         shopItems[2] = 2;
         shopItems[3] = 3;
+        shopItems[4] = 4;
+        
+        //shopItems[5] = 5;
+        //shopDurability[5] = 50f;
+
+        shopItems[6] = 6;
+        shopDurability[6] = 100f;
 
         for (int i = 0; i < shopItems.Length; i++)
         {

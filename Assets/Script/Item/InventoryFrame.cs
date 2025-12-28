@@ -8,23 +8,26 @@ public class InventoryFrame : MonoBehaviour
     public ItemUIManager ItemUI;
 
     protected string inventoryName;
+    protected int INVENTORY_SIZE = 25;
 
-    public virtual void GenerateData()
+    public virtual void GenerateData(int slots = 25, int equipSlots = 0)
     {
         inventoryData = new InventoryData();
-        inventoryData.GenerateData();
-
+        inventoryData.GenerateData(slots + equipSlots);
+        INVENTORY_SIZE = slots;
         //GetItem(0, 1);
         Debug.Log("Inventory data generated");
     }
 
-    public void GetItem(int id, int quantitiy = 1, int durability = -1)
+    public void GetItem(int id, int quantitiy = 1, float durability = -1)
     {
         //같은 아이템이 이미 존재하는지 확인 먼저 한 후 빈 슬롯을 찾기
-        for (int i = 0; i < inventoryData.id.Length; i++)
+        for (int i = 0; i < INVENTORY_SIZE; i++)
         {
             if (inventoryData.id[i] == id)
             {
+                if (GetSingularity(i) == true) break;
+
                 inventoryData.quantity[i] += quantitiy;
                 Debug.Log($"Item added in slot{i}. current quantity = {inventoryData.quantity[i]}");
                 ItemUI.SetQuantity(i, inventoryData.quantity[i]);
@@ -32,13 +35,14 @@ public class InventoryFrame : MonoBehaviour
             }
         }
 
-        for (int i = 0; i < inventoryData.id.Length; i++) //비어있는 경우. 임시로 -1로 설정c
+        for (int i = 0; i < INVENTORY_SIZE; i++) //비어있는 경우. 임시로 -1로 설정c
         {
             if (inventoryData.id[i] == -1)
             {
                 Debug.Log($"Found empty slots. Slot index = {i}");
                 inventoryData.quantity[i] = quantitiy;
                 inventoryData.id[i] = id;
+                if (durability != -1) inventoryData.durability[i] = durability;
 
                 //inventoryData.item.LoadIcons(inventoryData.id[i]);
 
@@ -89,20 +93,25 @@ public class InventoryFrame : MonoBehaviour
         {
             inventoryData.id[index] = -1;
             inventoryData.quantity[index] = 0;
+            inventoryData.durability[index] = -1;
             Debug.Log($"Removed Item in slot {index}");
 
             ItemUI.ResetIcons(index);
         }
     }
 
-    public void MoveItemSlot(int before, int after)
+    public virtual void MoveItemSlot(int before, int after)
     {
         if (inventoryData.id[before] == -1) return;
         Sprite ItemSpriteAfter;
         if (inventoryData.id[after] == -1) //옮기는 자리가 빈 자리임
         {
+            if (after > INVENTORY_SIZE - 1 && !CheckEquipableItem(inventoryData.id[before])) return; //장비칸에다 착용 불가능한 장비를 착용하려 시도할 때
+
             inventoryData.id[after] = inventoryData.id[before];
             inventoryData.quantity[after] = inventoryData.quantity[before];
+            inventoryData.durability[after] = inventoryData.durability[before];
+
             ItemSpriteAfter = ItemDatabase.Instance.GetIcons(inventoryData.id[after]);
 
             ItemUI.LoadIcons(after, ItemSpriteAfter);
@@ -113,14 +122,21 @@ public class InventoryFrame : MonoBehaviour
         //각 위치에 아이템이 존재할 때
         else
         {
+            if (after > INVENTORY_SIZE - 1 && !CheckEquipableItem(inventoryData.id[before])) return;
+            if (before > INVENTORY_SIZE - 1 && !CheckEquipableItem(inventoryData.id[after])) return;
+
             int tempID = inventoryData.id[after];
             int tempQuantity = inventoryData.quantity[after];
+            float tempDurability = inventoryData.durability[after];
 
             inventoryData.id[after] = inventoryData.id[before];
             inventoryData.quantity[after] = inventoryData.quantity[before];
+            inventoryData.durability[after] = inventoryData.durability[before];
 
             inventoryData.id[before] = tempID;
             inventoryData.quantity[before] = tempQuantity;
+            inventoryData.durability[before] = tempDurability;
+
             ItemSpriteAfter = ItemDatabase.Instance.GetIcons(inventoryData.id[after]);
             Sprite ItemSpriteBefore = ItemDatabase.Instance.GetIcons(inventoryData.id[before]);
             ItemUI.LoadIcons(after, ItemSpriteAfter);
@@ -168,6 +184,28 @@ public class InventoryFrame : MonoBehaviour
         return ItemDatabase.Instance.GetIcons(index);
     }
 
+    public bool GetSingularity(int index)
+    {
+        return ItemDatabase.Instance.getSingularity(inventoryData.id[index]);
+    }
+
+    public void SetDurability(int index, float durability)
+    {
+        inventoryData.durability[index] = durability;
+    }
+
+    public float GetDurability(int index)
+    {
+        return inventoryData.durability[index];
+    }
+
+    public bool CheckEquipableItem(int itemId)
+    {
+        if (itemId == -1) return false;
+        if (ItemDatabase.Instance.ifEquipable(itemId)) return true;
+        else return false;
+    }
+
     public virtual void LoadData()
     {
         inventoryData.LoadInventory(inventoryName);
@@ -177,6 +215,19 @@ public class InventoryFrame : MonoBehaviour
     {
         inventoryData.SaveInventory(inventoryName);
     }
+
+    public bool CheckInventoryEmpty()
+    {
+        for (int i = 0; i < INVENTORY_SIZE; i++)
+        {
+            if (inventoryData.id[i] == -1)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
 
 
@@ -185,15 +236,17 @@ public class InventoryData
 {
     public int[] quantity;
     public int[] id;
+    public float[] durability;
     //[NonSerialized] // 명시적으로 직렬화에서 제외
     //public ItemDatabase item; //Serializable이 아니므로 이 값이 json으로 저장되진 않음
 
     public int money;
 
-    public void GenerateData()
+    public void GenerateData(int slots = 25)
     {
-        quantity = new int[25];
-        id = new int[25];
+        quantity = new int[slots];
+        id = new int[slots];
+        durability = new float[slots];
         //item = new ItemDatabase();
         //item.GenerateData();
 
@@ -201,6 +254,7 @@ public class InventoryData
         {
             quantity[i] = 0;
             id[i] = -1;
+            durability[i] = -1;
         }
 
         money = 0;
@@ -209,10 +263,11 @@ public class InventoryData
 
     }
 
-    public void GetItem(int slot, int id, int quantity = 1)
+    public void GetItem(int slot, int id, int quantity = -1, float durability = -1)
     {
         this.id[slot] = id;
         this.quantity[slot] = quantity;
+        this.durability[slot] = durability;
     }
 
     public void AddItem(int slot, int amount)
@@ -261,10 +316,10 @@ public class InventoryData
         string json = File.ReadAllText(path);
         InventoryData data = JsonUtility.FromJson<InventoryData>(json);
 
-        quantity = data.quantity;
+        if (data.quantity != null) quantity = data.quantity;
         money = data.money;
         id = data.id;
-
+        if (data.durability != null) durability= data.durability;
     }
 
     public void useItem(int index)
@@ -302,5 +357,10 @@ public class InventoryData
         return null;
     }
     */
+
+    public bool CheckEquipableItem(int itemId)
+    {
+        return true;
+    }
 
 }

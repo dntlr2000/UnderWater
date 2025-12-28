@@ -192,6 +192,7 @@ MonoBehaviour:
   usePhoton: 1
   itemID: 1
   amount: 1
+  durability: -1
   ifPool: 1
 --- !u!114 &9103384896578973413
 MonoBehaviour:

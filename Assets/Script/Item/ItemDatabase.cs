@@ -50,47 +50,32 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
             items[i].itemId = i;
         }
 
-        //µ¥ÀÌÅÍ »ý¼º
-        /*¾ç½Ä
-        items[0].itemName = "ÀÌ¸§";
-        items[0].weight = 1; //¹«°Ô
-        items[0].durability = 99; //ÃÖ´ë ³»±¸µµ
-
-        */
-        items[0].itemName = "Null Item";
-        items[0].weight = 0; 
-        items[0].durability = 99;
-        items[0].interactable = true;
-        items[0].damage = 10f;
-        
-
-        items[1].itemName = "Item Box";
-        items[1].weight = 0;
-        items[1].durability = 99;
-        items[1].interactable = false;
-        items[1].price = 100;
-        items[1].damage = 10f;
-        //items[1].fieldItemName = "1";
-
-        items[2].itemName = "Drink Can";
-        items[2].weight = 0;
-        items[2].durability = 99;
-        items[2].interactable = false;
-        items[2].price = 200;
-        items[2].damage = 10f;
-
-        items[3].itemName = "Weapon";
-        items[3].weight = 0;
-        items[3].durability = 99;
-        items[3].interactable = false;
-        items[3].price = 300;
-        items[3].damage = 50f;
+        SetItemData(0, "Null Item", 0, 99, true, 0, 0f);
+        SetItemData(1, "Item Box", 0, 99, false, 100, 10f);
+        SetItemData(2, "Dring Can", 0, 99, false, 200, 10f);
+        SetItemData(3, "Weapon", 0, 99, false, 300, 50f, true) ;
+        SetItemData(4, "Key", 0, 99, false, 100, 10f, true);
+        SetItemData(5, "OxygenCylinder_old", 0, 200, false, 0, 10f, true, "equipable");
+        SetItemData(6, "OxygenSaver", 0, 100, false, 0, 10f, true, "equipable");
 
         LoadIcons(); //¾ÆÀÌÅÛ ¾ÆÀÌÄÜµéÀ» ¸ÕÀú ÀüºÎ ·Îµù
 
         //DebugListAllSprites("Item");
         Debug.Log("ItemDatabase data generated");
 
+    }
+
+    public void SetItemData(int index, string itemName, float weight = 0, float durability = 99, bool interactable = false, int price = 0, float damage = 10f, bool singularity = false, string type = "item")
+    {
+        //¾ÆÀÌÅÛ µ¥ÀÌÅÍ »ý¼º ¾ç½Ä
+        items[index].itemName = itemName;
+        items[index].weight = weight;
+        items[index].durability = durability;
+        items[index].interactable = interactable;
+        items[index].price = price;
+        items[index].damage = damage;
+        items[index].sigularity = singularity;
+        items[index].type = type;
     }
 
     public void LoadIcons()
@@ -113,7 +98,6 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         //ÀÌÈÄ db¿¡ ¸ÅÄªµÇ´Â ¾ÆÀÌÅÛ ¾ÆÀÌÄÜÀ» ÀÌ·¸°Ô ºÒ·¯¿À¸é µÉµí
     }
     
-
     public Sprite LoadIcons(int index)
     {
         ItemIcons[index] = Resources.Load<Sprite>("Item/Item"+ index);
@@ -173,7 +157,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         else if (itemId == 2) //ÀÓ½Ã À½·á¼ö
         {
             quantity-= 1;
-            player.getFood(10, 10);
+            player.condition.getFood(10, 10);
         }
 
         else if (itemId == 3) //ÀÓ½Ã Ä®
@@ -181,7 +165,22 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
             //¾Æ¹« ±â´É ¾øÀ½. ³»±¸µµ ÇöÀç Á¸Àç ¾ÈÇÔ
         }
 
+        else if (itemId == 5) //»ê¼ÒÅë(±¸)
+        {
+            //ÀÏ´Ü ÀÓ½Ã·Î ¼Ò¸ðÇü ¾ÆÀÌÅÛÀ¸·Î ±¸ÇöÇÔ
+            //player.condition.chargeOxygen(inventory.GetDurability(inventory.index));
+            //quantity -= 1;
+        }
+
+        else if (itemId == 6) //»ê¼ÒÅë
+        {
+            //ÀÏ´Ü ÀÓ½Ã·Î ¼Ò¸ðÇü ¾ÆÀÌÅÛÀ¸·Î ±¸ÇöÇÔ
+            //player.condition.chargeOxygen(inventory.GetDurability(inventory.index));
+            //quantity -= 1;
+        }
+
         return quantity; //¼Ò¸ðÇü ¾ÆÀÌÅÛÀÎ °æ¿ì quantityÀÇ °ªÀ» ¼Ò¸ðµÈ ¸¸Å­ »©°í ¹ÝÈ¯¹Þµµ·Ï ÇÔ
+        //Àåºñ ÀåÂø È¿°ú¿¡ ´ëÇØ¼­´Â Condition.csÀÇ EquipEffect()¿¡¼­ ±¸ÇöµÊ
     }
 
     public string getItemName(int itemId)
@@ -205,6 +204,12 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
     {
         if (itemId == -1) return false;
         return items[itemId].interactable;
+    }
+
+    public bool getSingularity(int itemId)
+    {
+        if (itemId == -1) return false;
+        return items[itemId].sigularity;
     }
 
     public int getPrice(int itemId)
@@ -268,7 +273,26 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
         return items[itemId].damage;
     }
 
-    public void GenerateItemPhoton(int itemID, int amount, Vector3 Location)
+    public float getMaxDurability(int itemId)
+    {
+        if (itemId == -1) return -1;
+        return items[itemId].durability;
+    }
+
+    public bool ifEquipable(int itemId)
+    {
+        if (itemId == -1) return false;
+        if (items[itemId].type == "equipable") return true;
+        return false;
+    }
+
+    public string GetItemType(int itemId)
+    {
+        if (itemId == -1) return "NULL";
+        return items[itemId].type;
+    }
+
+    public void GenerateItemPhoton(int itemID, int amount, Vector3 Location, float durability = -1f)
     {
         if (photonView == null) { 
             photonView = GetComponent<PhotonView>(); 
@@ -281,12 +305,12 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
 
         Vector3 dropLocation = Location;
 
-        photonView.RPC("PunRPC_Master_InstantiateDroppedItem", RpcTarget.MasterClient, itemIDToDrop, quantityToDrop, dropLocation);
+        photonView.RPC("PunRPC_Master_InstantiateDroppedItem", RpcTarget.MasterClient, itemIDToDrop, quantityToDrop, durability, dropLocation);
     }
 
 
     [PunRPC]
-    public void PunRPC_Master_InstantiateDroppedItem(int itemID, int amount, Vector3 location)
+    public void PunRPC_Master_InstantiateDroppedItem(int itemID, int amount, float durability, Vector3 location)
     {
         if (!PhotonNetwork.IsMasterClient)
         {
@@ -305,7 +329,7 @@ public class ItemDatabase : MonoBehaviour //¾ÆÀÌÅÛ ¸ñ·ÏÀ» ÀÎÅÍÆäÀÌ½º³ª abstract·
             PhotonView itemView = droppedItem.GetComponent<PhotonView>();
             if (itemView != null)
             {
-                itemView.RPC("PunRPC_SetItemProperties", RpcTarget.All, itemID, amount);
+                itemView.RPC("PunRPC_SetItemProperties", RpcTarget.All, itemID, amount, durability);
             }
             else
             {
@@ -326,6 +350,8 @@ public struct ItemData
     public float durability; //³»±¸µµ. ¾ÆÁ÷ »ó¼¼ ºÎºÐÀº ¹Ì±¸Çö
     public bool interactable; //µé°í ÀÖÀ» ¶§ ÇÊµåÀÇ ¿ÀºêÁ§Æ®¿Í »óÈ£ÀÛ¿ëÇÒ ¼ö ÀÖ´Â ¾ÆÀÌÅÛÀÎÁö ÆÇ´Ü ¿©ºÎ ex: ¼Ò¸ðÇü ¾ÆÀÌÅÛ
     public float damage;
+    public bool sigularity;
+    public string type;
 
     //public string itemFileName;
     //public string fieldItemName;

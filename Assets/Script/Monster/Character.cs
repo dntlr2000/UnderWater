@@ -9,6 +9,7 @@ public abstract class Character : InteractableObject
     public float atkPower;  //공격력
 
     protected bool invincibleState = false;
+    //protected bool attackable = true; //Monster.cs에 lastattacktime이 이미 비슷한 기능을 수행함
 
     //공격 메서드
     public virtual void Attack()

@@ -171,4 +171,21 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
         return value;
     }
 
+    protected int GetItemIDFromPlayer()
+    {
+        int value;
+        if (inventory == null) inventory = FindAnyObjectByType<Inventory>();
+        value = inventory.GetItemID(inventory.index);
+
+        return value;
+    }
+
+    protected float GetDurationFromPlayer()
+    {
+        float value;
+        if (inventory == null) inventory = FindAnyObjectByType<Inventory>();
+        value = inventory.GetDurability(inventory.index);
+
+        return value;
+    }
 }

@@ -8,13 +8,13 @@ public class FieldItem : InteractableObject//, Interactable
     //public bool getAble = true;
     public int itemID; //연관된 아이템 DB의 아이디
     public int amount; //개수
-    //public int durability = -1;
+    public float durability = -1; //내구성, 또는 게이지형 장비 및 소모품 전용
     //private Inventory inventory;
     public bool ifPool = true;
 
     public override InteractionType GetInteractionType() => InteractionType.Gauge; //사실 이 구조면 InteractionType이 필요없을거 같기도
     
-    public void Start()
+    public virtual void Start()
     {
         StartCoroutine(WaitforGetable());
         holdDuration = 1f;
@@ -66,7 +66,7 @@ public class FieldItem : InteractableObject//, Interactable
 
     //현재로서는 Instant, Guage만 정의되어있음
 
-    public void GetItem()
+    public virtual void GetItem()
     {
         inventory = FindAnyObjectByType<Inventory>();
         if (inventory == null)
@@ -77,7 +77,7 @@ public class FieldItem : InteractableObject//, Interactable
         if (!inventory.HoldingInteractableItem()) return; //아이템을 주울 수 있는 상태인지 판단 기준1 : 손에 든 채로 또 아이템을 주울 수 있는 아이템을 들고 있는지 리턴
         //소모형 아이템이 1개 남아서 사용하고 아이템이 비워지자마자 아이템이 주워지는 현상 발생. inventory의 아이템 사용 스크립트가 먼저 처리되기 때문
         //해결 방안1 : 아이템이 소모되어 삭제되는 시점을 코루틴 등으로 미루기
-
+        if (!inventory.CheckInventoryEmpty()) return;
         inventory.GetItem(itemID, amount);
         //gameObject.SetActive(false);
         Destroy(gameObject);
@@ -117,7 +117,7 @@ public class FieldItem : InteractableObject//, Interactable
     }
 
     [PunRPC]
-    private void PunRPC_TryToPickup(int requesterViewID, PhotonMessageInfo info)
+    protected void PunRPC_TryToPickup(int requesterViewID, PhotonMessageInfo info)
     {
         if (!PhotonNetwork.IsMasterClient) return;
 
@@ -133,7 +133,7 @@ public class FieldItem : InteractableObject//, Interactable
         {
             // 요청자에게만 "PunRPC_AddItem" RPC를 보내 아이템을 인벤토리에 추가하도록 합니다.
             // (이전에 창고 기능 구현 시 Inventory.cs에 만들어 둔 RPC를 재사용합니다.)
-            requesterView.RPC("PunRPC_AddItem", info.Sender, this.itemID, this.amount);
+            requesterView.RPC("PunRPC_AddItem", info.Sender, this.itemID, this.amount, this.durability);
 
             // 아이템 지급에 성공했으므로, 이 필드 아이템을 네트워크에서 파괴합니다.
             // PhotonNetwork.Destroy()는 모든 클라이언트에서 이 오브젝트를 파괴합니다.
@@ -176,10 +176,11 @@ public class FieldItem : InteractableObject//, Interactable
     }
 
     [PunRPC]
-    public void PunRPC_SetItemProperties(int id, int amt)
+    public void PunRPC_SetItemProperties(int id, int amt, float durability)
     {
         this.itemID = id;
         this.amount = amt;
+        this.durability = durability;
         Debug.Log($"[PROPERTY SET] Item properties received via RPC. ID set to {this.itemID}, Amount to {this.amount}");
     }
 }

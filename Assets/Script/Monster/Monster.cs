@@ -120,7 +120,7 @@ public class Monster : Character
 
         if (!IsInWater())
         {
-            RequestForTakeDamage(waterDamagePerSecond * Time.fixedDeltaTime);
+            RequestForTakeDamage(waterDamagePerSecond * Time.fixedDeltaTime, false);
 
             //물 안으로 복귀 시도
             MoveTowardsWater();
@@ -238,6 +238,7 @@ public class Monster : Character
         {
             if (Input.GetMouseButtonDown(0)) //좌클
             {
+                //if (player.condition.GetIsBusy()) return;
                 RequestForTakeDamage(GetDamageValueFromInventory());
             }
         }
@@ -369,12 +370,11 @@ public class Monster : Character
     public override void TakeDamage(float damage)
     {
         health -= damage;
-        //Debug.Log($"{gameObject}가 {damage}만큼의 피해를 입었습니다.");
 
         if (health <= 0)
         {
             Debug.Log("체력이 0이하가 되었으므로 사망 처리 시작");
-            RequestForDeath();
+            RequestForDeath(); //오버라이드로 인해 변경된 부분
         }
     }
 
@@ -398,8 +398,11 @@ public class Monster : Character
         PhotonNetwork.Destroy(this.gameObject);
     }
 
-    public void RequestForTakeDamage(float damage)
+    public void RequestForTakeDamage(float damage, bool setInvincible = true)
     {
+        if (invincibleState) return;
+        if (setInvincible) SetInvincible(0.5f);
+
         PhotonView playerPhotonView = player.gameObject.GetComponent<PhotonView>();
 
         pv.RPC("PunRPC_MonsterDamaged", RpcTarget.MasterClient, damage);

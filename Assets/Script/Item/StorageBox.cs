@@ -44,7 +44,7 @@ public class StorageBox : InventoryFrame
     {
         if (inventory == null)
         {
-            inventory = FindAnyObjectByType<Inventory>();
+            inventory = FindAnyObjectByType<Inventory>(); //플레이어 인벤토리
         }
         int invLen = ItemUI.itemSlots.Length;
 
@@ -134,9 +134,9 @@ public class StorageBox : InventoryFrame
     {
         if (inventory.GetItemID(index) == -1 || inventory.GetQuantity(index) <= 0) return;
 
-        // --- 로컬에서 직접 데이터를 변경하는 대신 RPC 호출 ---
         int itemID = inventory.GetItemID(index);
         int quantity = inventory.GetQuantity(index);
+        float durability = inventory.GetDurability(index);
 
         int trueAmount = amount;
 
@@ -149,17 +149,12 @@ public class StorageBox : InventoryFrame
 
         if (linkedPhotonView != null)
         {
-            // 마스터 클라이언트에게 아이템을 보관해달라고 요청
-            linkedPhotonView.RPC("PunRPC_RequestStoreItem", RpcTarget.MasterClient, index, itemID, trueAmount);
+            linkedPhotonView.RPC("PunRPC_RequestStoreItem", RpcTarget.MasterClient, index, itemID, trueAmount, durability);
 
-            // 요청을 보낸 후, 클라이언트 측의 인벤토리에서 아이템을 즉시 제거하여 반응성을 높임
-            //inventory.RemoveAllItem(index);
             inventory.RemoveItem(index, amount);
             UpdateInventoryMenu(); // 인벤토리 UI 즉시 업데이트
         }
 
-        // UpdateMenu()는 이제 동기화 RPC를 받았을 때 자동으로 호출되므로 여기서 호출하지 않습니다.
-        // Debug.Log($"{index}번 아이템 보관을 요청합니다.");
     }
 
     public void StorageItem()
@@ -335,15 +330,6 @@ public class StorageBox : InventoryFrame
         LoadData();
         UpdateMenu();
     }
-
-    public override void GenerateData()
-    {
-        // 이 함수는 이제 마스터 클라이언트의 OpenableStorageBox에서만 호출되므로,
-        // 클라이언트의 StorageBox UI에서는 필요가 없어지거나 비워둘 수 있습니다.
-        // : 아닌 것으로 보임
-        base.GenerateData(); 
-    }
-
 
     public void SetComfirmScreen(bool ifDeposit)
     {

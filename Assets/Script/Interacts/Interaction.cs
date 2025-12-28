@@ -15,7 +15,7 @@ public class Interaction : MonoBehaviour
     private Camera cam;
     private float holdTimer = 0f;
     private Interactable currentTarget;
-    public bool isBusy = false;
+    //public bool isBusy = false;
 
     private void Start()
     {
@@ -24,7 +24,7 @@ public class Interaction : MonoBehaviour
     }
     private void Update()
     {
-        if (!isBusy)
+        if (!player.condition.GetIsBusy())
             HandleInteraction();
     }
     private void HandleInteraction()

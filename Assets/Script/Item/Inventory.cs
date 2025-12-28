@@ -14,6 +14,29 @@ public class Inventory : InventoryFrame
 
     public bool canUseItem = true;
 
+    //public ItemSlot[] equipment;
+    //private InventoryData equipData;
+
+    //private static Inventory _instance;
+    /*
+    public static Inventory Instance
+    {
+        get
+        {
+            // 만약 인스턴스가 아직 없다면 씬에서 찾아봅니다.
+            if (_instance == null)
+            {
+                _instance = FindAnyObjectByType<Inventory>();
+                if (_instance == null)
+                {
+                    Debug.LogError("씬에 ItemDatabase 오브젝트가 존재하지 않습니다!");
+                }
+            }
+            return _instance;
+        }
+    }
+    */
+
     protected void Awake()
     {
         photonView = GetComponent<PhotonView>();
@@ -33,19 +56,16 @@ public class Inventory : InventoryFrame
         }
         */
 
-
-        GenerateData();
+        GenerateData(25, 1);
+        //0 ~ 24까지 인벤토리, 25부터는 장비
         inventoryName = playerInventoryName;
         //GetItem(0, 1);
     }
 
-    public override void GenerateData()
+    public override void GenerateData(int slots, int equipSlots = 0)
     {
-        inventoryData = new InventoryData();
-        inventoryData.GenerateData();
+        base.GenerateData(slots, equipSlots);
         GetMoney(100);
-
-        //GetItem(0, 1);
         Debug.Log("Inventory data generated");
     }
 
@@ -142,18 +162,15 @@ public class Inventory : InventoryFrame
 
         int itemIDToDrop = inventoryData.id[index];
         int quantityToDrop = inventoryData.quantity[index] < amount ? inventoryData.quantity[index] : amount;
+        float durabilityToDrop = inventoryData.durability[index];
 
-        // **STEP 1: Remove the item from the local inventory immediately.**
-        // This provides instant feedback to the player.
         RemoveItem(index, quantityToDrop);
 
-        // Calculate the drop position
         if (player == null) player = GetComponent<Player>();
         Transform playerTransform = player.transform;
         Vector3 dropLocation = playerTransform.position + playerTransform.forward * 1.5f + Vector3.up * 0.5f;
 
-        // **STEP 2: Send a request to the Master Client to create the item for everyone.**
-        photonView.RPC("PunRPC_Master_InstantiateDroppedItem", RpcTarget.MasterClient, itemIDToDrop, quantityToDrop, dropLocation);
+        photonView.RPC("PunRPC_Master_InstantiateDroppedItem", RpcTarget.MasterClient, itemIDToDrop, quantityToDrop, durabilityToDrop, dropLocation);
     }
 
     public bool HoldingInteractableItem() //들고 있을 때 상호작용 가능한 아이템인지 확인 =>InteractableObject와 연계
@@ -163,9 +180,9 @@ public class Inventory : InventoryFrame
     }
 
     [PunRPC]
-    public void PunRPC_AddItem(int id, int quantity)
+    public void PunRPC_AddItem(int id, int quantity, float durability)
     {
-        GetItem(id, quantity); // 기존에 있던 아이템 추가 로직 호출
+        GetItem(id, quantity, durability); // 기존에 있던 아이템 추가 로직 호출
         Debug.Log($"네트워크를 통해 아이템 수신: ID {id}, 수량 {quantity}");
     }
 
@@ -178,41 +195,9 @@ public class Inventory : InventoryFrame
         ItemUI.UpdateMoney(inventoryData.money);
         Debug.Log($"네트워크를 통해 돈 수신. 현재 잔액: {inventoryData.money}");
     }
-
-
-    [PunRPC]
-    public void PunRPC_DropItem(int itemID, int amount, Vector3 location, PhotonMessageInfo info)
-    {
-        // --- 1. 프리팹 경로 결정 ---
-        string prefabPath = $"FieldItem/Object{itemID}";
-        if (Resources.Load(prefabPath) == null)
-        {
-            prefabPath = "FieldItem/Object1";
-        }
-
-        // --- 2. 아이템 생성 (instantiationData 없이) ---
-        GameObject droppedItem = PhotonNetwork.Instantiate(prefabPath, location, Quaternion.identity);
-
-        // --- 3. 생성된 아이템에 속성 설정 RPC 호출 ---
-        if (droppedItem != null)
-        {
-            PhotonView itemView = droppedItem.GetComponent<PhotonView>();
-            if (itemView != null)
-            {
-                // 모든 클라이언트에게 이 아이템의 속성을 설정하라고 명령합니다.
-                itemView.RPC("PunRPC_SetItemProperties", RpcTarget.All, itemID, amount);
-            }
-        }
-
-        // --- 4. 인벤토리에서 아이템 제거 ---
-        if (info.Sender == PhotonNetwork.LocalPlayer)
-        {
-            RemoveItem(this.index, amount);
-        }
-    }
     
     [PunRPC]
-    public void PunRPC_Master_InstantiateDroppedItem(int itemID, int amount, Vector3 location)
+    public void PunRPC_Master_InstantiateDroppedItem(int itemID, int amount, float durability, Vector3 location)
     {
         // Safety check: ensure only the master client runs this.
         if (!PhotonNetwork.IsMasterClient)
@@ -237,7 +222,7 @@ public class Inventory : InventoryFrame
             if (itemView != null)
             {
                 // Use the existing RPC on FieldItem.cs to sync its data (ID and amount)
-                itemView.RPC("PunRPC_SetItemProperties", RpcTarget.All, itemID, amount);
+                itemView.RPC("PunRPC_SetItemProperties", RpcTarget.All, itemID, amount, durability);
             }
             else
             {
@@ -245,4 +230,31 @@ public class Inventory : InventoryFrame
             }
         }
     }
+
+    public override void MoveItemSlot(int before, int after)
+    {
+
+        base.MoveItemSlot(before, after);
+        //Debug.Log($"Switched Complete");
+
+        if (before >= INVENTORY_SIZE || after >= INVENTORY_SIZE)
+        {
+            Condition condition = player.condition;
+
+            condition.ResetStateOrigin();
+            //Debug.Log($"@@ INVENTORY_SIZE = {INVENTORY_SIZE}, EQUIP_SLOTS = {inventoryData.id.Length - INVENTORY_SIZE}");
+            for (int i = INVENTORY_SIZE; i < inventoryData.id.Length; i++)
+            {
+                //Debug.Log($"@@@ {i - INVENTORY_SIZE} 슬롯에 장착중인 장비 효과 반영 : ID = {inventoryData.id[i]}");
+                condition.EquipEffect(inventoryData.id[i], i,inventoryData.durability[i]);
+            }
+            condition.SetBarUI();
+        }
+       
+    }
+
+
+    
+
+
 }

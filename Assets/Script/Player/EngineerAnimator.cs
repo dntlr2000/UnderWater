@@ -66,6 +66,7 @@ public class EngineerAnimator : MonoBehaviour
 
     public void SetAttack(int attackType)
     {
+        //Debug.Log($"공격 타입 : {attackType}");
         animator.SetFloat("AttackType", attackType);
         animator.SetTrigger("Attack");
     }
