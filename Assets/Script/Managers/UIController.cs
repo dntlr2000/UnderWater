@@ -221,7 +221,7 @@ public class UIController : MonoBehaviour
         {
             playerScript.canMoveCamera = canControl;
             // UI가 켜져있으면 isBusy를 true로 만들어 이동/공격을 막음
-            playerScript.isBusy = !canControl;
+            playerScript.condition.SetIsBusy(!canControl);
 
             // 만약 움직이는 중에 UI를 켰다면 멈추게 처리
             if (!canControl)

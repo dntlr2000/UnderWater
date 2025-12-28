@@ -316,6 +316,11 @@ public class Condition : MonoBehaviour
         return isBusy; 
     }
 
+    public void SetIsBusy(bool isBusy)
+    {
+        this.isBusy = isBusy;
+    }
+
     /*
     public void SetInteractable(bool state = true) //isBusy가 참이어도 상호작용에 쓰일 1회용 허가증같은거. 상호작용과 플레이어가 아예 분리되어 있기 때문에 추후 병합 시 필요없어짐
     {
