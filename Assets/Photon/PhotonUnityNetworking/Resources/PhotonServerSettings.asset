@@ -82,6 +82,16 @@ MonoBehaviour:
   - PunRPC_SetMoveState
   - PunRPC_SetSitState
   - PunRPC_SetWaterState
+  - PunRPC_LockObject
+  - PunRPC_OpenDoor
+  - PunRPC_OpenObject
+  - PunRPC_RequestDoor
+  - PunRPC_SyncDoor
+  - PunRPC_SyncLock
+  - PunRPC_SyncOpen
+  - PunRPC_UnlockObject
+  - PunRPC_RemoveSylinder
+  - PunRPC_SetSylinder
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
