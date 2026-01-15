@@ -102,7 +102,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: c7b87fa286009b349a5158c847aea53a, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 528282b47d9e26f4e8f9b5a223ad891b, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -431,7 +431,7 @@ MonoBehaviour:
   - cursorType: Key
     cursorSprite: {fileID: 21300000, guid: c248289f6768b994c978df88ea91e317, type: 3}
   - cursorType: Cross
-    cursorSprite: {fileID: 21300000, guid: cb56b8312b023364986131c4bfc9174b, type: 3}
+    cursorSprite: {fileID: 21300000, guid: 528282b47d9e26f4e8f9b5a223ad891b, type: 3}
   gaugeImage: {fileID: 2255142211287375803}
   gaugeUnfilledImage: {fileID: 7203881778745875289}
 --- !u!1 &3453806653155162943

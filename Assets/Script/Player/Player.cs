@@ -194,7 +194,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             rb.linearVelocity = Vector3.zero; //부들대는 현상 제거용
         }
 
-        if (!photonView.IsMine || condition.isFainted) return;
+        if (!photonView.IsMine || !condition.CanAct(false, true, true)) return;
 
         condition.Run();
         if (condition.isUnderwater)
@@ -340,7 +340,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     }
     void RotateView()
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine || !condition.CanAct(false, true, false)) return;
         // Mouse X → 플레이어 회전
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivityX * Time.deltaTime;
         horizontalAngle += mouseX;

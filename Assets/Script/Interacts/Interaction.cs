@@ -24,7 +24,7 @@ public class Interaction : MonoBehaviour
     }
     private void Update()
     {
-        if (!player.condition.GetIsBusy())
+        if (player.condition.CanAct(true, true, true))
             HandleInteraction();
     }
     private void HandleInteraction()

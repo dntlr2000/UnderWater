@@ -345,7 +345,6 @@ public class StorageBox : InventoryFrame
             if (boxIndex== -1) return;
             if (GetItemID(boxIndex) == -1) return;
         }
-
         comfirmScreen.gameObject.SetActive(true);
 
         if (ifDeposit) //보관 모드

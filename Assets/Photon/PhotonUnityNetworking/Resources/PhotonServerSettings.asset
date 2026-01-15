@@ -92,6 +92,8 @@ MonoBehaviour:
   - PunRPC_UnlockObject
   - PunRPC_RemoveSylinder
   - PunRPC_SetSylinder
+  - RPC_SetUsing
+  - PunRPC_SetUsing
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
