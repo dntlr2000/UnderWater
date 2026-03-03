@@ -322,11 +322,11 @@ public class ShopManager : MonoBehaviour
         shopItems[3] = 3;
         shopItems[4] = 4;
         
-        //shopItems[5] = 5;
-        //shopDurability[5] = 50f;
+        shopItems[5] = 6;
+        shopDurability[5] = 80f;
 
-        shopItems[6] = 6;
-        shopDurability[6] = 100f;
+        //shopItems[6] = 5;
+        //shopDurability[6] = 50f;
 
         for (int i = 0; i < shopItems.Length; i++)
         {

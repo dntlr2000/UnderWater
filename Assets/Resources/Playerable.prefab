@@ -343,6 +343,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6171832865811880693}
+  - component: {fileID: 3150158565814306109}
   m_Layer: 8
   m_Name: FirstViewModeObject_X
   m_TagString: Untagged
@@ -359,13 +360,31 @@ Transform:
   m_GameObject: {fileID: 2348633237659199538}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.45, z: 3.71}
+  m_LocalPosition: {x: 0, y: 2.45, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1690134849494874969}
   m_Father: {fileID: 1260514553517511453}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3150158565814306109
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2348633237659199538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbcadd4697ce24a4980ab172326bc4ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cameraTransform: {fileID: 1690134849494874969}
+  cameraPivot: {fileID: 6171832865811880693}
+  MouseSensitivityX: 100
+  MouseSensitivityY: 100
+  canActivate: 0
+  player: {fileID: 7411697451129402638}
 --- !u!1 &3432984275771070951
 GameObject:
   m_ObjectHideFlags: 0
@@ -593,6 +612,7 @@ GameObject:
   - component: {fileID: 1819224067686749904}
   - component: {fileID: 1856746806914636969}
   - component: {fileID: -9024019472833989526}
+  - component: {fileID: 8785678508657033785}
   m_Layer: 8
   m_Name: Playerable
   m_TagString: Player
@@ -684,10 +704,7 @@ MonoBehaviour:
   rotationSpeed: 10
   gravity: -9.8
   swimUpForce: 5
-  cameraTransform: {fileID: 6171832865811880693}
-  cameraPivot: {fileID: 1690134849494874969}
-  mouseSensitivityX: 500
-  mouseSensitivityY: 500
+  firstViewCamera: {fileID: 3150158565814306109}
   canMoveCamera: 1
   animator: {fileID: 7748892893612311456}
   thirdViewAnimator: {fileID: 0}
@@ -846,6 +863,38 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.9, y: 0.5, z: 0.9}
   m_Center: {x: 0, y: -0.12, z: 0}
+--- !u!114 &8785678508657033785
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5368671032790062748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41fb15798cd2c4b40b903676354c1b84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  player: {fileID: 0}
+  MAX_HEALTH: 100
+  MAX_HUNGER: 100
+  MAX_THIRST: 100
+  MAX_OXYGEN: 100
+  MAX_VITALITY: 100
+  MAX_STAMINA: 100
+  health: 100
+  hunger: 100
+  thirst: 100
+  oxygen: 100
+  vitality: 100
+  stamina: 100
+  isRunning: 0
+  isFainted: 0
+  onSit: 0
+  isUnderwater: 0
+  onGround: 0
+  onWork: 0
+  stateUICollection: {fileID: 0}
 --- !u!1 &5402255817681753600
 GameObject:
   m_ObjectHideFlags: 0
@@ -910,7 +959,7 @@ Transform:
   m_GameObject: {fileID: 5413072857066087420}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.1500001, z: -3.71}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

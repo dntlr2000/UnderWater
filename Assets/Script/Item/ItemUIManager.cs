@@ -26,16 +26,6 @@ public class ItemUIManager : MonoBehaviour
             itemSlots[i].SlotID = i;
         }
     }
-    /*
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.I))
-        {
-            SwitchInventoryState();
-        }
-        
-    }
-    */
 
     public void SwitchInventoryState()
     {

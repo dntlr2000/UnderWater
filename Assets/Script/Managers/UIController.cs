@@ -7,7 +7,7 @@ public class UIController : MonoBehaviour
     public PauseScreen pauseScreen;
     bool pauseState = false;
 
-    public Player playerScript;
+    private Player playerScript;
 
     public QuestUI questUI;
     public ShopManager shop;
@@ -64,39 +64,39 @@ public class UIController : MonoBehaviour
     {
         CheckPlayerScript();
 
-        // 1. 아이템 창이 열려있으면 닫기
+        //아이템창이 켜져 있는 경우
         if (itemUIManager.showInventory)
         {
             ToggleInventory();
             return;
         }
-        // 2. 창고가 열려있으면 닫기
+        //창고
         else if (storageBox.activeSelf)
         {
             SetBoxScreen(false);
             return;
         }
-        // 3. 퀘스트 창이 열려있으면 닫기
+        //퀘스트창
         else if (questUI.isActive)
         {
             ToggleQuestPanel();
             return;
         }
-        // 4. 상점이 열려있으면 닫기
+        //상점
         else if (shop.ifShopOn)
         {
             SetShopScreen(false);
             return;
         }
-        // 5. 옵션 창이 열려있으면 닫기
+        //설정
         else if (optionManager.ifOptionActive)
         {
             optionManager.TurnOptions(false);
             return;
         }
 
-        // 6. 아무것도 안 열려있으면 -> 일시정지(Pause) 토글
-        if (!pauseState)
+        //그 외 -> 일시정지 종료
+        else if (!pauseState)
         {
             SetPauseScreen(true);
         }
@@ -113,12 +113,12 @@ public class UIController : MonoBehaviour
         // 인벤토리 상태에 따라 커서 및 카메라 제어
         if (itemUIManager.showInventory)
         {
-            LockCursor(false);
+            //LockCursor(false);
             SetPlayerControl(false);
         }
         else
         {
-            LockCursor(true);
+            //LockCursor(true);
             SetPlayerControl(true);
         }
     }
@@ -168,14 +168,14 @@ public class UIController : MonoBehaviour
         if (state)
         {
             shop.UpdateMoneyData();
-            LockCursor(false);
+            //LockCursor(false);
             SetPlayerControl(false);
         }
         else
         {
             shop.DisableComfirmScreen();
             shop.ResetSlot();
-            LockCursor(true);
+            //LockCursor(true);
             SetPlayerControl(true);
         }
     }
@@ -210,6 +210,7 @@ public class UIController : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
+        
     }
 
 
@@ -219,6 +220,7 @@ public class UIController : MonoBehaviour
         CheckPlayerScript();
         if (playerScript != null)
         {
+           
             playerScript.canMoveCamera = canControl;
             // UI가 켜져있으면 isBusy를 true로 만들어 이동/공격을 막음
             playerScript.condition.SetIsBusy(!canControl);
@@ -241,6 +243,6 @@ public class UIController : MonoBehaviour
     private void CheckPlayerScript()
     {
         if (playerScript == null)
-            playerScript = FindAnyObjectByType<Player>();
+            playerScript = FindAnyObjectByType<Inventory>().player;
     }
 }

@@ -120,6 +120,7 @@ MonoBehaviour:
   objectName: Can
   player: {fileID: 0}
   usePhoton: 1
+  usingPlayerID: 0
   itemID: 2
   amount: 1
   durability: -1

@@ -14,28 +14,6 @@ public class Inventory : InventoryFrame
 
     public bool canUseItem = true;
 
-    //public ItemSlot[] equipment;
-    //private InventoryData equipData;
-
-    //private static Inventory _instance;
-    /*
-    public static Inventory Instance
-    {
-        get
-        {
-            // 만약 인스턴스가 아직 없다면 씬에서 찾아봅니다.
-            if (_instance == null)
-            {
-                _instance = FindAnyObjectByType<Inventory>();
-                if (_instance == null)
-                {
-                    Debug.LogError("씬에 ItemDatabase 오브젝트가 존재하지 않습니다!");
-                }
-            }
-            return _instance;
-        }
-    }
-    */
 
     protected void Awake()
     {
@@ -48,14 +26,6 @@ public class Inventory : InventoryFrame
 
     void Start()
     {
-        /*
-        if (!photonView.IsMine)
-        {
-            this.enabled = false;
-            return;
-        }
-        */
-
         GenerateData(25, 1);
         //0 ~ 24까지 인벤토리, 25부터는 장비
         inventoryName = playerInventoryName;
@@ -140,7 +110,7 @@ public class Inventory : InventoryFrame
 
     private void FixedUpdate()
     {
-        
+        if (player != null) player.SyncInventory(inventoryData);
     }
 
     public float getPowerFromItem()
@@ -239,22 +209,57 @@ public class Inventory : InventoryFrame
 
         if (before >= INVENTORY_SIZE || after >= INVENTORY_SIZE)
         {
-            Condition condition = player.condition;
-
-            condition.ResetStateOrigin();
-            //Debug.Log($"@@ INVENTORY_SIZE = {INVENTORY_SIZE}, EQUIP_SLOTS = {inventoryData.id.Length - INVENTORY_SIZE}");
-            for (int i = INVENTORY_SIZE; i < inventoryData.id.Length; i++)
-            {
-                //Debug.Log($"@@@ {i - INVENTORY_SIZE} 슬롯에 장착중인 장비 효과 반영 : ID = {inventoryData.id[i]}");
-                condition.EquipEffect(inventoryData.id[i], i,inventoryData.durability[i]);
-            }
-            condition.SetBarUI();
+            RefreshEquipments();
         }
        
     }
 
 
-    
+    public void ApplyLoadedData(InventoryData loadedData)
+    {
+        if (loadedData == null || loadedData.id == null || loadedData.id.Length < INVENTORY_SIZE)
+        {
+            Debug.LogWarning("수신된 인벤토리 데이터가 비어있거나 손상되어 새로 생성합니다.");
+            GenerateData(25, 1);
+            return;
+        }
 
+        //데이터 덮어쓰기
+        this.inventoryData = loadedData;
 
+        //돈 UI 업데이트
+        ItemUI.UpdateMoney(inventoryData.money);
+
+        //슬롯 UI 업데이트
+        for (int i = 0; i < inventoryData.id.Length; i++)
+        {
+            if (inventoryData.id[i] == -1)
+            {
+                ItemUI.ResetIcons(i);
+            }
+            else
+            {
+                Sprite itemSprite = ItemDatabase.Instance.GetIcons(inventoryData.id[i]);
+                ItemUI.LoadIcons(i, itemSprite);
+                ItemUI.SetQuantity(i, inventoryData.quantity[i]);
+            }
+        }
+        RefreshEquipments();
+        Debug.Log("저장된 인벤토리 데이터 복구 완료!");
+    }
+
+    public void RefreshEquipments()
+    {
+        if (player == null || player.condition == null) return;
+
+        Condition condition = player.condition;
+        condition.ResetStateOrigin(); //먼저 기본 상태로 초기화 후 다시 장착 효과 반영
+
+        for (int i = INVENTORY_SIZE; i < inventoryData.id.Length; i++)
+        {
+            condition.EquipEffect(inventoryData.id[i], i, inventoryData.durability[i]);
+        }
+
+        condition.SetBarUI();
+    }
 }

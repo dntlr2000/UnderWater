@@ -52,11 +52,11 @@ public class ItemDatabase : MonoBehaviour //아이템 목록을 인터페이스나 abstract�
 
         SetItemData(0, "Null Item", 0, 99, true, 0, 0f);
         SetItemData(1, "Item Box", 0, 99, false, 100, 10f);
-        SetItemData(2, "Dring Can", 0, 99, false, 200, 10f);
+        SetItemData(2, "Drink Can", 0, 99, false, 200, 10f);
         SetItemData(3, "Weapon", 0, 99, false, 300, 50f, true) ;
         SetItemData(4, "Key", 0, 99, false, 100, 10f, true);
         SetItemData(5, "OxygenCylinder_old", 0, 200, false, 0, 10f, true, "equipable");
-        SetItemData(6, "OxygenSaver", 0, 100, false, 0, 10f, true, "equipable");
+        SetItemData(6, "OxygenCylinder", 0, 100, false, 0, 10f, true, "equipable");
 
         LoadIcons(); //아이템 아이콘들을 먼저 전부 로딩
 

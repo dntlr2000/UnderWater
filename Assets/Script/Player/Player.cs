@@ -25,14 +25,9 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     #region Camera Settings
     [Header("Camera")]
-    public Transform cameraTransform;
-    public Transform cameraPivot;
-    public float mouseSensitivityX = 500f;
-    public float mouseSensitivityY = 500f;
+    public FirstViewCamera firstViewCamera;
     public bool canMoveCamera = true;
 
-    private float verticalAngle;
-    private float horizontalAngle;
     #endregion
 
     #region Animation
@@ -99,17 +94,21 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             Inventory inventory = FindAnyObjectByType<Inventory>();
             inventory.player = this;
         }
+
+        if (condition == null) condition = GetComponent<Condition>();
+        condition.SetCondition(this);
     }
 
     private void Start()
     {
-        SetupLocalPlayerCamera();
+        firstViewCamera.SetupLocalPlayerCamera();
 
         if (photonView.IsMine)
         {
             PlayerCanvas.SetActive(true);
             FirstViewLook.SetActive(true);
             ThirdViewLook.SetActive(false);
+            //FindAnyObjectByType<OptionManager>().LoadOptions();
 
             // 초기 직업 적용 (OnPhotonInstantiate에서 설정된 initialJob 사용)
             if (initialJob >= 0)
@@ -118,8 +117,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
                 // JobIndex 속성 덕분에 아래 로직은 SetJob 내부에서 CustomProperties를 사용하는 것으로 대체될 수 있습니다.
                 // PhotonNetwork.LocalPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "JobIndex", initialJob } }); 
             }
-
-            if (condition == null) condition = new Condition(this);
 
 
             RaycastInteract raycastInteract = GetComponent<RaycastInteract>();
@@ -136,9 +133,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             RaycastInteract raycastInteract = GetComponent<RaycastInteract>();
             if (raycastInteract != null) raycastInteract.enabled = false;
         }
-
-        if (cameraTransform == null)
-            cameraTransform = Camera.main.transform;
 
     }
 
@@ -166,7 +160,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             }
 
             if (canMoveCamera)
-                RotateView();
+                firstViewCamera.RotateView();
 
             //if (!isBusy)
             //Animate();
@@ -269,19 +263,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     }
     #endregion
 
-    #region Camera Method
-    private void SetupLocalPlayerCamera()
-    {
-        if (!photonView.IsMine)
-        {
-            if (cameraTransform != null && cameraTransform.GetComponent<Camera>() != null)
-                cameraTransform.GetComponent<Camera>().enabled = false;
-
-            if (cameraPivot != null)
-                cameraPivot.gameObject.SetActive(false);
-        }
-    }
-    #endregion
 
     #region Movement Methods
     private void Jump()
@@ -297,7 +278,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
         if (input.magnitude >= 0.1f)
         {
-            Vector3 moveDir = Quaternion.Euler(0, cameraTransform.eulerAngles.y, 0) * input;
+            Vector3 moveDir = Quaternion.Euler(0, firstViewCamera.cameraTransform.eulerAngles.y, 0) * input;
             Vector3 targetVelocity = moveDir * moveSpeed * (isRunning ? runSpeedMultiply : 1f);
             targetVelocity.y = rb.linearVelocity.y + gravity * Time.fixedDeltaTime;
 
@@ -323,7 +304,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (Input.GetKey(KeyCode.Space)) verticalInput += 1f;
         if (Input.GetKey(KeyCode.LeftControl)) verticalInput -= 1f;
 
-        Vector3 moveDir = Quaternion.Euler(0, cameraTransform.eulerAngles.y, 0) * input;
+        Vector3 moveDir = Quaternion.Euler(0, firstViewCamera.cameraTransform.eulerAngles.y, 0) * input;
         moveDir += Vector3.up * verticalInput;
 
         rb.linearVelocity = moveDir.normalized * swimSpeed;
@@ -338,24 +319,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
 
     }
-    void RotateView()
-    {
-        if (!photonView.IsMine || !condition.CanAct(false, true, false)) return;
-        // Mouse X → 플레이어 회전
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivityX * Time.deltaTime;
-        horizontalAngle += mouseX;
-        transform.rotation = Quaternion.Euler(0, horizontalAngle, 0);
 
-        // Mouse Y → 카메라 상하 회전
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivityY * Time.deltaTime;
-        verticalAngle -= mouseY;
-        verticalAngle = Mathf.Clamp(verticalAngle, -89f, 89f);
-
-        if (cameraPivot != null)
-        {
-            cameraPivot.localRotation = Quaternion.Euler(verticalAngle, 0f, 0f);
-        }
-    }
 
     public void OnPhotonInstantiate(PhotonMessageInfo info)
     {
@@ -459,15 +423,18 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         string stableId = GetStablePlayerId(photonView.Owner);
 
         // 아이템 정보는 Inventory 등 다른 컴포넌트에서 가져와야 합니다. 현재는 빈 배열
-        Item[] currentItems = new Item[0];
+        //Item[] currentItems = new Item[0];
 
         return new PlayerData
         {
             playerId = stableId,
             playerName = photonView.Owner.NickName,
             position = new PlayerLocation(transform.position),
-            items = currentItems,
+            //items = currentItems,
+            items = inventory,
             jobIndex = JobIndex ?? -1, // 직업이 없으면 -1 반환
+
+            conditionData = condition != null ? condition.ToConditionData() : null
         };
     }
 
@@ -492,13 +459,26 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             return;
         }
 
-        // 마스터 클라이언트가 아닐 때만 이벤트 전송
-        object[] content = new object[]
+        string inventoryJson = "";
+        if (inventory != null)
         {
+            inventoryJson = JsonUtility.ToJson(inventory);
+        }
+
+        string conditionJson = "";
+        if (condition != null)
+            conditionJson = JsonUtility.ToJson(condition.ToConditionData());
+        else Debug.LogWarning("Condition이 Null입니다");
+
+            // 마스터 클라이언트가 아닐 때만 이벤트 전송
+            object[] content = new object[]
+            {
             GetStablePlayerId(PhotonNetwork.LocalPlayer), // 안정적인 ID 사용
             transform.position,
-            JobIndex ?? -1
-        };
+            JobIndex ?? -1,
+            inventoryJson,
+            conditionJson
+            };
 
         PhotonNetwork.RaiseEvent(
             eventCode: 101, // SaveManager에서 이 코드를 구독하고 있습니다.
@@ -606,5 +586,10 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         Gizmos.DrawWireSphere(transform.position, pushRadius);
     }
     */
+    InventoryData inventory;
 
+    public void SyncInventory(InventoryData data)
+    {
+        inventory = data;
+    }
 }

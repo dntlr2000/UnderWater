@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using UnityEngine;
 
+
 public class InventoryFrame : MonoBehaviour
 {
     protected InventoryData inventoryData;
@@ -13,14 +14,16 @@ public class InventoryFrame : MonoBehaviour
     public virtual void GenerateData(int slots = 25, int equipSlots = 0)
     {
         inventoryData = new InventoryData();
-        inventoryData.GenerateData(slots + equipSlots);
         INVENTORY_SIZE = slots;
+        inventoryData.GenerateData(slots + equipSlots);
         //GetItem(0, 1);
         Debug.Log("Inventory data generated");
+        Debug.Log($"Generated InventorySize = {inventoryData.id.Length}");
     }
 
     public void GetItem(int id, int quantitiy = 1, float durability = -1)
     {
+        Debug.Log($"InventorySIze = {INVENTORY_SIZE}, {inventoryData.id.Length}");
         //같은 아이템이 이미 존재하는지 확인 먼저 한 후 빈 슬롯을 찾기
         for (int i = 0; i < INVENTORY_SIZE; i++)
         {

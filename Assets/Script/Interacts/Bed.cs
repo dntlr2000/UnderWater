@@ -7,25 +7,30 @@ public class Bed : InteractableObject
     public Transform lyingPoint;
     public Transform awakePoint;
 
-    public bool isUsing;
-    public int usingPlayerID;
+    //public bool isUsing;
+    
 
     //private IEnumerator SleepRoutine;
 
     public void FixedUpdate()
     {
-        if (Input.GetKey(KeyCode.Escape) || Input.GetKey(KeyCode.Y))
+        if (Input.GetKey(KeyCode.Escape) || Input.GetKey(KeyCode.E))
         {
-            if (isUsing)
+            if (!isInteractable)
             {
                 SetAwake();
             }
         }
     }
 
+    public void Start()
+    {
+        isInteractable = true;
+    }
+
     public override void Interact()
     {
-        if (!isUsing && Input.GetMouseButton(1))
+        if (isInteractable && Input.GetMouseButton(1))
         {
             UpdateGuage(true, holdDuration);
         }
@@ -43,7 +48,7 @@ public class Bed : InteractableObject
         }
         else
         {
-            if (isUsing) return;
+            if (!isInteractable) return;
             SetSleep();
         }
     }
@@ -52,7 +57,7 @@ public class Bed : InteractableObject
     {
         
         player.gameObject.transform.position = lyingPoint.position;
-        isUsing = true;
+        isInteractable = false;
         player.condition.onWork = true;
         StartCoroutine(getSleepCoroutine());
         player.condition.ResetMove();
@@ -66,14 +71,13 @@ public class Bed : InteractableObject
 
     public void SetAwake()
     {
-        //if (usingPlayer != player) return;
         if (usePhoton)
         {
             if (usingPlayerID != player.photonView.ViewID) return;
         }
 
         player.gameObject.transform.position = awakePoint.position;
-        isUsing = false;
+        isInteractable = true;
         player.condition.onWork = false;
         StopAllCoroutines();
 
@@ -84,15 +88,10 @@ public class Bed : InteractableObject
         }
     }
 
-    public void RequestSetUsing(bool isUsing, int viewID)
-    {
-        pv.RPC("PunRPC_SetUsing", RpcTarget.AllBuffered, isUsing, viewID);
-    }
-
     [PunRPC]
-    public void PunRPC_SetUsing(bool value, int viewID)
+    public override void PunRPC_SetUsing(bool value, int viewID)
     {
-        this.isUsing = value;
+        this.isInteractable = !value;
         this.usingPlayerID = viewID;
     }
 
@@ -110,7 +109,7 @@ public class Bed : InteractableObject
             }
         }
         
-        if (isUsing) SetAwake();
+        if (!isInteractable) SetAwake();
 
         yield return null;
     }

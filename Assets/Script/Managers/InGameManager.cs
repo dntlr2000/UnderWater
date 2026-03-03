@@ -58,6 +58,7 @@ public class InGameManager : MonoBehaviourPunCallbacks
             {
                 spawnPos = myData.position.ToVector3();
             }
+            
         }
 
         // 2. SaveManager에 없으면 CustomProperties 확인 (보완책 - 로비에서 설정한 값)
@@ -86,6 +87,27 @@ public class InGameManager : MonoBehaviourPunCallbacks
             {
                 player.SetJob(finalJobIndex);
                 Debug.Log($"[InGameManager] {PhotonNetwork.LocalPlayer.NickName} 스폰 완료 - 위치:{spawnPos}, 직업Index:{finalJobIndex}");
+
+                if (SaveManager.Instance.isGameLoadedFromSave)
+                {
+                    // SaveManager에 내 데이터가 있는지 확인
+                    var myData = SaveManager.Instance.GetCurrentSave().players.FirstOrDefault(p => p.playerId == myUserId);
+                    if (myData != null)
+                    {
+                        // [수정] 인벤토리 로드와 상태 로드를 서로 독립적으로 실행하게 분리
+                        if (myData.items != null)
+                        {
+                            Inventory myInventory = FindAnyObjectByType<Inventory>();
+                            if (myInventory != null) myInventory.ApplyLoadedData(myData.items);
+                        }
+                        
+                        if (myData.conditionData != null && myData.conditionData.isSaved)
+                        {
+                            // 방금 생성된 내 플레이어의 Condition 컴포넌트에 데이터 덮어씌우기
+                            player.condition.ApplyLoadedData(myData.conditionData);
+                        } 
+                    }
+                }
 
                 // 로컬 플레이어 정보 즉시 업데이트 (내 정보 저장)
                 PlayerData pd = new PlayerData

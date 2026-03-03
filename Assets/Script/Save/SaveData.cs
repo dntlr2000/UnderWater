@@ -14,7 +14,7 @@ public class SaveData
 
     public List<PlayerData> players = new(); // 플레이어별 데이터
     public WorldProgress worldProgress = new();
-    public Options options = new();
+    //public Options options = new(); //추후 이곳으로 옮길 예정?
 
     public SaveData(string roomName)
     {
@@ -33,8 +33,10 @@ public class PlayerData
     public string playerId;
     public string playerName; // Nickname
     public PlayerLocation position;
-    public Item[] items; // 게임 내 아이템 구조체
+    //public Item[] items; // 게임 내 아이템 구조체
+    public InventoryData items;
     public int jobIndex; // 선택된 직업 인덱스
+    public ConditionData conditionData;
 
     public List<string> completedQuestIds = new List<string>(); // 완료된 퀘스트 ID 목록
     public List<QuestProgressData> activeQuests = new List<QuestProgressData>(); // 현재 진행중인 퀘스트 정보
@@ -49,12 +51,15 @@ public class PlayerLocation
 }
 
 // Item, WorldProgress, Options 구조체는 그대로 유지
+//InventoryData는 InventoryFrame.cs에 존재하므로 일단 이 곳에 옮기거나 정의하지 않음
+/*
 [Serializable]
 public class Item
 {
     public int itemId;
     public int amount;
 }
+*/
 
 [Serializable]
 public class QuestProgressData
@@ -71,6 +76,7 @@ public class WorldProgress
     public int SubmarinePowerLevel;
 }
 
+
 [Serializable]
 public class Options
 {
@@ -79,4 +85,16 @@ public class Options
     public float BGMVolume;
     public float SFXVolume;
     public bool isWindowMode;
+}
+
+[Serializable]
+public class ConditionData
+{
+    public bool isSaved;
+    public float health;
+    public float hunger;
+    public float thirst;
+    public float oxygen;
+    public float vitality;
+    public float stamina;
 }

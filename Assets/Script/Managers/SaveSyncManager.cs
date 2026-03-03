@@ -157,7 +157,7 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
 
         try
         {
-            pv.RPC("RPC_BroadcastSaveData", RpcTarget.All, saveJson);
+            pv.RPC("RPC_BroadcastSaveData", RpcTarget.AllBuffered, saveJson);
         }
         catch (Exception ex)
         {

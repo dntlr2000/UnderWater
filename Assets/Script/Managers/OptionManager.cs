@@ -31,40 +31,17 @@ public class OptionManager : MonoBehaviour
     void Start()
     {
         //LockCursor(true);
-        OptionScreen.SetActive(false);
+        //OptionScreen.SetActive(false);
+        //LoadOptions();
+        //ApplyOptions();
     }
 
-    // Update is called once per frame
-    /*
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            if (ifOptionActive == false) //옵션 활성화
-            {
-                TurnOptions(true);
-            }
-
-            else //옵션 비활성화
-            {
-                TurnOptions(false);
-            }
-
-        }
-    }
-    */
-    /*
     private void Awake()
     {
-        //LoadOptions();
-        if(ifOptionActive == false)
-        {
-            LockCursor(true);
-        }
+        audioScript = FindAnyObjectByType<AudioManager>();
     }
-    */
 
-    private void SaveOptions() // 버튼을 이용해서 저장을 할 경우 public으로 전환 바람
+    private void SaveOptions()
     {
         xValue = xSlider.value;
         yValue = ySlider.value;
@@ -74,7 +51,7 @@ public class OptionManager : MonoBehaviour
         
     }
 
-    private void LoadOptions() //// 버튼을 이용해서 불러올 경우 public으로 전환 바람
+    public void LoadOptions() 
     {
         SaveController.Options options = saveController.LoadOptions();
 
@@ -84,16 +61,17 @@ public class OptionManager : MonoBehaviour
             return;
         }
 
-        float xValue = options.SensivityX;
-        float yValue = options.SensivityY;
-        float BgmValue = options.BGMVolume;
-        float SFXValue = options.BGMVolume;
+        xValue = options.SensivityX;
+        yValue = options.SensivityY;
+        BgmValue = options.BGMVolume;
+        SFXValue = options.BGMVolume;
 
         xSlider.value = xValue;
         ySlider.value = yValue;
         BGMSlider.value = BgmValue;
         SFXSlider.value = SFXValue;
 
+        //Debug.Log($"설정 불러오기! : x감도 : {player.firstViewCamera.MouseSensitivityX}, y감도 : {player.firstViewCamera.MouseSensitivityY}");
         ApplyOptions();
 
     }
@@ -145,29 +123,31 @@ public class OptionManager : MonoBehaviour
 
     private void ApplyOptions() //전체 적용
     {
-        player.mouseSensitivityX = xValue * sensitivityMultiplyValue;
-        player.mouseSensitivityY = yValue * sensitivityMultiplyValue;
-        //audioScript.ChangeVolume_BGM(BGMValue);
-        //audioScript.ChangeVolume_SFX(SFXValue);
+        Vector2 sensivity = GetSensivity();
+        FindPlayer();
+        if (player == null) Debug.LogError("플레이어가 할당되지 않은 상태에서 설정이 적용되었습니다!");
+        player.firstViewCamera.MouseSensitivityX = sensivity.x;
+        player.firstViewCamera.MouseSensitivityY = sensivity.y;
+
+
         audioScript.SetVolume(SoundType.BGM, BgmValue);
         audioScript.SetVolume(SoundType.SFX, SFXValue);
+
+        Debug.Log($"설정 적용 완료! : x감도 : {player.firstViewCamera.MouseSensitivityX}, y감도 : {player.firstViewCamera.MouseSensitivityY}");
     }
 
-    /*
-    public void LockCursor(bool state)
+    public Vector2 GetSensivity()
     {
-        if (state)
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
+        Vector2 sensivity;
+        sensivity.x = xValue * sensitivityMultiplyValue;
+        sensivity.y = yValue * sensitivityMultiplyValue;
 
-        else
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
+        return sensivity;
     }
-    */
+
+    void FindPlayer()
+    {
+        if (player == null) player = FindAnyObjectByType<Inventory>().player;
+    }
 
 }

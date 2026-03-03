@@ -23,16 +23,18 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
     public bool usePhoton;
 
     protected bool isInteractable;
+    public int usingPlayerID;
 
-    //public float cooldownTime;
-
-    //이 구조로 구현하면 InteractionType이 필요한가? 싶음. 
     public virtual InteractionType GetInteractionType() => InteractionType.Instant;
     public virtual string GetCursorType() => cursorType; // => return cursorType와 동일
     public virtual string GetInteractionID() => objectName;
 
     public abstract void Interact(); //카메라가 이 오브젝트를 바라볼 때 호출됨
     public virtual void HoldInteract() {
+        //if (!pv.IsMine)
+        //{
+        //    pv.RequestOwnership(); //PhotonTransformView - Takeover로 설정 -> 해당 오브젝트의 포톤오너 변경
+        //}
         Debug.Log("홀딩 완료");
     }
 
@@ -187,5 +189,17 @@ public abstract class InteractableObject : MonoBehaviour, Interactable
         value = inventory.GetDurability(inventory.index);
 
         return value;
+    }
+
+    public void RequestSetUsing(bool isUsing, int viewID)
+    {
+        pv.RPC("PunRPC_SetUsing", RpcTarget.AllBuffered, isUsing, viewID);
+    }
+
+    [PunRPC]
+    public virtual void PunRPC_SetUsing(bool value, int viewID)
+    {
+        this.isInteractable = !value;
+        this.usingPlayerID = viewID;
     }
 }

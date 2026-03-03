@@ -15,7 +15,7 @@ public class Condition : MonoBehaviour
     public float MAX_THIRST = 100f;
     public float MAX_OXYGEN = 100f;
     private float humanOxygen = 100f;
-    public float MAX_FATIGUE = 100f;
+    public float MAX_VITALITY = 100f;
     public float MAX_STAMINA = 100f;
     #endregion
 
@@ -26,7 +26,7 @@ public class Condition : MonoBehaviour
     public float thirst = 100f;    //수분
     public float oxygen = 100f;    //산소
     private float usingOxgenSpeed = 1f;
-    public float fatigue = 0f;    //피로도
+    public float vitality = 0f;    //피로도
     public float stamina = 100f;    //스테미너
 
     [Header("State")]
@@ -60,31 +60,16 @@ public class Condition : MonoBehaviour
 
     #endregion
 
-    #region Constructors
-    public Condition(Player player)
+    public void SetCondition(Player player)
     {
         this.player = player;
-        ResetCondition();
-        ConnectStateBarUI();
-        
+        //ResetCondition();
+        if (player.photonView.IsMine)
+        {
+            ConnectStateBarUI();
+        }
     }
-
-    public Condition(Player player, float health, float hunger, float thirst, float oxygen, float max_fatigue, float stamina)
-    {
-        this.player = player;
-
-        MAX_HEALTH = health;
-        MAX_HUNGER = hunger;
-        MAX_THIRST = thirst;
-        MAX_OXYGEN = oxygen;
-        MAX_FATIGUE = max_fatigue;
-        MAX_STAMINA = stamina;
-
-        ResetCondition();
-        ConnectStateBarUI();
-
-    }
-    #endregion
+    
     void Start()
     {
         
@@ -102,13 +87,14 @@ public class Condition : MonoBehaviour
         hunger= MAX_HUNGER;
         thirst= MAX_THIRST;
         oxygen= MAX_OXYGEN;
-        fatigue= 0f;
+        vitality = MAX_VITALITY;
         stamina= MAX_STAMINA;
     }
 
     public void ConnectStateBarUI()
     {
-        //if (!player.photonView.IsMine) { return; }
+        if (!player.photonView.IsMine) { return; }
+        
         stateUICollection = FindAnyObjectByType<StateUICollection>();
         if (stateUICollection == null) {
             Debug.LogError("StateBarUI가 연동되지 않았습니다.");
@@ -122,21 +108,22 @@ public class Condition : MonoBehaviour
         fatigueBar = stateUICollection.fatigueBar;
         staminaBar = stateUICollection.staminaBar;
 
-        UIController uIController = FindAnyObjectByType<UIController>();
-        OptionManager optionScript = FindAnyObjectByType<OptionManager>();
-        if (uIController != null) uIController.playerScript = player;
-        if (optionScript != null) optionScript.player = player;
+        //UIController uiController = FindAnyObjectByType<UIController>();
+        //OptionManager optionScript = FindAnyObjectByType<OptionManager>();
+        //if (uiController != null) uiController.playerScript = player;
+        //if (optionScript != null) optionScript.player = player;
 
         SetBarUI();
     }
 
     public void SetBarUI()
     {
+        Debug.Log($"상태 UI 갱신 - 체력 : {health}, 허기 : {hunger}, 수분 : {thirst}, 산소 : {oxygen}, 활력 : {vitality}, 스태미너 : {stamina}");
         healthBar.SetBarUI(health, MAX_HEALTH);
         hungerBar.SetBarUI(hunger, MAX_HUNGER);
         thirstBar.SetBarUI(thirst, MAX_THIRST);
         oxygenBar.SetBarUI(oxygen, MAX_OXYGEN);
-        fatigueBar.SetBarUI(fatigue, MAX_FATIGUE);
+        fatigueBar.SetBarUI(vitality, MAX_VITALITY);
         staminaBar.SetBarUI(stamina, MAX_STAMINA);
     }
 
@@ -161,8 +148,11 @@ public class Condition : MonoBehaviour
         {
             hunger -= 1f;
             thirst -= 1f; //일단 허기, 목마름, 피로 증가 매커니즘이 아예 동일할 것으로 생각되어 하나의 메서드 안에 통합
-            fatigue += 0.5f;
-            SetBarUI();
+            RecoverFatigue(-0.5f);
+            //SetBarUI();
+            hungerBar.SetBarUI(hunger, MAX_HUNGER);
+            thirstBar.SetBarUI(thirst, MAX_THIRST);
+            healthBar.SetBarUI(health, MAX_HEALTH);
             yield return new WaitForSeconds(5f);
         }
     }
@@ -185,7 +175,7 @@ public class Condition : MonoBehaviour
                 //사망처리 필요시 구현
                 if (OxygenCylinderSlotIndex == -1) //제 기능 안될 시 싱크 맞추기용 변수 하나 만들자
                 {
-                    Debug.Log("산소가 부족함! 체력이 떨어지고 있음!");
+                    //Debug.Log("산소가 부족함! 체력이 떨어지고 있음!");
                     Damaged(1f);
                 }
                 else
@@ -226,24 +216,6 @@ public class Condition : MonoBehaviour
         inventory.SetDurability(OxygenCylinderSlotIndex, oxygen);
         return;
         //}
-
-        //DiscountOxygenDurability();
-    }
-
-    private void DiscountOxygenDurability(float value = 1f) //2번째 버전 산소통 로직
-    {
-        float durability = inventory.GetDurability(OxygenCylinderSlotIndex);
-        //게이지가 전부 소모되면 원래 속도로 떨어지는 방식
-        if (durability > 0)
-        {
-            //durability -= value;
-            inventory.SetDurability(OxygenCylinderSlotIndex, value);
-            return;
-        }
-        else
-        {
-            usingOxgenSpeed = 1f;
-        } 
     }
 
     public void chargeOxygen(float amount)
@@ -268,32 +240,19 @@ public class Condition : MonoBehaviour
 
     public void RecoverFatigue(float value)
     {
-        fatigue = Mathf.Max(fatigue - value, 0);
+        vitality = Mathf.Max(vitality + value, 0);
+        vitality = Mathf.Min(vitality + value, 100);
 
-        fatigueBar.SetBarUI(fatigue);
+
+        fatigueBar.SetBarUI(vitality);
     }
 
-    public IEnumerator getSleepCoroutine()
-    {
-        //onWork = true;
-        int maxCount = 10;
-        while (onWork && maxCount > 0)
-        {
-            yield return new WaitForSeconds(1f);
-            if (onWork)
-            {
-                RecoverFatigue(1);
-                maxCount--;
-            }
-        }
-        onWork = false;
-        yield return null;
-    }
+
     #endregion
 
     public void Run()
     {
-        if (stamina < 5f && isRunning == false)
+        if (stamina < 5f && isRunning == false) //스태미나를 방전시킨 경우
         {
             stamina += 0.01f;
             isRunning = false;
@@ -301,18 +260,19 @@ public class Condition : MonoBehaviour
             return; //뛸 수 없는 상태
         }
 
-        if (Input.GetKey(KeyCode.LeftShift) && player.isMoving)
+        if (Input.GetKey(KeyCode.LeftShift) && player.isMoving) //뛰는 경우
         {
             isRunning = true;
             player.isRunning = true;
             stamina -= 0.1f;
-            if (stamina < 0.1f)
+            RecoverFatigue(-0.01f);
+            if (stamina < 0.1f) //방전
             {
                 isRunning = false;
                 player.isRunning = false;
             }
         }
-        else
+        else //뛸 수 있는데 안뛰는 경우
         {
             stamina = Mathf.Min(stamina + 0.05f, 100f);
             isRunning = false;
@@ -320,6 +280,7 @@ public class Condition : MonoBehaviour
 
         }
         staminaBar.SetBarUI(stamina);
+        fatigueBar.SetBarUI(vitality);
     }
 
     public IEnumerator BusyRoutine(float duration)
@@ -353,7 +314,7 @@ public class Condition : MonoBehaviour
         //if (MAX_OXYGEN > 101f && isUnderwater) oxygen = 0f; //무한산소 꼼수 방지용
         usingOxgenSpeed= 1f;
         MAX_OXYGEN = 100f;
-        MAX_FATIGUE = 100f;
+        MAX_VITALITY = 100f;
         MAX_STAMINA = 100f;
         OxygenCylinderSlotIndex = -1;
         //LoadHumanOxygen();
@@ -388,7 +349,6 @@ public class Condition : MonoBehaviour
         if (oxygen > MAX_OXYGEN) { oxygen = MAX_OXYGEN; }
     }
 
-
     public void SaveHumanOxygen(float value)
     {
         Debug.Log($"현재 산소량은 저장됩니다 : {value}");
@@ -418,5 +378,36 @@ public class Condition : MonoBehaviour
         Rigidbody rb = player.GetComponent<Rigidbody>();
         rb.linearVelocity = Vector3.zero;
         //rb.angularVelocity = Vector3.zero;
+    }
+
+    public ConditionData ToConditionData()
+    {
+        return new ConditionData
+        {
+            isSaved = true,
+            health = this.health,
+            hunger = this.hunger,
+            thirst = this.thirst,
+            oxygen = this.oxygen,
+            vitality = this.vitality,
+            stamina = this.stamina
+        };
+    }
+
+    public void ApplyLoadedData(ConditionData data)
+    {
+        if (data == null) return;
+
+        this.health = data.health;
+        this.hunger = data.hunger;
+        this.thirst = data.thirst;
+        this.oxygen = data.oxygen;
+        this.vitality = data.vitality;
+        this.stamina = data.stamina;
+
+        // 데이터 덮어쓴 후 UI 즉시 갱신
+        SetBarUI();
+
+        Debug.Log("저장된 플레이어 상태(Condition) 복구 완료!");
     }
 }

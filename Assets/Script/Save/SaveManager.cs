@@ -115,9 +115,12 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
     #region SaveData Get/Set Logic
 
-    public void SetCurrentSave(SaveData save)
+    public void SetCurrentSave(SaveData save, bool isLoaded = true)
     {
         currentSave = save;
+        Debug.Log($"_isLoaded 값 : {isLoaded}");
+        isGameLoadedFromSave = isLoaded;
+
         RefreshRuntimeCache();
         Debug.Log($"[SaveManager] SaveData 설정 완료. (Room: {save?.roomName ?? "NULL"})");
     }
@@ -177,12 +180,14 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
         if (existing != null)
         {
-            existing.position = pd.position;
-            existing.items = pd.items;
+            if (pd.items != null) existing.items = pd.items;
+            else Debug.LogWarning("pd.items가 존재하지 않습니다!");
+            if (pd.conditionData != null) existing.conditionData = pd.conditionData;
+            else Debug.LogWarning("pd.conditionData가 존재하지 않습니다!");
             if (pd.jobIndex != -1)
             {
                 existing.position = pd.position;
-                existing.items = pd.items;
+                //existing.items = pd.items;
                 if (pd.jobIndex != -1) existing.jobIndex = pd.jobIndex;
 
                 if (pd.completedQuestIds != null && pd.completedQuestIds.Count > 0)
@@ -283,19 +288,35 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         string playerId = (string)data[0];
         Vector3 pos = (Vector3)data[1];
         int jobIndex = (int)data[2];
+        string inventoryJson = data.Length > 3 ? (string)data[3] : "";
+        string conditionJson = data.Length > 4 ? (string)data[4] : "";
 
         int? savedJob = GetSavedJob(playerId);
         if (savedJob.HasValue && savedJob.Value != -1 && jobIndex == 0)
         {
             jobIndex = savedJob.Value; // 기존 저장된 직업 유지
         }
-
-        PlayerData pd = new PlayerData
+        InventoryData receivedInventory = null;
+        if (!string.IsNullOrEmpty(inventoryJson))
         {
-            playerId = playerId,
-            position = new PlayerLocation(pos),
-            jobIndex = jobIndex
-        };
+            receivedInventory = JsonUtility.FromJson<InventoryData>(inventoryJson);
+        }
+        ConditionData receivedCondition = null;
+        if (!string.IsNullOrEmpty(conditionJson))
+        {
+            receivedCondition = JsonUtility.FromJson<ConditionData>(conditionJson);
+            //Debug.Log($"[데이터 해독] {playerId}님의 체력 해독 결과: {receivedCondition.health}");
+        }
+        else Debug.LogWarning("recivedCondition를 받지 못했습니다!");
+
+            PlayerData pd = new PlayerData
+            {
+                playerId = playerId,
+                position = new PlayerLocation(pos),
+                jobIndex = jobIndex,
+                items = receivedInventory, // [추가] PlayerData에 인벤토리 할당!
+                conditionData = receivedCondition
+            };
 
         if (PhotonNetwork.IsMasterClient)
         {
@@ -309,7 +330,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
     {
         SaveData loadedData = JsonUtility.FromJson<SaveData>(json);
 
-        SetCurrentSave(loadedData);
+        SetCurrentSave(loadedData,  true);
         isGameLoadedFromSave = true;
 
         if (AuthMngr != null && !string.IsNullOrEmpty(AuthMngr.currentUserId))
