@@ -3186,7 +3186,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 77.59043}
+  m_AnchoredPosition: {x: 0, y: 77.590096}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &1519316174079218771
@@ -11812,7 +11812,7 @@ GameObject:
   - component: {fileID: 141880875199837345}
   - component: {fileID: 1456735483239104960}
   m_Layer: 5
-  m_Name: WithdrawMoney
+  m_Name: DepositMoney
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12294,7 +12294,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &7227015817243734383
 RectTransform:
   m_ObjectHideFlags: 0
@@ -12791,15 +12791,15 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2278460048456090572}
         m_TargetAssemblyTypeName: ShopManager, Assembly-CSharp
-        m_MethodName: BuyItem
-        m_Mode: 3
+        m_MethodName: SetComfirmScreen
+        m_Mode: 6
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 1
           m_FloatArgument: 0
           m_StringArgument: 
-          m_BoolArgument: 0
+          m_BoolArgument: 1
         m_CallState: 2
 --- !u!1 &4856321326823121996
 GameObject:
@@ -14308,29 +14308,17 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 6689653276887435909}
         m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
-        m_MethodName: StorageItem
-        m_Mode: 3
+        m_MethodName: SetComfirmScreen
+        m_Mode: 6
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
-        m_MethodName: StorageMoney
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
+          m_BoolArgument: 1
         m_CallState: 2
 --- !u!1 &5626085267330155945
 GameObject:
@@ -15889,7 +15877,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &3236295780605607197
 RectTransform:
   m_ObjectHideFlags: 0
@@ -20292,7 +20280,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 9059116418534640476}
   m_HandleRect: {fileID: 8998061710929819833}
   m_Direction: 2
-  m_Value: -0.000006096436
+  m_Value: -0.0000013766146
   m_Size: 0.7413667
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -20556,8 +20544,8 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2278460048456090572}
         m_TargetAssemblyTypeName: ShopManager, Assembly-CSharp
-        m_MethodName: SellItem
-        m_Mode: 3
+        m_MethodName: SetComfirmScreen
+        m_Mode: 6
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -20687,22 +20675,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 6689653276887435909}
         m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
-        m_MethodName: WithdrawItem
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: StorageBox, Assembly-CSharp
-        m_MethodName: WithdrawMoney
-        m_Mode: 1
+        m_MethodName: SetComfirmScreen
+        m_Mode: 6
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -21439,7 +21415,7 @@ GameObject:
   - component: {fileID: 8066177812381727541}
   - component: {fileID: 7818453712295876983}
   m_Layer: 5
-  m_Name: DepositMoney
+  m_Name: WithdrawMoney
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
