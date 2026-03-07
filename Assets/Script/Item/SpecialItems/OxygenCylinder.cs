@@ -20,7 +20,7 @@ public class OxygenCylinder : FieldItem
             Debug.LogWarning("Inventory를 찾을 수 없습니다.");
             return;
         }
-        if (!inventory.HoldingInteractableItem()) return; 
+        //if (inventory.HoldingInteractableItem()) return; 
 
         inventory.GetItem(itemID, amount, durability);
         //gameObject.SetActive(false);

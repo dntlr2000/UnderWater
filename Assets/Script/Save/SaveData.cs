@@ -14,7 +14,8 @@ public class SaveData
 
     public List<PlayerData> players = new(); // 플레이어별 데이터
     public WorldProgress worldProgress = new();
-    //public Options options = new(); //추후 이곳으로 옮길 예정?
+    //public Options options = new(); //추후 이곳으로 옮길 예정x 개인 클라이언트에 의존하도록
+    public List<BoxSaveData> storageBoxes = new List<BoxSaveData>();
 
     public SaveData(string roomName)
     {
@@ -97,4 +98,11 @@ public class ConditionData
     public float oxygen;
     public float vitality;
     public float stamina;
+}
+
+[Serializable]
+public class BoxSaveData
+{
+    public string boxId; // 창고의 고유 이름 (boxName)
+    public InventoryData items; // 창고 안에 든 아이템과 돈
 }

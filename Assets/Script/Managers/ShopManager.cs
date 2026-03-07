@@ -251,7 +251,7 @@ public class ShopManager : MonoBehaviour
             shopList[i].itemName.text = ItemDatabase.Instance.getItemName(shopItems[k]);
             shopList[i].priceText.text = shopPrice[i] + "G";
             //shopList[i].quatitiy.text = 
-            shopList[i].itemSlotIcon.texture = ItemDatabase.Instance.LoadIcons(shopItems[k]).texture;
+            shopList[i].itemSlotIcon.texture = ItemDatabase.Instance.GetIcons(shopItems[k]).texture;
 
         }
 
@@ -331,14 +331,14 @@ public class ShopManager : MonoBehaviour
         for (int i = 0; i < shopItems.Length; i++)
         {
             if (shopItems[i] == -1) continue;
-            shopPrice[i] = 2 * ItemDatabase.Instance.items[shopItems[i]].price;
+            shopPrice[i] = 2 * ItemDatabase.Instance.getPrice(shopItems[i]);
         }
 
     }
 
     public int GetItemId(int shopId)
     {
-        return ItemDatabase.Instance.items[shopId].itemId;
+        return ItemDatabase.Instance.GetItem(shopId).itemId;
     }
 
     public void SetComfirmScreen(bool ifBuy)
@@ -365,7 +365,7 @@ public class ShopManager : MonoBehaviour
 
         if (ifBuy) //구매 모드
         {
-            ItemNameText.text = ItemDatabase.Instance.items[shopItems[selectedID]].itemName;
+            ItemNameText.text = ItemDatabase.Instance.getItemName(shopItems[selectedID]);
             sellComfirmButton.gameObject.SetActive(false);
             buyComfirmButton.gameObject.SetActive(true);
             priceText.text = "G: " + (shopPrice[selectedID] * amount);
@@ -373,7 +373,7 @@ public class ShopManager : MonoBehaviour
 
         if (!ifBuy) //판매 모드
         {
-            ItemNameText.text = ItemDatabase.Instance.items[inventory.GetItemID(selectedID)].itemName;
+            ItemNameText.text = ItemDatabase.Instance.getItemName(inventory.GetItemID(selectedID));
             sellComfirmButton.gameObject.SetActive(true);
             buyComfirmButton.gameObject.SetActive(false);
             priceText.text = "G: " + (ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * amount);

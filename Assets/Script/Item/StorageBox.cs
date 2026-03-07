@@ -349,14 +349,14 @@ public class StorageBox : InventoryFrame
 
         if (ifDeposit) //보관 모드
         {
-            ItemNameText.text = ItemDatabase.Instance.items[inventory.GetItemID(inventoryIndex)].itemName;
+            ItemNameText.text = ItemDatabase.Instance.getItemName(inventory.GetItemID(inventoryIndex));
             withdrawComfirmButton.gameObject.SetActive(false);
             depositComfirmButton.gameObject.SetActive(true);
         }
 
         if (!ifDeposit) //반출 모드
         {
-            ItemNameText.text = ItemDatabase.Instance.items[GetItemID(boxIndex)].itemName;
+            ItemNameText.text = ItemDatabase.Instance.getItemName(GetItemID(boxIndex));
             withdrawComfirmButton.gameObject.SetActive(true);
             depositComfirmButton.gameObject.SetActive(false);
         }

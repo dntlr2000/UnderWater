@@ -12,7 +12,7 @@ public class Inventory : InventoryFrame
     //private bool showInventory = false; //ItemUI에서 일단 가져와봄 Update 부하를 줄이기 위해 ItemUI의 메서드를 여기로 옮길 수 있음
     PhotonView photonView;
 
-    public bool canUseItem = true;
+    private bool canUseItem = true;
 
 
     protected void Awake()
@@ -97,6 +97,7 @@ public class Inventory : InventoryFrame
         {
             if (inventoryData.id[index] < 0) return;
             if (!canUseItem) return;
+            //if (!HoldingInteractableItem()) return; //들고 있는 아이템이 상호작용을 거부하는 아이템인 경우 false가 리턴됨
             inventoryData.useItem(index);
             ItemUI.SetQuantity(index, inventoryData.quantity[index]);
             if (inventoryData.quantity[index] <= 0)
@@ -261,5 +262,10 @@ public class Inventory : InventoryFrame
         }
 
         condition.SetBarUI();
+    }
+
+    public void ChangeCanUseItem(bool value)
+    {
+        canUseItem = value;
     }
 }

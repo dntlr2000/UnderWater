@@ -59,6 +59,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
     public static event Action<string> OnSaveDataChanged;
     private Dictionary<string, PlayerData> runtimePlayerCache = new();
+    private Dictionary<string, InventoryData> runtimeBoxCache = new();
 
     public float autoSaveInterval = 5f;
     private float timer;
@@ -136,6 +137,16 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             {
                 if (pd != null && !string.IsNullOrEmpty(pd.playerId))
                     runtimePlayerCache[pd.playerId] = pd;
+            }
+        }
+
+        runtimeBoxCache.Clear();
+        if (currentSave?.storageBoxes != null)
+        {
+            foreach (var box in currentSave.storageBoxes)
+            {
+                if (box != null && !string.IsNullOrEmpty(box.boxId))
+                    runtimeBoxCache[box.boxId] = box.items;
             }
         }
     }
@@ -255,7 +266,26 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         currentSave.jobAssignments = currentSave.players.ToDictionary(p => p.playerId, p => p.jobIndex);
         currentSave.createdDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
 
+        currentSave.storageBoxes = new List<BoxSaveData>();
+        foreach (var kvp in runtimeBoxCache)
+        {
+            currentSave.storageBoxes.Add(new BoxSaveData { boxId = kvp.Key, items = kvp.Value });
+        }
+
         return currentSave;
+    }
+
+    public InventoryData GetBoxData(string boxId)
+    {
+        if (runtimeBoxCache.ContainsKey(boxId))
+            return runtimeBoxCache[boxId];
+        return null;
+    }
+
+    public void UpdateBoxCache(string boxId, InventoryData data)
+    {
+        if (string.IsNullOrEmpty(boxId) || data == null) return;
+        runtimeBoxCache[boxId] = data; // 캐시에 덮어쓰기 (나중에 자동 저장 시 파일에 기록됨)
     }
 
     #endregion

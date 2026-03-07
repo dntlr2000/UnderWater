@@ -46,7 +46,7 @@ public class CylinderHolder : InteractableObject
     {
         int playerHoldingID = GetItemIDFromPlayer();
         Debug.Log($"플레이어가 현재 들고 있는 아이템 ID = {playerHoldingID}");
-        if (isHolding && playerHoldingID != -1) return;
+        if (isHolding && playerHoldingID != -1) return; //PlayerHoldingID = -1 -> 빈손으로 들고 있어야지 산소통을 주울 수 있게 설정 되어 있음 -> 수정 예정
         else if (!isHolding)
         {
             if (playerHoldingID == -1) return;

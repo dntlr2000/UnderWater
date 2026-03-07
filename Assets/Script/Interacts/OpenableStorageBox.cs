@@ -1,5 +1,6 @@
 using UnityEngine;
 using Photon.Pun;
+using System.Collections;
 public class OpenableStorageBox : InteractableObject
 {
     public string boxName = "storageBox";
@@ -19,7 +20,7 @@ public class OpenableStorageBox : InteractableObject
         {
             Debug.LogError("OpenableStorageBox에 PhotonView가 없습니다!");
         }
-
+        /*
         // 마스터 클라이언트만 초기 데이터를 생성합니다.
         if (PhotonNetwork.IsMasterClient)
         {
@@ -27,6 +28,33 @@ public class OpenableStorageBox : InteractableObject
             storageData.GenerateData();
             storageData.LoadInventory(boxName);
             Debug.Log("storageData를 생성하였습니다.");
+        }
+        */
+    }
+
+    private IEnumerator Start()
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            yield return new WaitUntil(() => SaveManager.Instance != null && SaveManager.Instance.IsDataReady);
+
+            // 1. SaveManager에 내 이름(boxName)으로 된 저장 데이터가 있는지 확인
+            InventoryData savedData = SaveManager.Instance.GetBoxData(boxName);
+
+            if (savedData != null)
+            {
+                // 불러온 데이터가 있으면 적용
+                storageData = savedData;
+                Debug.Log($"[{boxName}] 저장된 창고 데이터를 성공적으로 불러왔습니다.");
+            }
+            else
+            {
+                // 없으면 새 게임이므로 새로 생성 후 SaveManager에 등록
+                storageData = new InventoryData();
+                storageData.GenerateData();
+                SaveManager.Instance.UpdateBoxCache(boxName, storageData);
+                Debug.Log($"[{boxName}] 새 창고 데이터를 생성했습니다.");
+            }
         }
     }
 
@@ -167,8 +195,13 @@ public class OpenableStorageBox : InteractableObject
     private void SyncDataToAll()
     {
         if (!PhotonNetwork.IsMasterClient) return;
-        storageData.SaveInventory(boxName);
+        //storageData.SaveInventory(boxName);
         //Debug.Log($"SyncDataToAll - 현재 잔액 : {storageData.money}");
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.UpdateBoxCache(boxName, storageData);
+        }
+
         string jsonData = JsonUtility.ToJson(storageData);
         photonView.RPC("PunRPC_SyncBoxData", RpcTarget.AllBuffered, jsonData);
         Debug.Log("모든 클라이언트에게 창고 데이터 동기화 전송");
@@ -204,14 +237,7 @@ public class OpenableStorageBox : InteractableObject
         //창고 데이터 돈 추가 로직
         storageData.money += amount;
         Debug.Log($"'{info.Sender.NickName}'로부터 {amount}원 입금 요청. 현재 창고 잔액: {storageData.money}");
-
-        //창고 데이터 돈 변경 알림
-        PhotonView requesterPhotonView = PhotonView.Find(requesterViewID);
-        if (requesterPhotonView != null)
-        {
-            //현재로선 서버에서 각각의 플레이어가 관리하는 재화에 간섭하지 않음
-        }
-        storageData.SaveInventory();
+        //storageData.SaveInventory();
         //변경된 창고 데이터를 모든 클라이언트에게 동기화
         SyncDataToAll();
         //Debug.Log($"싱크 완료, 현재 창고 잔액: {storageData.money}");
@@ -221,7 +247,6 @@ public class OpenableStorageBox : InteractableObject
     public void PunRPC_RequestWithdrawMoney(int amount, int requesterViewID, PhotonMessageInfo info)
     {
         if (!PhotonNetwork.IsMasterClient) return;
-
 
         if (storageData.money >= amount)
         {
@@ -237,7 +262,7 @@ public class OpenableStorageBox : InteractableObject
                 int newTotalMoney = requesterInventory.GetMoneyData() + amount;
                 requesterPhotonView.RPC("PunRPC_SetMoney", info.Sender, newTotalMoney);
             }
-            storageData.SaveInventory();
+            //storageData.SaveInventory();
             //변경된 창고 데이터를 모든 클라이언트에게 동기화.
             SyncDataToAll();
         }

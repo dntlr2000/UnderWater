@@ -74,7 +74,7 @@ public class FieldItem : InteractableObject//, Interactable
             Debug.LogWarning("Inventory를 찾을 수 없습니다.");
             return;
         }
-        if (!inventory.HoldingInteractableItem()) return; //아이템을 주울 수 있는 상태인지 판단 기준1 : 손에 든 채로 또 아이템을 주울 수 있는 아이템을 들고 있는지 리턴
+        //if (!inventory.HoldingInteractableItem()) return; //아이템을 주울 수 있는 상태인지 판단 기준1 : 손에 든 채로 또 아이템을 주울 수 있는 아이템을 들고 있는지 리턴
         //소모형 아이템이 1개 남아서 사용하고 아이템이 비워지자마자 아이템이 주워지는 현상 발생. inventory의 아이템 사용 스크립트가 먼저 처리되기 때문
         //해결 방안1 : 아이템이 소모되어 삭제되는 시점을 코루틴 등으로 미루기
         if (!inventory.CheckInventoryEmpty()) return;

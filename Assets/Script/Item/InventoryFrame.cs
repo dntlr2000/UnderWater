@@ -327,16 +327,9 @@ public class InventoryData
 
     public void useItem(int index)
     {
-        quantity[index] = ItemDatabase.Instance.useItem(id[index], quantity[index]);
+        quantity[index] = ItemDatabase.Instance.UseItem(id[index], quantity[index]);
     }
 
-    public void InitializeItemDatabase()
-    {
-        if (ItemDatabase.Instance == null)
-        {
-            ItemDatabase.Instance.GenerateData();
-        }
-    }
 
     /* 버그의 원인이라 기존의 저장 시스템으로 롤백
     public void SaveToFile(string dataName)

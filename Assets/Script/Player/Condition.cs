@@ -41,7 +41,7 @@ public class Condition : MonoBehaviour
 
     private bool isBusy = false;
     public bool onWork = false;
-    private bool interactable = true;
+    //private bool interactable = true;
 
     private int OxygenCylinderSlotIndex = -1;
     public Coroutine BusyCoroutine;
