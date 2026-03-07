@@ -26,16 +26,6 @@ public class ItemUIManager : MonoBehaviour
             itemSlots[i].SlotID = i;
         }
     }
-    /*
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.I))
-        {
-            SwitchInventoryState();
-        }
-        
-    }
-    */
 
     public void SwitchInventoryState()
     {
@@ -83,7 +73,7 @@ public class ItemUIManager : MonoBehaviour
         itemSlots[index].itemSlotIcon.gameObject.SetActive(true);
         //itemSlots[index].quatitiy.gameObject.SetActive(true);
 
-        Debug.Log($"added item icon on slot {index}");
+        //Debug.Log($"added item icon on slot {index}");
     }
 
     public void SetQuantity(int index, int quantity)
@@ -107,5 +97,10 @@ public class ItemUIManager : MonoBehaviour
     public void UpdateMoney(int value)
     {
         MoneyText.text = value.ToString() + "G";
+    }
+
+    public void SetColors(int index, byte r = 63, byte g = 63, byte b = 63)
+    {
+        itemSlots[index].SetColor(r, g, b);
     }
 }

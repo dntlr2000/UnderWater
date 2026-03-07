@@ -1,5 +1,5 @@
 using UnityEngine;
-
+/*
 public class PlayerStateMachine
 {
     public PlayerState currentState;
@@ -18,3 +18,4 @@ public class PlayerStateMachine
         currentState.Enter();
     }
 }
+*/

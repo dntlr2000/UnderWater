@@ -1,31 +1,41 @@
+using Photon.Pun;
 using System;
 using System.IO;
 using UnityEngine;
 
-public class Inventory : MonoBehaviour
+public class Inventory : InventoryFrame
 {
     public int index; //현재 들고 있는 아이템
-    private InventoryData inventoryData;
-    public ItemUIManager ItemUI;
     public Transform IndexLine;
     public Player player; //플레이어가 포톤을 통해 자신의 인벤토리를 할당하는 기능 필요
-
+    public string playerInventoryName = "inventory";
     //private bool showInventory = false; //ItemUI에서 일단 가져와봄 Update 부하를 줄이기 위해 ItemUI의 메서드를 여기로 옮길 수 있음
+    PhotonView photonView;
+
+    private bool canUseItem = true;
+
+
+    protected void Awake()
+    {
+        photonView = GetComponent<PhotonView>();
+        if (photonView == null)
+        {
+            Debug.LogError("Inventory 스크립트에 PhotonView가 없습니다! 플레이어 프리팹에 추가해주세요.");
+        }
+    }
 
     void Start()
     {
-        GenerateData();
-
+        GenerateData(25, 1);
+        //0 ~ 24까지 인벤토리, 25부터는 장비
+        inventoryName = playerInventoryName;
         //GetItem(0, 1);
     }
 
-    public void GenerateData()
+    public override void GenerateData(int slots, int equipSlots = 0)
     {
-        inventoryData = new InventoryData();
-        inventoryData.GenerateData();
+        base.GenerateData(slots, equipSlots);
         GetMoney(100);
-
-        //GetItem(0, 1);
         Debug.Log("Inventory data generated");
     }
 
@@ -86,7 +96,8 @@ public class Inventory : MonoBehaviour
         if (Input.GetMouseButtonDown(1))
         {
             if (inventoryData.id[index] < 0) return;
-
+            if (!canUseItem) return;
+            //if (!HoldingInteractableItem()) return; //들고 있는 아이템이 상호작용을 거부하는 아이템인 경우 false가 리턴됨
             inventoryData.useItem(index);
             ItemUI.SetQuantity(index, inventoryData.quantity[index]);
             if (inventoryData.quantity[index] <= 0)
@@ -95,93 +106,22 @@ public class Inventory : MonoBehaviour
                 ItemUI.ResetIcons(index);
             }
         }
+
     }
 
     private void FixedUpdate()
     {
-        
+        if (player != null) player.SyncInventory(inventoryData);
     }
 
-    private void IndexSetter()
+    public float getPowerFromItem()
+    {
+        return ItemDatabase.Instance.getWeaponDamage(inventoryData.id[index]);
+    }
+
+    protected void IndexSetter()
     {
         IndexLine.localPosition = new Vector2(-140 + 70 * index, 0);
-    }
-
-    public void GetItem(int id, int quantitiy = 1, int durability = -1)
-    {
-        //같은 아이템이 이미 존재하는지 확인 먼저 한 후 빈 슬롯을 찾기
-        for (int i = 0; i < inventoryData.id.Length; i++)
-        {
-            if (inventoryData.id[i] == id)
-            {            
-                inventoryData.quantity[i] += quantitiy;
-                Debug.Log($"Item added in slot{i}. current quantity = {inventoryData.quantity[i]}");
-                ItemUI.SetQuantity(i, inventoryData.quantity[i]);
-                return;
-            }
-        }
-
-        for (int i = 0; i < inventoryData.id.Length; i++) //비어있는 경우. 임시로 -1로 설정c
-        {
-            if (inventoryData.id[i] == -1)
-            {
-                Debug.Log($"Found empty slots. Slot index = {i}");
-                inventoryData.quantity[i] = quantitiy;
-                inventoryData.id[i] = id;
-
-                //inventoryData.item.LoadIcons(inventoryData.id[i]);
-
-                Sprite ItemSprite = inventoryData.item.GetIcons(id);
-                if (ItemSprite == null)
-                {
-                    Debug.LogWarning($"ID가 {id}인 아이템 아이콘을 찾을 수 없습니다.");
-                    return;
-                }
-                if (ItemUI == null)
-                {
-                    Debug.LogWarning("ItemUI가 할당되지 않았습니다.");
-                }
-
-                ItemUI.LoadIcons(i, ItemSprite);
-                ItemUI.SetQuantity(i, quantitiy);
-                return;
-            }
-        }
-    }
-
-    public void RemoveAllItem(int index)
-    {
-       if (inventoryData.id[index] == -1)
-        {
-            return;
-        }
-       else
-        {
-            inventoryData.id[index] = -1;
-            inventoryData.quantity[index] = 0;
-            Debug.Log($"Removed Item in slot {index}");
-
-            ItemUI.ResetIcons(index);
-        }
-    }
-
-    public void RemoveItem(int index, int amount)
-    {
-        if (inventoryData.id[index] == -1)
-        {
-            return;
-        }
-        else
-        {
-            inventoryData.quantity[index] -= amount;
-            ItemUI.SetQuantity(index, inventoryData.quantity[index]);
-
-            if (inventoryData.quantity[index] <= 0)
-            {
-                inventoryData.id[index] = -1;
-                ItemUI.ResetIcons(index);
-            }
-        }
     }
 
     public void DropItem(int index, int amount = 1)
@@ -190,182 +130,142 @@ public class Inventory : MonoBehaviour
         {
             return;
         }
-        else
-        {
-            int trueQuantity = inventoryData.quantity[index] < amount ? inventoryData.quantity[index] : amount;
-            Transform playerTransform = player.transform;
-            Vector3 DropLocation = playerTransform.position + playerTransform.forward * 3f;
-            inventoryData.item.generateFieldItem(inventoryData.id[index], DropLocation, trueQuantity);
 
-            RemoveItem(index, amount);
+        int itemIDToDrop = inventoryData.id[index];
+        int quantityToDrop = inventoryData.quantity[index] < amount ? inventoryData.quantity[index] : amount;
+        float durabilityToDrop = inventoryData.durability[index];
 
-        }
+        RemoveItem(index, quantityToDrop);
 
-    }
+        if (player == null) player = GetComponent<Player>();
+        Transform playerTransform = player.transform;
+        Vector3 dropLocation = playerTransform.position + playerTransform.forward * 1.5f + Vector3.up * 0.5f;
 
-    public void MoveItemSlot(int before, int after)
-    {
-        if (inventoryData.id[before] == -1) return;
-        Sprite ItemSpriteAfter;
-        if (inventoryData.id[after] == -1) //옮기는 자리가 빈 자리임
-        {
-            inventoryData.id[after] = inventoryData.id[before];
-            inventoryData.quantity[after] = inventoryData.quantity[before];
-            ItemSpriteAfter = inventoryData.item.GetIcons(inventoryData.id[after]);
-
-            ItemUI.LoadIcons(after, ItemSpriteAfter);
-            ItemUI.SetQuantity(after, inventoryData.quantity[after]);
-
-            RemoveAllItem(before);
-        }
-        //각 위치에 아이템이 존재할 때
-        else
-        {
-            int tempID = inventoryData.id[after];
-            int tempQuantity = inventoryData.quantity[after];
-
-            inventoryData.id[after] = inventoryData.id[before];
-            inventoryData.quantity[after] = inventoryData.quantity[before];
-
-            inventoryData.id[before] = tempID;
-            inventoryData.quantity[before] = tempQuantity;
-            ItemSpriteAfter = inventoryData.item.GetIcons(inventoryData.id[after]);
-            Sprite ItemSpriteBefore = inventoryData.item.GetIcons(inventoryData.id[before]);
-            ItemUI.LoadIcons(after, ItemSpriteAfter);
-            ItemUI.SetQuantity(after, inventoryData.quantity[after]);
-
-            ItemUI.LoadIcons(before, ItemSpriteBefore);
-            ItemUI.SetQuantity(before, inventoryData.quantity[before]);
-        }
-
-        Debug.Log($"Switched Items Slot {before} <-> Slot {after}");
-
+        photonView.RPC("PunRPC_Master_InstantiateDroppedItem", RpcTarget.MasterClient, itemIDToDrop, quantityToDrop, durabilityToDrop, dropLocation);
     }
 
     public bool HoldingInteractableItem() //들고 있을 때 상호작용 가능한 아이템인지 확인 =>InteractableObject와 연계
     {
         if (inventoryData.id[index] == -1) return true;
-        return inventoryData.item.getInteractable(inventoryData.id[index]);
+        return ItemDatabase.Instance.getInteractable(inventoryData.id[index]);
     }
 
-    public void GetMoney(int value)
+    [PunRPC]
+    public void PunRPC_AddItem(int id, int quantity, float durability)
     {
-        if (inventoryData.money < 0 && value <= 0) return;
-        inventoryData.money += value;
-        if (inventoryData.money < 0) inventoryData.money = 0;
+        GetItem(id, quantity, durability); // 기존에 있던 아이템 추가 로직 호출
+        Debug.Log($"네트워크를 통해 아이템 수신: ID {id}, 수량 {quantity}");
+    }
+
+    [PunRPC]
+    public void PunRPC_SetMoney(int newTotalMoney)
+    {
+        // inventoryData.money -= amount; 와 같이 계산하는 것보다
+        // 서버가 계산한 최종 금액을 그대로 덮어쓰는 것이 동기화에 더 안전합니다.
+        inventoryData.money = newTotalMoney;
         ItemUI.UpdateMoney(inventoryData.money);
+        Debug.Log($"네트워크를 통해 돈 수신. 현재 잔액: {inventoryData.money}");
     }
-
-    public int GetMoneyData()
+    
+    [PunRPC]
+    public void PunRPC_Master_InstantiateDroppedItem(int itemID, int amount, float durability, Vector3 location)
     {
-        return inventoryData.money;
-    }
-
-    public int GetItemID(int index)
-    {
-        return inventoryData.id[index];
-    }
-
-    public int GetQuantity(int index)
-    {
-        return inventoryData.quantity[index];
-    }
-
-    public string GetName(int index)
-    {
-        return inventoryData.GetItemName(index);
-    }
-
-}
-
-[Serializable]
-public class InventoryData
-{
-    public int[] quantity;
-    public int[] id;
-
-    public ItemDatabase item; //Serializable이 아니므로 이 값이 json으로 저장되진 않음
-
-    public int money;
-
-    public void GenerateData()
-    {
-        quantity = new int[25];
-        id = new int[25];
-        item = new ItemDatabase();
-        item.GenerateData();
-
-        for (int i = 0; i < quantity.Length;i++)
+        // Safety check: ensure only the master client runs this.
+        if (!PhotonNetwork.IsMasterClient)
         {
-            quantity[i] = 0;
-            id[i] = -1;
-        }
-
-        money = 0;
-
-        Debug.Log("InventoryData data generated");
-
-    }
-
-    public void GetItem(int slot, int id, int quantity = 1)
-    {
-        this.id[slot] = id;
-        this.quantity[slot] = quantity;
-    }
-
-    public void AddItem(int slot, int amount)
-    {
-        quantity[slot] += amount;
-    }
-
-    public void RemoveItem(int slot, int amount)
-    {
-        quantity[slot] -= amount;
-        if (quantity[slot] <= 0) //아이템이 비워짐
-        {
-            quantity[slot] = 0;
-            id[0] = -1;
-        }
-    }
-
-    public string GetItemName(int slot)
-    {
-        int itemId = id[slot];
-        return item.getItemName(itemId);
-    }
-
-    //id는 그냥 id[slot]의 값
-
-    //public int UseItem() //이 부분은 다른 스크립트에서 구현해야 할 내용인듯
-    public void SaveInventory() //추후 멀티플레이어를 고려하여 경로를 고쳐야할듯
-    {
-        string path = Application.persistentDataPath + "/inventory.json";
-        InventoryData data = this;
-
-        string json = JsonUtility.ToJson(data);
-        File.WriteAllText(path, json);
-
-        Debug.Log($"인벤토리 데이터 저장 경로: {path}");
-    }
-
-    public void LoadInventory()
-    {
-        string path = Application.persistentDataPath + "/inventory.json";
-        if (!File.Exists(path))
-        {
-            Debug.LogWarning("저장된 인벤토리 정보가 없습니다.");
             return;
         }
-        string json = File.ReadAllText(path);
-        InventoryData data = JsonUtility.FromJson<InventoryData>(json);
 
-        quantity = data.quantity;
-        id = data.id;
+        // --- 1. Determine Prefab Path ---
+        string prefabPath = $"FieldItem/Object{itemID}";
+        if (Resources.Load(prefabPath) == null)
+        {
+            prefabPath = "FieldItem/Object1"; // Fallback prefab
+        }
 
+        // --- 2. Instantiate Item ONCE on the network ---
+        GameObject droppedItem = PhotonNetwork.Instantiate(prefabPath, location, Quaternion.identity);
+
+        // --- 3. Set properties on the new item for all clients ---
+        if (droppedItem != null)
+        {
+            PhotonView itemView = droppedItem.GetComponent<PhotonView>();
+            if (itemView != null)
+            {
+                // Use the existing RPC on FieldItem.cs to sync its data (ID and amount)
+                itemView.RPC("PunRPC_SetItemProperties", RpcTarget.All, itemID, amount, durability);
+            }
+            else
+            {
+                Debug.LogError($"Dropped item prefab '{prefabPath}' is missing a PhotonView component.");
+            }
+        }
     }
 
-    public void useItem(int index)
+    public override void MoveItemSlot(int before, int after)
     {
-        quantity[index] = item.useItem(id[index], quantity[index]);
+
+        base.MoveItemSlot(before, after);
+        //Debug.Log($"Switched Complete");
+
+        if (before >= INVENTORY_SIZE || after >= INVENTORY_SIZE)
+        {
+            RefreshEquipments();
+        }
+       
+    }
+
+
+    public void ApplyLoadedData(InventoryData loadedData)
+    {
+        if (loadedData == null || loadedData.id == null || loadedData.id.Length < INVENTORY_SIZE)
+        {
+            Debug.LogWarning("수신된 인벤토리 데이터가 비어있거나 손상되어 새로 생성합니다.");
+            GenerateData(25, 1);
+            return;
+        }
+
+        //데이터 덮어쓰기
+        this.inventoryData = loadedData;
+
+        //돈 UI 업데이트
+        ItemUI.UpdateMoney(inventoryData.money);
+
+        //슬롯 UI 업데이트
+        for (int i = 0; i < inventoryData.id.Length; i++)
+        {
+            if (inventoryData.id[i] == -1)
+            {
+                ItemUI.ResetIcons(i);
+            }
+            else
+            {
+                Sprite itemSprite = ItemDatabase.Instance.GetIcons(inventoryData.id[i]);
+                ItemUI.LoadIcons(i, itemSprite);
+                ItemUI.SetQuantity(i, inventoryData.quantity[i]);
+            }
+        }
+        RefreshEquipments();
+        Debug.Log("저장된 인벤토리 데이터 복구 완료!");
+    }
+
+    public void RefreshEquipments()
+    {
+        if (player == null || player.condition == null) return;
+
+        Condition condition = player.condition;
+        condition.ResetStateOrigin(); //먼저 기본 상태로 초기화 후 다시 장착 효과 반영
+
+        for (int i = INVENTORY_SIZE; i < inventoryData.id.Length; i++)
+        {
+            condition.EquipEffect(inventoryData.id[i], i, inventoryData.durability[i]);
+        }
+
+        condition.SetBarUI();
+    }
+
+    public void ChangeCanUseItem(bool value)
+    {
+        canUseItem = value;
     }
 }

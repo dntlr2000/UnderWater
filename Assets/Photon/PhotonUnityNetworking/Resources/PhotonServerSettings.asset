@@ -43,6 +43,57 @@ MonoBehaviour:
   - ChatRPC
   - RequestDestroy
   - RPC_Deactivate
+  - PunRPC_RequestStoreItem
+  - PunRPC_RequestWithdrawItem
+  - PunRPC_SyncBoxData
+  - PunRPC_AddItem
+  - PunRPC_RequestDepositMoney
+  - PunRPC_RequestWithdrawMoney
+  - PunRPC_SetMoney
+  - PunRPC_RequestLatestData
+  - PunRPC_DropItem
+  - PunRPC_Master_InstantiateDroppedItem
+  - PunRPC_SetItemProperties
+  - PunRPC_SpawnItemFromPool
+  - PunRPC_TryToPickup
+  - PunRPC_ActivateMonster
+  - PunRPC_ReturnMonster
+  - RequestTakeDamage
+  - RPC_ActivateMonster
+  - RPC_DeactivateMonster
+  - TakeDamage
+  - RPC_AddToPoolAndDeactivate
+  - RPC_ActivateMonsterFromPool
+  - RPC_ClearAllMonsters
+  - RPC_ReturnMonsterToPool
+  - PunRPC_Master_InstantiateMonster
+  - PunRPC_MonsterDeath
+  - PunRPC_MonsterDamaged
+  - RPC_SendPlayerInfoToMaster
+  - RPC_BroadcastSaveData
+  - RPC_ReceiveChat
+  - RPC_RequestJobChange
+  - PunRPC_ApplyVelocityY
+  - PunRPC_ResetTrigger
+  - PunRPC_SetAirState
+  - PunRPC_SetAttackState
+  - PunRPC_SetDownState
+  - PunRPC_SetJumpState
+  - PunRPC_SetMoveState
+  - PunRPC_SetSitState
+  - PunRPC_SetWaterState
+  - PunRPC_LockObject
+  - PunRPC_OpenDoor
+  - PunRPC_OpenObject
+  - PunRPC_RequestDoor
+  - PunRPC_SyncDoor
+  - PunRPC_SyncLock
+  - PunRPC_SyncOpen
+  - PunRPC_UnlockObject
+  - PunRPC_RemoveSylinder
+  - PunRPC_SetSylinder
+  - RPC_SetUsing
+  - PunRPC_SetUsing
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

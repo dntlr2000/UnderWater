@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "277146441052",
+    "project_id": "theoverflown-5908d",
+    "storage_bucket": "theoverflown-5908d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:277146441052:android:3c4718fb63155d8b719d99",
+        "android_client_info": {
+          "package_name": "com.Overflown.MyGame"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9xgUzM-QumKvw2fEgUDaRdTpa571DuT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

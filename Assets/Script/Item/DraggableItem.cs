@@ -53,12 +53,6 @@ public class DraggableItem : MonoBehaviour,
     public void OnDrag(PointerEventData e)
     {
         //마우스 포인터를 따라다니게
-        /*
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            canvas.transform as RectTransform,
-            e.position, e.pressEventCamera,
-            out Vector2 lp);
-        */
         RectTransform canvasRect = canvas.transform as RectTransform;
         Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
 
@@ -93,5 +87,6 @@ public class DraggableItem : MonoBehaviour,
 
         transform.SetParent(originalParent, false); //원래 부모로 복원하기
         rect.anchoredPosition = originalAnchoredPos;
+        rect.localScale = Vector3.one;
     }
 }

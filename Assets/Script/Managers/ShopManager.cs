@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class ShopManager : MonoBehaviour
 {
     Inventory inventory;
-    ItemDatabase database;
+    //ItemDatabase database;
     public TextMeshProUGUI GoldText;
 
     public bool ifShopOn = false;
@@ -19,16 +19,32 @@ public class ShopManager : MonoBehaviour
     public Scrollbar scrollbar;
 
     int scrollRate = 0;
+    int MaxScrollRate = 4;
 
     int selectedID = -1;
 
     int[] shopItems; //상점에 팔 아이템 ID 저장
+    float[] shopDurability;
     int[] shopPrice; //상점 품목 별 가격
+
+    public RawImage comfirmScreen;
+    public TextMeshProUGUI ItemNameText; //구매 또는 판매임을 알리는 텍스트
+    public TextMeshProUGUI amountText;
+    public TextMeshProUGUI priceText;
+    public int amount;
+    protected int price;
+    //protected bool ifBuyComfirm;
+    public Button buyComfirmButton;
+    public Button sellComfirmButton;
+    public Scrollbar amountBar;
+
+    bool ifBuyState = false;
+
 
     private void Start()
     {
-        database = new ItemDatabase();
-        database.GenerateData();
+        //database = new ItemDatabase();
+        //database.GenerateData();
         UpdateMoneyData();
         GenerateShopData(0);
     }
@@ -58,7 +74,7 @@ public class ShopManager : MonoBehaviour
         }
     }
 
-    void UpdateMoneyData()
+    public void UpdateMoneyData()
     {
         if (inventory == null)
         {
@@ -77,18 +93,22 @@ public class ShopManager : MonoBehaviour
 
     public void BuyItem(int amount = 1)
     {
-        if (shopItems[selectedID] == -1)
+        if (selectedID == -1 || shopItems[selectedID] == -1 || selectedID >= shopItems.Length)
         {
             return;
         }
-        if (inventory.GetMoneyData() < shopPrice[selectedID])
+        if (inventory.GetMoneyData() < shopPrice[selectedID] * amount)
         {
             Debug.Log("돈이 부족합니다!");
             return;
         }
 
-        inventory.GetMoney(-shopPrice[selectedID]);
-        inventory.GetItem(shopItems[selectedID]);
+        inventory.GetMoney(-shopPrice[selectedID] * amount);
+        if (ItemDatabase.Instance.getSingularity(shopItems[selectedID]) == true)
+        {
+            for (int i = 0; i < amount; i++) inventory.GetItem(shopItems[selectedID], 1, shopDurability[selectedID]);
+        }  
+        else inventory.GetItem(shopItems[selectedID], amount, shopDurability[selectedID]);
         UpdateMoneyData();
 
     }
@@ -100,14 +120,16 @@ public class ShopManager : MonoBehaviour
 
     public void SellItem(int amount = 1)
     {
-        if (inventory.GetItemID(selectedID) == -1)
+        if (selectedID == -1 || inventory.GetItemID(selectedID) == -1)
         {
             Debug.Log("선택된 아이템이 없습니다.");
             return;
         }
+        int trueAmount = amount;
+        if (amount > inventory.GetQuantity(selectedID)) trueAmount = inventory.GetQuantity(selectedID);
 
-        inventory.GetMoney(database.getPrice(inventory.GetItemID(selectedID)) * amount);
-        inventory.RemoveItem(selectedID, amount);
+        inventory.GetMoney(ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * trueAmount);
+        inventory.RemoveItem(selectedID, trueAmount);
         UpdateSellMenu();
         UpdateMoneyData();
     }
@@ -119,10 +141,12 @@ public class ShopManager : MonoBehaviour
             sellScreen.gameObject.SetActive(true);
             //scrollbar.gameObject.SetActive(true);
             scrollRate = 0;
+            MaxScrollRate = 3;
             UpdateSellMenu();
         }
         else
         {
+            ResetSlot();
             sellScreen.gameObject.SetActive(false);
             scrollbar.gameObject.SetActive(false);
         }
@@ -134,11 +158,13 @@ public class ShopManager : MonoBehaviour
         {
             //scrollbar.gameObject.SetActive(true);
             buyScreen.gameObject.SetActive(true);
+            MaxScrollRate = 2;
             scrollRate = 0;
             UpdateBuyMenu();
         }
         else
         {
+            ResetSlot();
             buyScreen.gameObject.SetActive(false);
             scrollbar.gameObject.SetActive(false);
         }
@@ -158,29 +184,39 @@ public class ShopManager : MonoBehaviour
         //인벤토리에서 로드
         for (int i = 0; i < invLen; i++)
         {
-            int k = invLen * scrollRate + i;
+            int k = invLen * (scrollRate) + i;
 
             inventoryList[i].SlotID = k;
 
-            if (k >= 30) //현재 인벤토리 슬롯 개수 : 30
-            {
-                scrollRate = 4;
-                return;
-            }
 
-            if (inventory.GetItemID(k) == -1) {
+            //if (k >= 25) //현재 인벤토리 슬롯 개수 : 25
+            //{
+            //    return;
+            //}
+
+
+
+            if (k >= 25 || inventory.GetItemID(k) == -1) {
                 inventoryList[i].itemName.gameObject.SetActive(false);
                 inventoryList[i].priceText.gameObject.SetActive(false);
                 inventoryList[i].quatitiy.gameObject.SetActive(false);
                 inventoryList[i].itemSlotIcon.gameObject.SetActive(false);
                 continue;
             }
-            inventoryList[i].itemName.text = database.getItemName(inventory.GetItemID(k));
-            inventoryList[i].priceText.text = database.getPrice(inventory.GetItemID(k)) + "G";
+            inventoryList[i].itemName.text = ItemDatabase.Instance.getItemName(inventory.GetItemID(k));
+            inventoryList[i].priceText.text = ItemDatabase.Instance.getPrice(inventory.GetItemID(k)) + "G";
             inventoryList[i].quatitiy.text = inventory.GetQuantity(k).ToString();
-            inventoryList[i].itemSlotIcon.texture = database.LoadIcons(inventory.GetItemID(k)).texture;
+            //inventoryList[i].itemSlotIcon.texture = database.LoadIcons(inventory.GetItemID(k)).texture;
+            inventoryList[i].itemSlotIcon.texture = inventory.GetIcon(inventory.GetItemID(k)).texture;
         }
 
+        if (selectedID != -1)
+        {
+            //if (selectedID < shopList.Length) shopList[selectedID].SetColor();
+            //if (selectedID < 30) inventoryList[selectedID % 8].SetColor();
+            
+            //ResetSlot();
+        }
     }
 
 
@@ -203,73 +239,177 @@ public class ShopManager : MonoBehaviour
             int k = shopLen * scrollRate + i;
             shopList[i].SlotID = k;
             
-            if (shopItems[i] == -1)
+            if (k >= shopItems.Length || shopItems[k] == -1)
             {
                 shopList[i].itemName.gameObject.SetActive(false);
                 shopList[i].priceText.gameObject.SetActive(false);
                 //shopList[i].quatitiy.gameObject.SetActive(false);
                 shopList[i].itemSlotIcon.gameObject.SetActive(false);
-
-                if (k >= 10) //현재 상점 슬롯 개수 : 10
-                {
-                    scrollRate = 1;
-                    ///return;
-                }
                 continue;
             }
 
-            shopList[i].itemName.text = database.getItemName(shopItems[i]);
+            shopList[i].itemName.text = ItemDatabase.Instance.getItemName(shopItems[k]);
             shopList[i].priceText.text = shopPrice[i] + "G";
             //shopList[i].quatitiy.text = 
-            shopList[i].itemSlotIcon.texture = database.LoadIcons(shopItems[i]).texture;
+            shopList[i].itemSlotIcon.texture = ItemDatabase.Instance.GetIcons(shopItems[k]).texture;
 
         }
 
-
+        if (selectedID != -1)
+        {
+            if (selectedID < shopList.Length) shopList[selectedID].SetColor();
+            if (selectedID < 30) inventoryList[selectedID % 8].SetColor();
+        }
     }
 
     public void onScroll(int y)
     {
         scrollRate += y;
         if (scrollRate <= 0) scrollRate= 0;
-        if (scrollRate >= 2) scrollRate= 2;
+        if (scrollRate >= MaxScrollRate) scrollRate = MaxScrollRate;
         Debug.Log($"Scroll Rate = {scrollRate}");
+
+        ResetSlot();
+        //selectedID = -1;
         UpdateBuyMenu();
         UpdateSellMenu();
+        
     }
 
     public void SelectSlot(int index)
     {
+        if (selectedID != -1)
+        {
+            if (selectedID < shopItems.Length) shopList[selectedID % 8].SetColor();
+            if (selectedID < 25) inventoryList[selectedID % 8].SetColor();
+        }
         selectedID = index;
+        if (ifBuyState && index >= 25)
+        {
+            ResetSlot();
+            return;
+        }
+        
+        if (selectedID < shopItems.Length) shopList[index % 8].SetColor(110, 123, 150);
+        if (selectedID < 25) inventoryList[index % 8].SetColor(110, 123, 150);
     }
 
+    public void ResetSlot()
+    {
+        if (selectedID == -1) return;
+        shopList[selectedID % 8].SetColor();
+        inventoryList[selectedID % 8].SetColor();
+        selectedID = -1;
+    }
 
     public void GenerateShopData(int level = 0)
     {
         //level : 레벨에 따른 순차 개방 기능을 위해 구현
         shopItems = new int[10]; //임시로 2개 품목만 구현
         shopPrice = new int[10];
+        shopDurability = new float[10];
 
         for (int i = 0; i < shopItems.Length; i++)
         {
             shopItems[i] = -1;
             shopPrice[i] = 0;
+            shopDurability[i] = -1;
         }
 
         shopItems[0] = 0;
         shopItems[1] = 1;
+        shopItems[2] = 2;
+        shopItems[3] = 3;
+        shopItems[4] = 4;
+        
+        shopItems[5] = 6;
+        shopDurability[5] = 80f;
+
+        //shopItems[6] = 5;
+        //shopDurability[6] = 50f;
 
         for (int i = 0; i < shopItems.Length; i++)
         {
             if (shopItems[i] == -1) continue;
-            shopPrice[i] = 2 * database.items[shopItems[i]].price;
+            shopPrice[i] = 2 * ItemDatabase.Instance.getPrice(shopItems[i]);
         }
 
     }
 
     public int GetItemId(int shopId)
     {
-        return database.items[shopId].itemId;
+        return ItemDatabase.Instance.GetItem(shopId).itemId;
+    }
+
+    public void SetComfirmScreen(bool ifBuy)
+    {
+        if (selectedID == -1) return;
+        ifBuyState = ifBuy;
+        if (ifBuy && (selectedID >= shopItems.Length || shopItems[selectedID] == -1)) //구매 모드
+        {
+            ResetSlot();
+            return;
+        }
+
+        if (!ifBuy && (selectedID >= 25 || inventory.GetItemID(selectedID) == -1)) //판매 모드
+        {
+            ResetSlot();
+            return;
+        }
+
+        
+        comfirmScreen.gameObject.SetActive(true);
+        amount = 1;
+        amountBar.value = 0;
+        amountText.text = "1 / 10";
+
+        if (ifBuy) //구매 모드
+        {
+            ItemNameText.text = ItemDatabase.Instance.getItemName(shopItems[selectedID]);
+            sellComfirmButton.gameObject.SetActive(false);
+            buyComfirmButton.gameObject.SetActive(true);
+            priceText.text = "G: " + (shopPrice[selectedID] * amount);
+        }
+
+        if (!ifBuy) //판매 모드
+        {
+            ItemNameText.text = ItemDatabase.Instance.getItemName(inventory.GetItemID(selectedID));
+            sellComfirmButton.gameObject.SetActive(true);
+            buyComfirmButton.gameObject.SetActive(false);
+            priceText.text = "G: " + (ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * amount);
+        }
+        
+        //priceText.text = "\\ " + (shopPrice[selectedID] * amount);
+    }
+
+    public void DisableComfirmScreen()
+    {
+        comfirmScreen.gameObject.SetActive(false);
+        return;
+    }
+
+    public void ComfirmBuy()
+    {
+        BuyItem(amount);
+    }
+
+    public void ComfirmSell()
+    {
+        SellItem(amount);
+    }
+
+    public void onScrollAmountChanged()
+    {
+        if (selectedID == -1)
+        {
+            comfirmScreen.gameObject.SetActive(false);
+            return;
+        }
+        amount = Mathf.RoundToInt(amountBar.value * (amountBar.numberOfSteps - 1)) + 1;
+        amountText.text = $"{amount} / 10";
+        
+        if (ifBuyState) priceText.text = "G: " + (shopPrice[selectedID] * amount);
+        else priceText.text = "G: " + (ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * amount);
     }
 }
 

@@ -6,16 +6,17 @@ using UnityEngine.EventSystems;
 public class ItemSlot : MonoBehaviour, IDropHandler
 {
     public int SlotID;
+    [Header("InsideSlots")]
+    public RawImage background;
     public RawImage itemSlotIcon;
-    //public Texture defaultSlotTexture;
     public TextMeshProUGUI quatitiy;
 
+    [Header("ShopTexts")]
     public TextMeshProUGUI itemName;
     public TextMeshProUGUI priceText;
 
     void Start()
     {
-        // 아이콘 초기 상태: 없을 땐 꺼두거나 기본 텍스처
         //itemSlotIcon.gameObject.SetActive(false);
     }
 
@@ -28,5 +29,28 @@ public class ItemSlot : MonoBehaviour, IDropHandler
         {
             shopManager.SelectSlot(SlotID);
         }
+    }
+
+    public void SelectedStorageInventory()
+    {
+        StorageBox storageBox = FindAnyObjectByType<StorageBox>();
+        if (storageBox != null)
+        {
+            storageBox.SetInventorytIndex(SlotID);
+        }
+    }
+
+    public void SelectedStorageBox()
+    {
+        StorageBox storageBox = FindAnyObjectByType<StorageBox>();
+        if (storageBox != null)
+        {
+            storageBox.SetBoxIndex(SlotID);
+        }
+    }
+
+    public void SetColor(byte r = 63, byte g = 63, byte b = 63)
+    {
+        background.color = new Color32(r, g, b, 71);
     }
 }
