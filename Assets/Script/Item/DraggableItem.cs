@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -27,13 +27,13 @@ public class DraggableItem : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData e)
     {
-        //¿ø·¡ ½½·Ô Á¤º¸ ÀúÀå
+        //ì›ë˜ ìŠ¬ë¡¯ ì •ë³´ ì €ì¥
         originalParent = transform.parent;
         originalAnchoredPos = rect.anchoredPosition;
         var slot = originalParent.GetComponent<ItemSlot>();
         originalSlotID = slot != null ? slot.SlotID : -1;
 
-        //Canvas ÁÂÇ¥°è·Î ÀÌµ¿ÇÏ¿© ¸¶¿ì½º¿Í ¾ÆÀÌÄÜ °£ÀÇ À§Ä¡ °è»ê
+        //Canvas ì¢Œí‘œê³„ë¡œ ì´ë™í•˜ì—¬ ë§ˆìš°ìŠ¤ì™€ ì•„ì´ì½˜ ê°„ì˜ ìœ„ì¹˜ ê³„ì‚°
         transform.SetParent(canvas.transform, true);
         RectTransform canvasRect = canvas.transform as RectTransform;
         Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
@@ -44,7 +44,7 @@ public class DraggableItem : MonoBehaviour,
             cam, 
             out Vector2 pointerLocal);
 
-        dragOffset = rect.anchoredPosition - pointerLocal; //¿ÀÇÁ¼Â º¸Á¤
+        dragOffset = rect.anchoredPosition - pointerLocal; //ì˜¤í”„ì…‹ ë³´ì •
 
         cg.blocksRaycasts = false;
         cg.alpha = 0.8f;
@@ -52,7 +52,7 @@ public class DraggableItem : MonoBehaviour,
 
     public void OnDrag(PointerEventData e)
     {
-        //¸¶¿ì½º Æ÷ÀÎÅÍ¸¦ µû¶ó´Ù´Ï°Ô
+        //ë§ˆìš°ìŠ¤ í¬ì¸í„°ë¥¼ ë”°ë¼ë‹¤ë‹ˆê²Œ
         RectTransform canvasRect = canvas.transform as RectTransform;
         Camera cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
 
@@ -70,22 +70,39 @@ public class DraggableItem : MonoBehaviour,
         cg.blocksRaycasts = true;
         cg.alpha = 1f;
 
-        //µå¶øµÈ °÷ È®ÀÎ
         var hitGO = e.pointerCurrentRaycast.gameObject;
-        var dropSlot = hitGO ? hitGO.GetComponentInParent<ItemSlot>() : null;
 
-        if (dropSlot != null && originalSlotID >= 0)
+        // íœ´ì§€í†µ(TrashCan)ì— ë“œë¡­í–ˆëŠ”ì§€ í™•ì¸
+        // (íœ´ì§€í†µ UI ì˜¤ë¸Œì íŠ¸ì˜ Tagë¥¼ "TrashCan"ìœ¼ë¡œ ì„¤ì •í•´ì•¼ í•©ë‹ˆë‹¤)
+        if (hitGO != null && hitGO.CompareTag("TrashCan"))
         {
-            //InventoryÀÇ ±³Ã¼ ¸Ş¼­µå È£Ãâ
-            inventory.MoveItemSlot(originalSlotID, dropSlot.SlotID);
+            // ë¹ˆ ìŠ¬ë¡¯ì„ ë“œë˜ê·¸í•´ì„œ ë²„ë¦¬ë ¤ëŠ” ê²½ìš° ë¬´ì‹œ
+            if (inventory.GetItemID(originalSlotID) != -1)
+            {
+                // ë²„ë¦¬ê¸° ë¡œì§ì´ ì •ìƒ ì‘ë™í•˜ë„ë¡ Inventoryì˜ í˜„ì¬ ì„ íƒ ì¸ë±ìŠ¤ë¥¼ ë§ì¶°ì¤ë‹ˆë‹¤.
+                inventory.throwIndex = originalSlotID;
+
+                // í™•ì • ì°½ ë„ìš°ê¸°
+                inventory.SetThrowScreen(true);
+            }
         }
         else
         {
+            // íœ´ì§€í†µì´ ì•„ë‹Œ ê³³ì— ë“œë¡­í–ˆì„ ê²½ìš° ê¸°ì¡´ì˜ ìŠ¬ë¡¯ ì´ë™ ë¡œì§ ì‹¤í–‰
+            var dropSlot = hitGO ? hitGO.GetComponentInParent<ItemSlot>() : null;
 
-            inventory.MoveItemSlot(originalSlotID, originalSlotID);
+            if (dropSlot != null && originalSlotID >= 0)
+            {
+                // Inventoryì˜ êµì²´ ë©”ì„œë“œ í˜¸ì¶œ
+                inventory.MoveItemSlot(originalSlotID, dropSlot.SlotID);
+            }
+            else
+            {
+                inventory.MoveItemSlot(originalSlotID, originalSlotID);
+            }
         }
 
-        transform.SetParent(originalParent, false); //¿ø·¡ ºÎ¸ğ·Î º¹¿øÇÏ±â
+        transform.SetParent(originalParent, false); //ì›ë˜ ë¶€ëª¨ë¡œ ë³µì›í•˜ê¸°
         rect.anchoredPosition = originalAnchoredPos;
         rect.localScale = Vector3.one;
     }

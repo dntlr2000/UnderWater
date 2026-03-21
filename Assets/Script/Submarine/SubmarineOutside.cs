@@ -1,7 +1,8 @@
-using Photon.Pun;
+ï»¿using Photon.Pun;
+using System;
 using UnityEngine;
 
-public class SubmarineOutside : MonoBehaviourPun
+public class SubmarineOutside : MonoBehaviourPun, ISavable
 {
     public Player player;
     CameraRotator camRotator;
@@ -22,6 +23,7 @@ public class SubmarineOutside : MonoBehaviourPun
     public int usingPlayerId = -1;
 
     public bool onWaterState = false;
+    PhotonView pv;
 
     void Start()
     {
@@ -29,14 +31,14 @@ public class SubmarineOutside : MonoBehaviourPun
         cameraObj = camRotator.cameraTransform.gameObject;
         cameraObj.SetActive(false);
         rb = GetComponent<Rigidbody>();
-        PhotonView pv = GetComponent<PhotonView>();
+        pv = GetComponent<PhotonView>();
     }
 
     // Update is called once per frame
 
     private void Update()
     {
-        if (controllable && Input.GetKeyDown(KeyCode.E)) //Àá¼öÇÔ »óÅÂ ¹ş¾î³ª±â
+        if (controllable && Input.GetKeyDown(KeyCode.E)) //ì ìˆ˜í•¨ ìƒíƒœ ë²—ì–´ë‚˜ê¸°
         {
             if (ConnectedHandle == null) return;
             if (usingPlayerId != ConnectedHandle.player.photonView.ViewID) return;
@@ -52,13 +54,13 @@ public class SubmarineOutside : MonoBehaviourPun
         if (!photonView.IsMine) return;
         if (controllable && usingPlayerId == ConnectedHandle.player.photonView.ViewID)
         {
-            if (onWaterState) //¼öÁß »óÅÂ
+            if (onWaterState) //ìˆ˜ì¤‘ ìƒíƒœ
             {
-                //ÀÔ·Â ¹× ¼Óµµ °è»ê
-                float turnInput = Input.GetAxis("Horizontal"); //ÁÂ¿ì È¸Àü
+                //ì…ë ¥ ë° ì†ë„ ê³„ì‚°
+                float turnInput = Input.GetAxis("Horizontal"); //ì¢Œìš° íšŒì „
                 turnSpeed = CaculateMovement(turnInput, turnSpeed, rotationSpeed, 0.05f);
 
-                float forwardInput = Input.GetAxis("Vertical"); //¾ÕµÚ
+                float forwardInput = Input.GetAxis("Vertical"); //ì•ë’¤
                 frontSpeed = CaculateMovement(forwardInput, frontSpeed, moveSpeed);
 
                 float verticalInput = 0f;
@@ -68,7 +70,7 @@ public class SubmarineOutside : MonoBehaviourPun
                 rb.angularVelocity = new Vector3(0, turnSpeed, 0f);
                 rb.linearVelocity = (transform.forward * frontSpeed) + (Vector3.up * verticalSpeed);
             }
-            else //¹Ù±ùÀ¸·Î ³ª¿Â »óÅÂ
+            else //ë°”ê¹¥ìœ¼ë¡œ ë‚˜ì˜¨ ìƒíƒœ
             {
                 turnSpeed = CaculateMovement(0, turnSpeed, rotationSpeed, 0.05f);
                 frontSpeed = CaculateMovement(0, frontSpeed, moveSpeed);
@@ -80,9 +82,9 @@ public class SubmarineOutside : MonoBehaviourPun
 
         else
         {
-            if (onWaterState) //¼öÁß »óÅÂ
+            if (onWaterState) //ìˆ˜ì¤‘ ìƒíƒœ
             {
-                //ÀÔ·Â ¹× ¼Óµµ °è»ê
+                //ì…ë ¥ ë° ì†ë„ ê³„ì‚°
                 turnSpeed = CaculateMovement(0, turnSpeed, rotationSpeed, 0.05f);
 
                 frontSpeed = CaculateMovement(0, frontSpeed, moveSpeed);
@@ -91,7 +93,7 @@ public class SubmarineOutside : MonoBehaviourPun
                 rb.angularVelocity = new Vector3(0, turnSpeed, 0f);
                 rb.linearVelocity = (transform.forward * frontSpeed) + (Vector3.up * verticalSpeed);
             }
-            else //¹Ù±ùÀ¸·Î ³ª¿Â »óÅÂ
+            else //ë°”ê¹¥ìœ¼ë¡œ ë‚˜ì˜¨ ìƒíƒœ
             {
                 turnSpeed = CaculateMovement(0, turnSpeed, rotationSpeed, 0.05f);
                 frontSpeed = CaculateMovement(0, frontSpeed, moveSpeed);
@@ -123,15 +125,15 @@ public class SubmarineOutside : MonoBehaviourPun
 
     public void SwitchSubmarineState(bool state)
     {
-        if (state) //Âü -> Àá¼öÇÔ Á¶Á¾ »óÅÂ
+        if (state) //ì°¸ -> ì ìˆ˜í•¨ ì¡°ì¢… ìƒíƒœ
         {
             if (!photonView.IsMine)
             {
-                photonView.RequestOwnership(); //PhotonTransformView - Takeover·Î ¼³Á¤ -> ÇØ´ç ¿ÀºêÁ§Æ®ÀÇ Æ÷Åæ¿À³Ê º¯°æ
-                //->PhotonTransformViewÀÇ µ¿±âÈ­ ±ÇÇÑ ¿Å±â±â°¡ °¡´ÉÇÔ
+                photonView.RequestOwnership(); //PhotonTransformView - Takeoverë¡œ ì„¤ì • -> í•´ë‹¹ ì˜¤ë¸Œì íŠ¸ì˜ í¬í†¤ì˜¤ë„ˆ ë³€ê²½
+                //->PhotonTransformViewì˜ ë™ê¸°í™” ê¶Œí•œ ì˜®ê¸°ê¸°ê°€ ê°€ëŠ¥í•¨
             }
             controllable = true;
-            player.gameObject.SetActive(false); //ÀÌÈÄ ¿òÁ÷ÀÓ ÅëÁ¦ÇÏ´Â °ÍÀ¸·Î ±â´É ±³Ã¼ ¿¹Á¤
+            player.gameObject.SetActive(false); //ì´í›„ ì›€ì§ì„ í†µì œí•˜ëŠ” ê²ƒìœ¼ë¡œ ê¸°ëŠ¥ êµì²´ ì˜ˆì •
             cameraObj.SetActive(true);
             camRotator.canActivate = true;
 
@@ -183,6 +185,61 @@ public class SubmarineOutside : MonoBehaviourPun
     {
         onWaterState = state;
         rb.useGravity = !state;
+    }
+
+    //ISavable ì¸í„°í˜ì´ìŠ¤ êµ¬í˜„
+    [Serializable]
+    public struct SubmarineSaveStruct
+    {
+        public bool onWaterState;
+        public Quaternion rotation;
+        //ì•„ì§ ì ìˆ˜í•¨ ë ˆë²¨ ì¢…ë¥˜ ë“± ì •ë³´ëŠ” ë¯¸êµ¬í˜„ ìƒíƒœ, í•„ìš”í•˜ë‹¤ë©´ ì¶”ê°€ ì˜ˆì •
+    }
+
+    // --- ISavable êµ¬í˜„ë¶€ ---
+    // ! ì•ì— "SceneObject_"ë¥¼ ë¶™ì—¬ ê¸°ì¡´ ì”¬ì— ìˆëŠ” ê°ì²´ì„ì„ ì•Œë ¤ì•¼ í•¨.
+    public string PrefabPath => "SceneObject_Submarine";
+
+    public string GetSaveDataJson()
+    {
+        SubmarineSaveStruct data = new SubmarineSaveStruct
+        {
+            onWaterState = this.onWaterState,
+            rotation = transform.rotation
+
+        };
+        return JsonUtility.ToJson(data);
+    }
+
+    public void RestoreSaveData(string json)
+    {
+        SubmarineSaveStruct data = JsonUtility.FromJson<SubmarineSaveStruct>(json);
+        //SetWaterState(data.onWaterState);
+
+        // í˜¹ì‹œ ëª°ë¼ ì ìˆ˜í•¨ ì´ë™ ì´ˆê¸°í™”
+        frontSpeed = 0f;
+        turnSpeed = 0f;
+        verticalSpeed = 0f;
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        // ë™ê¸°í™”
+        if (photonView != null && PhotonNetwork.IsMasterClient)
+        {
+            photonView.RPC(nameof(PunRPC_SyncSubmarine), RpcTarget.AllBuffered, data.onWaterState, data.rotation);
+            //ë”°ì˜´í‘œ ëŒ€ì‹  nameof(PunRPC_SyncSubmarine)ë¡œ êµ¬í˜„í•˜ë©´ ì°¸ì¡°ì— í™•ì¸ì´ ê°€ëŠ¥í•¨
+        }
+    }
+
+    [PunRPC]
+    public void PunRPC_SyncSubmarine(bool waterState, Quaternion _rotation)
+    {
+        SetWaterState(waterState);
+        transform.rotation = _rotation;
+        Debug.Log($"[SubmarineOutside] ì ìˆ˜í•¨ ìƒíƒœ ë™ê¸°í™”: onWaterState={waterState}, rotation={_rotation}");
     }
 }
 
