@@ -67,7 +67,7 @@ public class CookingUIManager : MonoBehaviour
         // 좌측 레시피 목록 생성
         foreach (CookingRecipe recipe in recipes)
         {
-            GameObject newSlot = Instantiate(CB_ItemPrefab, CB_contentParent);
+            GameObject newSlot = Instantiate(CB_ItemPrefab, CB_contentParent, false);
 
             // [추천] 프리팹에 아이콘 이미지도 넣어서 매칭해주면 더 좋습니다.
             TMP_Text text = newSlot.GetComponentInChildren<TMP_Text>();

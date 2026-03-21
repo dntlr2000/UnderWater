@@ -32,8 +32,14 @@ public abstract class BaseWorkbench<T> : InteractableObject where T : WorkbenchD
 
         foreach (var data in dataList)
         {
-            /*if (GlobalRecipeManager.Instance == null || !GlobalRecipeManager.Instance.IsRecipeUnlocked(data.id))
-                continue;*/
+            if (GlobalUnlockManager.Instance != null)
+            {
+                // 매니저가 있고, 이 데이터의 ID가 아직 해금되지 않았다면? 리스트에 안 띄움!
+                if (!GlobalUnlockManager.Instance.IsUnlocked(data.id))
+                {
+                    continue;
+                }
+            }
 
             if (isSpecialist)
             {
