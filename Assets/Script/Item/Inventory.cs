@@ -299,4 +299,10 @@ public class Inventory : InventoryFrame
         Debug.Log($"아이템 {dropAmount}개를 버렸습니다.");
     }
 
+    [PunRPC]
+    public void PunRPC_AddMoney(int amount)
+    {
+        GetMoney(amount);
+        Debug.Log($"[Inventory] 돈 획득 승인됨. {amount}G 획득! 현재 잔액: {inventoryData.money}G");
+    }
 }
