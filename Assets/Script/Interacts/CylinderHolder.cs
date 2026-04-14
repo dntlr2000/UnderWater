@@ -11,7 +11,7 @@ public class CylinderHolder : InteractableObject, ISavable
     private float currentDuration = 0f;
     private float MaxDuration = 0f;
     public float ChargeSpeed;
-    private int ItemID;
+    private int ItemID = -1;
 
     [Serializable]
     public struct HolderSaveStruct

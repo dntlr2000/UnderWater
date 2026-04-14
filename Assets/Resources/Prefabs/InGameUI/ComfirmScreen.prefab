@@ -130,7 +130,9 @@ MonoBehaviour:
   background: {fileID: 7991817087530021895}
   itemNameText: {fileID: 2867866876557790812}
   amountText: {fileID: 3340585934230651655}
+  priceText: {fileID: 2515829740311947437}
   amount: 1
+  price: 0
   ComfirmButtonA: {fileID: 5843208294682262838}
   ComfirmButtonB: {fileID: 0}
   amountBar: {fileID: 8868562600826812342}

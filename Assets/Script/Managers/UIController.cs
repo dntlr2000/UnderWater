@@ -194,7 +194,7 @@ public class UIController : MonoBehaviour
             StorageBox storage = FindAnyObjectByType<StorageBox>();
             if (storage)
             {
-                storage.DisableComfirmScreen();
+                storage.CloseComfirmScreen();
             }
             LockCursor(true);
             SetPlayerControl(true);
@@ -248,4 +248,6 @@ public class UIController : MonoBehaviour
         if (playerScript == null)
             playerScript = FindAnyObjectByType<Inventory>().player;
     }
+
+    
 }

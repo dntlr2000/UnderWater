@@ -8,8 +8,10 @@ public class ComfirmScreen : MonoBehaviour
     public RawImage background;
     public TextMeshProUGUI itemNameText;
     public TextMeshProUGUI amountText;
+    public TextMeshProUGUI priceText;
 
     public int amount;
+    public int price;
     public Button ComfirmButtonA;
     public Button ComfirmButtonB;
     public Scrollbar amountBar;
@@ -20,12 +22,17 @@ public class ComfirmScreen : MonoBehaviour
     public Action onConfirmAction;
     public Action onConfirmAction2;
 
-    public void ConstructComfirmScreen(int itemId)
+    public void ConstructComfirmScreen(int itemId, int itemPrice = 0)
     {
         itemNameText.text = ItemDatabase.Instance.getItemName(itemId);
         amount = 1;
-        amountBar.value = 1;
+        amountBar.value = 0;
         amountText.text = "1 / 10";
+        price = itemPrice;
+        if (itemPrice == 0)
+            priceText.text = "";
+        else
+            priceText.text = "G " + price;
     }
 
     public void onScrollAmountChanged()
@@ -33,6 +40,10 @@ public class ComfirmScreen : MonoBehaviour
         amount = Mathf.RoundToInt(amountBar.value * (amountBar.numberOfSteps - 1)) + 1;
         amountText.text = $"{amount} / 10";
         //priceText.text = "\\ " + (shopPrice[selectedID] * amount);
+        if (price == 0)
+            priceText.text = "";
+        else
+            priceText.text = "G " + price * amount;
     }
 
     public void onClickExit()
@@ -54,4 +65,6 @@ public class ComfirmScreen : MonoBehaviour
         onConfirmAction2?.Invoke();
         onClickExit();
     }
+
+
 }
