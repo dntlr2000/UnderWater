@@ -94,6 +94,11 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             if (timer >= autoSaveInterval)
             {
                 timer = 0f;
+                if (FindAnyObjectByType<AuthManager>() == null)
+                {
+                    return; // 에러를 뿜기 전에 조용히 돌아갑니다.
+                }
+
                 SaveGame();
             }
         }

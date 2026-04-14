@@ -15,6 +15,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     public float gravity = -9.81f;
     public float swimUpForce = 5f;
 
+    public float sinkSpeed = -1.5f;
+
     private Vector3 initialPosition;
     private Rigidbody rb;
 
@@ -28,6 +30,25 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     public FirstViewCamera firstViewCamera;
     public bool canMoveCamera = true;
 
+    #endregion
+
+    #region Underwater Effect Settings
+    [Header("Underwater Visuals")]
+    public float waterSurfaceY = 645f;
+    public Color underwaterColor = new Color(0.1f, 0.4f, 0.5f, 1f); // 물속 색상 (짙은 청록색)
+    [Range(0.01f, 0.2f)]
+    public float underwaterDensity = 0.05f; // 물속 탁도 (숫자가 클수록 앞이 안 보임)
+
+    // 물 밖에 나왔을 때 원래대로 돌려놓기 위한 저장소
+    private Color normalFogColor;
+    private float normalFogDensity;
+    private bool originalFogState;
+    private FogMode originalFogMode;
+
+
+    private CameraClearFlags originalClearFlags; // 원래 카메라 배경 모드 저장
+    private Color originalBackgroundColor;       // 원래 카메라 배경색 저장
+    private bool isCameraUnderwater = false;     // 현재 카메라가 물속인지 체크
     #endregion
 
     #region Animation
@@ -110,6 +131,21 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             ThirdViewLook.SetActive(false);
             //FindAnyObjectByType<OptionManager>().LoadOptions();
 
+            normalFogColor = RenderSettings.fogColor;
+            normalFogDensity = RenderSettings.fogDensity;
+            originalFogState = RenderSettings.fog;
+            originalFogMode = RenderSettings.fogMode;
+
+            //기본 카메라 상태 저장 (스카이박스 복구용)
+            if (firstViewCamera != null && firstViewCamera.cameraTransform != null)
+            {
+                Camera cam = firstViewCamera.cameraTransform.GetComponent<Camera>();
+                if (cam != null)
+                {
+                    originalClearFlags = cam.clearFlags;
+                    originalBackgroundColor = cam.backgroundColor;
+                }
+            }
             // 초기 직업 적용 (OnPhotonInstantiate에서 설정된 initialJob 사용)
             if (initialJob >= 0)
             {
@@ -118,11 +154,16 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
                 // PhotonNetwork.LocalPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "JobIndex", initialJob } }); 
             }
 
-
             RaycastInteract raycastInteract = GetComponent<RaycastInteract>();
             if (raycastInteract != null) raycastInteract.enabled = true;
 
             StartCoroutine(condition.getHungry());
+
+            if (firstViewCamera != null && firstViewCamera.cameraTransform != null)
+            {
+                bool startUnderwater = firstViewCamera.cameraTransform.position.y < waterSurfaceY;
+                SetUnderwaterVisuals(startUnderwater); // 태어난 곳이 하늘이면 즉시 안개를 확 꺼버림!
+            }
         }
         else
         {
@@ -178,6 +219,17 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
                 //isJumping = true; //부하를 줄이기 + 어색함을 줄이기 위해 위해 상시 적용을 피하고 싶은데 지금으로선 달리 방법이 없다..
             }
             */
+
+            if (firstViewCamera != null && firstViewCamera.cameraTransform != null)
+            {
+                bool checkCameraUnderwater = firstViewCamera.cameraTransform.position.y < waterSurfaceY;
+
+                // 상태가 변했을 때만 시각 효과 함수 호출
+                if (checkCameraUnderwater != isCameraUnderwater)
+                {
+                    SetUnderwaterVisuals(checkCameraUnderwater);
+                }
+            }
         }
 
     }
@@ -297,17 +349,32 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     private void SwimMove()
     {
+        // 1. 앞뒤좌우 (수평) 입력 계산
         Vector3 input = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical")).normalized;
-        float verticalInput = 0f;
+        Vector3 moveDir = Quaternion.Euler(0, firstViewCamera.cameraTransform.eulerAngles.y, 0) * input;
 
-        // Space: 위로, Ctrl: 아래로
+        // 일단 수평 이동 속도만 적용
+        Vector3 targetVelocity = moveDir * swimSpeed;
+
+        // 2. 위아래 (수직) 입력 계산
+        float verticalInput = 0f;
         if (Input.GetKey(KeyCode.Space)) verticalInput += 1f;
         if (Input.GetKey(KeyCode.LeftControl)) verticalInput -= 1f;
 
-        Vector3 moveDir = Quaternion.Euler(0, firstViewCamera.cameraTransform.eulerAngles.y, 0) * input;
-        moveDir += Vector3.up * verticalInput;
+        if (verticalInput > 0)
+        {
+            targetVelocity.y = swimUpForce; // 스페이스바: 설정해둔 힘으로 위로 헤엄침
+        }
+        else if (verticalInput < 0)
+        {
+            targetVelocity.y = -swimSpeed;  // 컨트롤: 아래로 헤엄쳐서 잠수함
+        }
+        else
+        {
+            targetVelocity.y = sinkSpeed;   // 아무것도 안 누름: 중력보다는 느리게 서서히 가라앉음!
+        }
 
-        rb.linearVelocity = moveDir.normalized * swimSpeed;
+        rb.linearVelocity = targetVelocity;
 
         if (input == Vector3.zero)
         {
@@ -408,11 +475,44 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
         condition.isUnderwater = underwater;
         if (underwater)
+        {
             StartCoroutine(condition.useOxygen());
+        }
         else
+        {
             StopCoroutine(condition.useOxygen());
-
+        }
         thirdViewAnimator.RequestSetWaterState(underwater);
+    }
+
+    private void SetUnderwaterVisuals(bool isUnder)
+    {
+        isCameraUnderwater = isUnder;
+        Camera cam = firstViewCamera.cameraTransform.GetComponent<Camera>();
+
+        if (isUnder)
+        {
+            if (cam != null)
+            {
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = underwaterColor;
+            }
+
+            // 2. 안개를 물 색깔로 짙게 설정합니다.
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared; // 시야를 꽉 조여주는 모드
+            RenderSettings.fogColor = underwaterColor;
+            RenderSettings.fogDensity = underwaterDensity;
+        }
+        else
+        {
+            if (cam != null)
+            {
+                cam.clearFlags = CameraClearFlags.Skybox;
+            }
+
+            RenderSettings.fog = false;
+        }
     }
 
     #endregion

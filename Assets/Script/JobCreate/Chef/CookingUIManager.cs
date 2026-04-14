@@ -69,7 +69,6 @@ public class CookingUIManager : MonoBehaviour
         {
             GameObject newSlot = Instantiate(CB_ItemPrefab, CB_contentParent, false);
 
-            // [추천] 프리팹에 아이콘 이미지도 넣어서 매칭해주면 더 좋습니다.
             TMP_Text text = newSlot.GetComponentInChildren<TMP_Text>();
             if (text != null) text.text = recipe.displayName;
 
@@ -93,6 +92,7 @@ public class CookingUIManager : MonoBehaviour
 
         foreach (Transform child in CB_materialsParent) Destroy(child.gameObject);
 
+       /* Inventory myInventory = FindAnyObjectByType<Inventory>();*/
         bool canCook = true; // 요리 가능 여부 체크
 
         foreach (RecipeIngredient ingredient in recipe.ingredients)
@@ -100,14 +100,17 @@ public class CookingUIManager : MonoBehaviour
             // 재료 슬롯 하나 생성
             GameObject matSlot = Instantiate(CB_materialSlotPrefab, CB_materialsParent);
 
-            // TODO: 현재 인벤토리를 뒤져서 이 아이템(ingredient.itemID)이 몇 개 있는지 가져와야 합니다.
-            // 임시로 0개라고 가정하겠습니다.
-            int ownedAmount = 0; // GetOwnedItemCount(ingredient.itemID);
+            matSlot.transform.localPosition = Vector3.zero;
+            matSlot.transform.localScale = Vector3.one;
 
-            if (ownedAmount < ingredient.requiredAmount) canCook = false;
+            int ownedAmount = ingredient.requiredAmount; // GetOwnedItemCount(ingredient.itemID); 원래 0으로 해야함 게이지 보려고 바꿈
+            /*if (myInventory != null)
+            {
+                ownedAmount = myInventory.GetOwnedItemCount(ingredient.itemID);
+            }
 
-            // 슬롯 내부의 이미지와 텍스트 컴포넌트 찾아서 값 넣기 (이름으로 찾거나, 별도 스크립트 부착 권장)
-            // 아래는 자식 오브젝트 이름을 기준으로 찾는 예시입니다.
+            if (ownedAmount < ingredient.requiredAmount) canCook = false;*/
+
             Image iconImg = matSlot.transform.Find("Icon")?.GetComponent<Image>();
             TMP_Text nameTxt = matSlot.transform.Find("NameText")?.GetComponent<TMP_Text>();
             TMP_Text countTxt = matSlot.transform.Find("CountText")?.GetComponent<TMP_Text>();
@@ -115,7 +118,6 @@ public class CookingUIManager : MonoBehaviour
             if (iconImg) iconImg.sprite = ingredient.itemIcon;
             if (nameTxt) nameTxt.text = ingredient.itemName;
 
-            // 보유량 / 필요량 텍스트 색상 처리 (부족하면 빨간색)
             string colorHex = (ownedAmount >= ingredient.requiredAmount) ? "#FFFFFF" : "#FF0000";
             if (countTxt) countTxt.text = $"<color={colorHex}>{ownedAmount}</color> / {ingredient.requiredAmount}";
         }
@@ -127,16 +129,76 @@ public class CookingUIManager : MonoBehaviour
         CB_cookButton.gameObject.SetActive(true);
         CB_cookButton.interactable = canCook;
 
+        TMP_Text buttonText = CB_cookButton.GetComponentInChildren<TMP_Text>();
+        if (buttonText != null) buttonText.text = "요리하기";
+
         CB_cookButton.onClick.RemoveAllListeners();
         CB_cookButton.onClick.AddListener(() =>
         {
-            CookRecipe(recipe);
+            StartCraftingProcess(recipe, buttonText);
         });
     }
 
     private void CookRecipe(CookingRecipe recipe)
     {
         Debug.Log($"[{recipe.displayName}] 요리 시작! 재료를 차감하고 결과물을 인벤토리에 넣으세요.");
+    }
+
+    private void StartCraftingProcess(CookingRecipe recipe, TMP_Text buttonText)
+    {
+        // 딤드 처리 및 텍스트 변경
+        CB_cookButton.interactable = false;
+        if (buttonText != null) buttonText.text = "요리 중...";
+
+        if (GlobalProgressBar.Instance != null)
+        {
+            GlobalProgressBar.Instance.StartProgress(
+                $"[{recipe.displayName}] 요리 중...",
+                recipe.cookTime,
+                () =>
+                {
+                    // ==========================================
+                    // 6. 버튼 3단계 상태: "보상 받기" 로 전환
+                    // ==========================================
+                    if (buttonText != null) buttonText.text = "보상 받기";
+                    CB_cookButton.interactable = true; // 다시 클릭 가능하게 활성화
+
+                    // 기존 이벤트를 지우고 보상 수령 로직으로 교체
+                    CB_cookButton.onClick.RemoveAllListeners();
+                    CB_cookButton.onClick.AddListener(() =>
+                    {
+                        ClaimReward(recipe);
+                    });
+                }
+            );
+        }
+        else
+        {
+            Debug.LogError("GlobalProgressBar가 씬에 없습니다! 게이지를 띄울 수 없습니다.");
+        }
+    }
+
+    private void ClaimReward(CookingRecipe recipe)
+    {
+        /*Inventory myInventory = FindAnyObjectByType<Inventory>();
+
+        if (myInventory != null)
+        {
+            // 1. 재료 차감
+            foreach (RecipeIngredient ingredient in recipe.ingredients)
+            {
+                myInventory.ConsumeItemByID(ingredient.itemID, ingredient.requiredAmount);
+            }
+
+            // 2. 완성품 획득
+            myInventory.GetItem(recipe.resultItemID, recipe.resultAmount);
+            Debug.Log($"[{recipe.displayName}] 요리 완성! 인벤토리에 지급되었습니다.");
+        }*/
+
+        // 로그만 띄워서 작동 확인
+        Debug.Log($"[{recipe.displayName}] 요리 완성 테스트! (인벤토리 차감/지급 건너뜀)");
+        // 3. 재료가 소모되었으므로 UI를 새로고침하여 숫자를 갱신 (버튼도 다시 초기화됨)
+        ShowRecipeDetail(recipe);
     }
 
     private void ClearRecipeDetail()

@@ -704,8 +704,12 @@ MonoBehaviour:
   rotationSpeed: 10
   gravity: -9.8
   swimUpForce: 5
+  sinkSpeed: -1.5
   firstViewCamera: {fileID: 3150158565814306109}
   canMoveCamera: 1
+  waterSurfaceY: 624
+  underwaterColor: {r: 0.1, g: 0.4, b: 0.5, a: 1}
+  underwaterDensity: 0.05
   animator: {fileID: 7748892893612311456}
   thirdViewAnimator: {fileID: 0}
   isMoving: 0

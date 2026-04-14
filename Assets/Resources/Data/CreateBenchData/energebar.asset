@@ -17,7 +17,7 @@ MonoBehaviour:
   icon: {fileID: 0}
   isBasic: 1
   recipeDescription: "\uBA39\uC73C\uBA74 \uD798\uC774\uB098\uB294 \uAC04\uC2DD"
-  cookTime: 0
+  cookTime: 10
   ingredients:
   - itemID: 1
     itemName: "\uD574\uC870\uB958"

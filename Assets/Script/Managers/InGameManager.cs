@@ -6,6 +6,9 @@ using Photon.Realtime;
 
 public class InGameManager : MonoBehaviourPunCallbacks
 {
+    [Header("테스트 설정 (인게임 바로 시작용)")]
+    public bool isTestMode = false;
+
     [Header("직업별 프리팹")]
     public GameObject[] jobPrefabs;
 
@@ -45,6 +48,38 @@ public class InGameManager : MonoBehaviourPunCallbacks
 
     void SpawnPlayer()
     {
+        if (isTestMode || FindAnyObjectByType<AuthManager>() == null)
+        {
+            Debug.LogWarning("[테스트 모드] 포톤이 오프라인입니다! 가짜 방을 만들고 테스트 캐릭터를 소환합니다.");
+
+            if (!PhotonNetwork.IsConnected)
+            {
+                PhotonNetwork.OfflineMode = true;
+            }
+
+            // 방에 안 들어가 있다면 가짜 방 만들기
+            if (!PhotonNetwork.InRoom)
+            {
+                PhotonNetwork.JoinOrCreateRoom("OfflineRoom", new RoomOptions(), TypedLobby.Default);
+            }
+
+            Vector3 testSpawnPos = new Vector3(600f, 1000f, 600f);
+            int testJobIndex = 0;
+
+            if (jobPrefabs != null && jobPrefabs.Length > 0)
+            {
+                object[] testData = new object[] { testSpawnPos, testJobIndex };
+                PhotonNetwork.Instantiate(jobPrefabs[testJobIndex].name, testSpawnPos, Quaternion.identity, 0, testData);
+                Debug.Log($"[테스트 모드] {jobPrefabs[testJobIndex].name} 소환 완료!");
+            }
+            else
+            {
+                Debug.LogError("[테스트 모드 실패] 인스펙터에 jobPrefabs가 비어있습니다!");
+            }
+
+            return; // 🚨 여기서 함수 종료! 절대 아래 에러나는 코드로 내려가지 않습니다.
+        }
+
         string myUserId = PhotonNetwork.LocalPlayer.UserId;
 
         if (AuthManager.Instance != null) myUserId = AuthManager.Instance.currentUserId;
