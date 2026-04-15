@@ -1,16 +1,28 @@
-using Photon.Pun;
+ï»¿using Photon.Pun;
+using System;
 using System.Collections;
 using UnityEngine;
+using static FieldItem;
 
-public class CylinderHolder : InteractableObject
+public class CylinderHolder : InteractableObject, ISavable
 {
     public bool isHolding = false;
     private GameObject holdingCylinder;
     private float currentDuration = 0f;
     private float MaxDuration = 0f;
     public float ChargeSpeed;
-    private int ItemID;
+    private int ItemID = -1;
 
+    [Serializable]
+    public struct HolderSaveStruct
+    {
+        //public bool isHolding;
+        public int itemID;
+        public float durability;
+
+        public Vector3 position;
+        public Quaternion rotation;
+    }
 
     public override void Interact()
     {
@@ -38,30 +50,30 @@ public class CylinderHolder : InteractableObject
     {
         if (!isHolding) return;
         currentDuration += ChargeSpeed;
-        //Debug.Log($"»ê¼ÒÅë ÃæÀüÁß : ÃÖ´ëÄ¡ - {MaxDuration}, ÇöÀç - {currentDuration}");
+        //Debug.Log($"ì‚°ì†Œí†µ ì¶©ì „ì¤‘ : ìµœëŒ€ì¹˜ - {MaxDuration}, í˜„ì¬ - {currentDuration}");
         if (currentDuration > MaxDuration) currentDuration = MaxDuration;
     }
 
     public void TradeCylinder()
     {
         int playerHoldingID = GetItemIDFromPlayer();
-        Debug.Log($"ÇÃ·¹ÀÌ¾î°¡ ÇöÀç µé°í ÀÖ´Â ¾ÆÀÌÅÛ ID = {playerHoldingID}");
-        if (isHolding && playerHoldingID != -1) return; //PlayerHoldingID = -1 -> ºó¼ÕÀ¸·Î µé°í ÀÖ¾î¾ßÁö »ê¼ÒÅëÀ» ÁÖ¿ï ¼ö ÀÖ°Ô ¼³Á¤ µÇ¾î ÀÖÀ½ -> ¼öÁ¤ ¿¹Á¤
+        Debug.Log($"í”Œë ˆì´ì–´ê°€ í˜„ì¬ ë“¤ê³  ìˆëŠ” ì•„ì´í…œ ID = {playerHoldingID}");
+        if (isHolding && playerHoldingID != -1) return; //PlayerHoldingID = -1 -> ë¹ˆì†ìœ¼ë¡œ ë“¤ê³  ìˆì–´ì•¼ì§€ ì‚°ì†Œí†µì„ ì£¼ìš¸ ìˆ˜ ìˆê²Œ ì„¤ì • ë˜ì–´ ìˆìŒ -> ìˆ˜ì • ì˜ˆì •
         else if (!isHolding)
         {
             if (playerHoldingID == -1) return;
             if (!ItemDatabase.Instance.ifEquipable(playerHoldingID)) return;
 
-            RequestSetSylinder(playerHoldingID);
+            RequestSetCylinder(playerHoldingID);
         }
         else
         {
-            if (ItemID == -1) Debug.LogError("È¦´õ¿¡ ¾ÆÀÌÅÛÀÌ ¾øÀ¸³ª ÀÖ´Â °ÍÀ¸·Î Ãë±ŞÇÏ°í ÀÖ½À´Ï´Ù.");
-            RequestRemoveSylinder();
+            if (ItemID == -1) Debug.LogError("í™€ë”ì— ì•„ì´í…œì´ ì—†ìœ¼ë‚˜ ìˆëŠ” ê²ƒìœ¼ë¡œ ì·¨ê¸‰í•˜ê³  ìˆìŠµë‹ˆë‹¤.");
+            RequestRemoveCylinder();
         }
     }
 
-    private void SetSylinder(int itemID)
+    private void SetCylinder(int itemID)
     {
         isHolding = true;
 
@@ -85,30 +97,31 @@ public class CylinderHolder : InteractableObject
             holdingCylinder.transform.localPosition = new Vector3(0, 0, 0.01f);
     }
 
-    public void RequestSetSylinder(int itemID)
+    public void RequestSetCylinder(int itemID)
     {
         if (inventory == null) inventory = FindAnyObjectByType<Inventory>();
 
         if (!usePhoton)
         {
-            SetSylinder(itemID);
+            SetCylinder(itemID);
             inventory.RemoveItem(inventory.index, 1);
         }
         else
         {
-            pv.RPC("PunRPC_SetSylinder", RpcTarget.AllBuffered, itemID, GetDurationFromPlayer());
+            pv.RPC("PunRPC_SetCylinder", RpcTarget.AllBuffered, itemID, GetDurationFromPlayer());
             inventory.RemoveItem(inventory.index, 1);
         }
     }
 
     [PunRPC]
-    public void PunRPC_SetSylinder(int itemID, float duration)
+    public void PunRPC_SetCylinder(int itemID, float duration)
     {
+        if (itemID == -1) return;
         SetItemProperties(itemID, duration, true);
         SetPrefab(itemID);
     }
 
-    private void RemoveSylinder()
+    private void RemoveCylinder()
     {
         isHolding = false;
 
@@ -117,9 +130,9 @@ public class CylinderHolder : InteractableObject
         ItemID = -1;
     }
 
-    private void RequestRemoveSylinder()
+    private void RequestRemoveCylinder()
     {
-        //È£Ãâ ¼ø¼­ ¶§¹®¿¡ ÅÛ º¹»ç ¹ö±× ¿ì·Á ÀÖ±ä ÇÔ
+        //í˜¸ì¶œ ìˆœì„œ ë•Œë¬¸ì— í…œ ë³µì‚¬ ë²„ê·¸ ìš°ë ¤ ìˆê¸´ í•¨
         if (inventory == null) inventory = FindAnyObjectByType<Inventory>();
         if (!inventory.CheckInventoryEmpty()) return;
 
@@ -127,19 +140,19 @@ public class CylinderHolder : InteractableObject
 
         if (!usePhoton)
         {
-            RemoveSylinder();
+            RemoveCylinder();
         }
         else
         {
             //if (!PhotonNetwork.IsMasterClient) return;
-            pv.RPC("PunRPC_RemoveSylinder", RpcTarget.AllBuffered);
+            pv.RPC("PunRPC_RemoveCylinder", RpcTarget.AllBuffered);
         }
     }
 
     [PunRPC]
-    public void PunRPC_RemoveSylinder()
+    public void PunRPC_RemoveCylinder()
     {
-        RemoveSylinder();
+        RemoveCylinder();
     }
 
 
@@ -149,7 +162,30 @@ public class CylinderHolder : InteractableObject
         this.currentDuration = durability;
         this.MaxDuration = ItemDatabase.Instance.getMaxDurability(id);
         this.isHolding = isHolding;
-        //Debug.Log($"[PROPERTY SET] Item properties received via RPC. ID set to {this.ItemID}, Amount to {this.currentDuration}");
     }
-    
+
+    public string PrefabPath => "SceneObject_CylinderHolder";
+
+    public string GetSaveDataJson()
+    {
+        HolderSaveStruct data = new HolderSaveStruct
+        {
+            itemID = this.ItemID,
+            durability = this.currentDuration,
+            position = this.transform.position,
+            rotation = this.transform.rotation
+        };
+        return JsonUtility.ToJson(data);
+    }
+
+    public void RestoreSaveData(string json)
+    {
+        HolderSaveStruct data = JsonUtility.FromJson<HolderSaveStruct>(json);
+        // ë§ˆìŠ¤í„° í´ë¼ì´ì–¸íŠ¸ê°€ ë³µêµ¬í•˜ë©´ì„œ ë‹¤ë¥¸ í´ë¼ì´ì–¸íŠ¸ì—ê²Œë„ ë™ê¸°í™”
+        if (pv != null && PhotonNetwork.IsMasterClient)
+        {
+            pv.RPC(nameof(PunRPC_SetCylinder), RpcTarget.All, data.itemID,  data.durability);
+            pv.RPC(nameof(PunRPC_SetTransform), RpcTarget.All, data.position, data.rotation);
+        }
+    }
 }

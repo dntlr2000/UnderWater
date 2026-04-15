@@ -275,6 +275,7 @@ MonoBehaviour:
   objectName: Key
   player: {fileID: 0}
   usePhoton: 1
+  usingPlayerID: 0
   itemID: 4
   amount: 1
   durability: -1

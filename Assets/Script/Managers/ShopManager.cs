@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,20 +23,14 @@ public class ShopManager : MonoBehaviour
 
     int selectedID = -1;
 
-    int[] shopItems; //ªÛ¡°ø° ∆» æ∆¿Ã≈€ ID ¿˙¿Â
+    int[] shopItems; //ÏÉÅÏ†êÏóê Ìåî ÏïÑÏù¥ÌÖú ID Ï†ÄÏû•
     float[] shopDurability;
-    int[] shopPrice; //ªÛ¡° «∞∏Ò ∫∞ ∞°∞›
+    int[] shopPrice; //ÏÉÅÏ†ê ÌíàÎ™© Î≥Ñ Í∞ÄÍ≤©
 
-    public RawImage comfirmScreen;
-    public TextMeshProUGUI ItemNameText; //±∏∏≈ ∂«¥¬ ∆«∏≈¿”¿ª æÀ∏Æ¥¬ ≈ÿΩ∫∆Æ
-    public TextMeshProUGUI amountText;
-    public TextMeshProUGUI priceText;
-    public int amount;
-    protected int price;
-    //protected bool ifBuyComfirm;
-    public Button buyComfirmButton;
-    public Button sellComfirmButton;
-    public Scrollbar amountBar;
+    public ComfirmScreen buyComfirmScreen;
+    public ComfirmScreen sellComfirmScreen;
+
+    private float sellDiscount = 0.6f; //ÌåêÎß§ Ïãú Í∞ÄÍ≤©Ïóê Í≥±Ìï¥ÏßÄÎäî Ìï†Ïù∏Ïú®, 60%Î°ú ÏÑ§Ï†ï
 
     bool ifBuyState = false;
 
@@ -47,6 +41,15 @@ public class ShopManager : MonoBehaviour
         //database.GenerateData();
         UpdateMoneyData();
         GenerateShopData(0);
+
+        if (buyComfirmScreen != null)
+        {
+            buyComfirmScreen.onConfirmAction = this.ComfirmBuy;
+        }
+        if (sellComfirmScreen != null)
+        {
+            sellComfirmScreen.onConfirmAction = this.ComfirmSell;
+        }
     }
     private void Awake()
     {
@@ -79,7 +82,7 @@ public class ShopManager : MonoBehaviour
         if (inventory == null)
         {
             inventory = FindAnyObjectByType<Inventory>();
-            if (inventory == null) { Debug.LogError("¿Œ∫•≈‰∏Æ∏¶ √£¿ª ºˆ æ¯Ω¿¥œ¥Ÿ"); }
+            if (inventory == null) { Debug.LogError("Ïù∏Î≤§ÌÜ†Î¶¨Î•º Ï∞æÏùÑ Ïàò ÏóÜÏäµÎãàÎã§"); }
 
         }
 
@@ -99,16 +102,22 @@ public class ShopManager : MonoBehaviour
         }
         if (inventory.GetMoneyData() < shopPrice[selectedID] * amount)
         {
-            Debug.Log("µ∑¿Ã ∫Œ¡∑«’¥œ¥Ÿ!");
+            Debug.Log("ÎèàÏù¥ Î∂ÄÏ°±Ìï©ÎãàÎã§!");
             return;
         }
 
         inventory.GetMoney(-shopPrice[selectedID] * amount);
+        OpenableStorageBox box = GameObject.FindWithTag("Mailbox").GetComponent<OpenableStorageBox>();
         if (ItemDatabase.Instance.getSingularity(shopItems[selectedID]) == true)
         {
-            for (int i = 0; i < amount; i++) inventory.GetItem(shopItems[selectedID], 1, shopDurability[selectedID]);
-        }  
-        else inventory.GetItem(shopItems[selectedID], amount, shopDurability[selectedID]);
+            //for (int i = 0; i < amount; i++) inventory.GetItem(shopItems[selectedID], 1, shopDurability[selectedID]);
+            for (int i = 0; i < amount; i++) box.RequestInsertItemOnRPC(shopItems[selectedID], 1, shopDurability[selectedID]);
+        }
+        else
+        {
+            //inventory.GetItem(shopItems[selectedID], amount, shopDurability[selectedID]);
+            box.RequestInsertItemOnRPC(shopItems[selectedID], amount, shopDurability[selectedID]);
+        }
         UpdateMoneyData();
 
     }
@@ -122,13 +131,17 @@ public class ShopManager : MonoBehaviour
     {
         if (selectedID == -1 || inventory.GetItemID(selectedID) == -1)
         {
-            Debug.Log("º±≈√µ» æ∆¿Ã≈€¿Ã æ¯Ω¿¥œ¥Ÿ.");
+            Debug.Log("ÏÑ†ÌÉùÎêú ÏïÑÏù¥ÌÖúÏù¥ ÏóÜÏäµÎãàÎã§.");
             return;
         }
         int trueAmount = amount;
         if (amount > inventory.GetQuantity(selectedID)) trueAmount = inventory.GetQuantity(selectedID);
 
-        inventory.GetMoney(ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * trueAmount);
+        inventory.GetMoney((int) (sellDiscount * ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * trueAmount));
+        /*
+        OpenableStorageBox box = GameObject.FindWithTag("Mailbox").GetComponent<OpenableStorageBox>();
+        box.RequestInsertMoneyOnRPC((int)(ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * trueAmount * sellDiscount));
+        */
         inventory.RemoveItem(selectedID, trueAmount);
         UpdateSellMenu();
         UpdateMoneyData();
@@ -181,7 +194,7 @@ public class ShopManager : MonoBehaviour
             inventoryList[i].itemSlotIcon.gameObject.SetActive(true);
         }
 
-        //¿Œ∫•≈‰∏Æø°º≠ ∑ŒµÂ
+        //Ïù∏Î≤§ÌÜ†Î¶¨ÏóêÏÑú Î°úÎìú
         for (int i = 0; i < invLen; i++)
         {
             int k = invLen * (scrollRate) + i;
@@ -189,7 +202,7 @@ public class ShopManager : MonoBehaviour
             inventoryList[i].SlotID = k;
 
 
-            //if (k >= 25) //«ˆ¿Á ¿Œ∫•≈‰∏Æ ΩΩ∑‘ ∞≥ºˆ : 25
+            //if (k >= 25) //ÌòÑÏû¨ Ïù∏Î≤§ÌÜ†Î¶¨ Ïä¨Î°Ø Í∞úÏàò : 25
             //{
             //    return;
             //}
@@ -204,7 +217,7 @@ public class ShopManager : MonoBehaviour
                 continue;
             }
             inventoryList[i].itemName.text = ItemDatabase.Instance.getItemName(inventory.GetItemID(k));
-            inventoryList[i].priceText.text = ItemDatabase.Instance.getPrice(inventory.GetItemID(k)) + "G";
+            inventoryList[i].priceText.text = ItemDatabase.Instance.getPrice(inventory.GetItemID(k)) * sellDiscount + "G";
             inventoryList[i].quatitiy.text = inventory.GetQuantity(k).ToString();
             //inventoryList[i].itemSlotIcon.texture = database.LoadIcons(inventory.GetItemID(k)).texture;
             inventoryList[i].itemSlotIcon.texture = inventory.GetIcon(inventory.GetItemID(k)).texture;
@@ -230,7 +243,7 @@ public class ShopManager : MonoBehaviour
             shopList[i].itemSlotIcon.gameObject.SetActive(true);
         }
 
-        if (inventory == null) Debug.LogError("¿Œ∫•≈‰∏Æ∞° æ¯Ω¿¥œ¥Ÿ.");
+        if (inventory == null) Debug.LogError("Ïù∏Î≤§ÌÜ†Î¶¨Í∞Ä ÏóÜÏäµÎãàÎã§.");
 
 
 
@@ -304,8 +317,8 @@ public class ShopManager : MonoBehaviour
 
     public void GenerateShopData(int level = 0)
     {
-        //level : ∑π∫ßø° µ˚∏• º¯¬˜ ∞≥πÊ ±‚¥…¿ª ¿ß«ÿ ±∏«ˆ
-        shopItems = new int[10]; //¿”Ω√∑Œ 2∞≥ «∞∏Ò∏∏ ±∏«ˆ
+        //level : Î†àÎ≤®Ïóê Îî∞Î•∏ ÏàúÏ∞® Í∞úÎ∞© Í∏∞Îä•ÏùÑ ÏúÑÌï¥ Íµ¨ÌòÑ
+        shopItems = new int[10]; //ÏûÑÏãúÎ°ú 2Í∞ú ÌíàÎ™©Îßå Íµ¨ÌòÑ
         shopPrice = new int[10];
         shopDurability = new float[10];
 
@@ -345,71 +358,50 @@ public class ShopManager : MonoBehaviour
     {
         if (selectedID == -1) return;
         ifBuyState = ifBuy;
-        if (ifBuy && (selectedID >= shopItems.Length || shopItems[selectedID] == -1)) //±∏∏≈ ∏µÂ
+        if (ifBuy && (selectedID >= shopItems.Length || shopItems[selectedID] == -1)) //Íµ¨Îß§ Î™®Îìú
         {
             ResetSlot();
             return;
         }
 
-        if (!ifBuy && (selectedID >= 25 || inventory.GetItemID(selectedID) == -1)) //∆«∏≈ ∏µÂ
+        else if (!ifBuy && (selectedID >= 25 || inventory.GetItemID(selectedID) == -1)) //ÌåêÎß§ Î™®Îìú
         {
             ResetSlot();
             return;
         }
 
-        
-        comfirmScreen.gameObject.SetActive(true);
-        amount = 1;
-        amountBar.value = 0;
-        amountText.text = "1 / 10";
-
-        if (ifBuy) //±∏∏≈ ∏µÂ
+        Debug.Log($"[ShopManager] ifBut = {ifBuy}, Selected ID : {selectedID}, Item ID : {GetItemId(selectedID)}");
+        if (ifBuy)
         {
-            ItemNameText.text = ItemDatabase.Instance.getItemName(shopItems[selectedID]);
-            sellComfirmButton.gameObject.SetActive(false);
-            buyComfirmButton.gameObject.SetActive(true);
-            priceText.text = "G: " + (shopPrice[selectedID] * amount);
+            buyComfirmScreen.gameObject.SetActive(true);
+            buyComfirmScreen.ConstructComfirmScreen(shopItems[selectedID], shopPrice[selectedID]);
+        }
+        else
+        {
+            sellComfirmScreen.gameObject.SetActive(true);
+            sellComfirmScreen.ConstructComfirmScreen(inventory.GetItemID(selectedID), (int)(ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * sellDiscount));
         }
 
-        if (!ifBuy) //∆«∏≈ ∏µÂ
-        {
-            ItemNameText.text = ItemDatabase.Instance.getItemName(inventory.GetItemID(selectedID));
-            sellComfirmButton.gameObject.SetActive(true);
-            buyComfirmButton.gameObject.SetActive(false);
-            priceText.text = "G: " + (ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * amount);
-        }
-        
-        //priceText.text = "\\ " + (shopPrice[selectedID] * amount);
-    }
-
-    public void DisableComfirmScreen()
-    {
-        comfirmScreen.gameObject.SetActive(false);
         return;
+
+
     }
 
     public void ComfirmBuy()
     {
-        BuyItem(amount);
+        BuyItem(buyComfirmScreen.amount);
     }
 
     public void ComfirmSell()
     {
-        SellItem(amount);
+        SellItem(sellComfirmScreen.amount);
     }
 
-    public void onScrollAmountChanged()
+    public void DisableComfirmScreen()
     {
-        if (selectedID == -1)
-        {
-            comfirmScreen.gameObject.SetActive(false);
-            return;
-        }
-        amount = Mathf.RoundToInt(amountBar.value * (amountBar.numberOfSteps - 1)) + 1;
-        amountText.text = $"{amount} / 10";
-        
-        if (ifBuyState) priceText.text = "G: " + (shopPrice[selectedID] * amount);
-        else priceText.text = "G: " + (ItemDatabase.Instance.getPrice(inventory.GetItemID(selectedID)) * amount);
+        buyComfirmScreen.gameObject.SetActive(false);
+        sellComfirmScreen.gameObject.SetActive(false);
+        return;
     }
 }
 

@@ -94,6 +94,12 @@ MonoBehaviour:
   - PunRPC_SetSylinder
   - RPC_SetUsing
   - PunRPC_SetUsing
+  - PunRPC_RemoveCylinder
+  - PunRPC_SetCylinder
+  - PunRPC_SetTransform
+  - PunRPC_SyncSubmarine
+  - PunRPC_SetCharacterProperties
+  - PunRPC_AddMoney
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
