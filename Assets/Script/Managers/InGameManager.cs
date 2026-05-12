@@ -12,6 +12,10 @@ public class InGameManager : MonoBehaviourPunCallbacks
     [Header("직업별 프리팹")]
     public GameObject[] jobPrefabs;
 
+    [Header("스폰 위치 설정")]
+    [Tooltip("맵에 배치된 빈 게임 오브젝트(SpawnPoint)를 연결하세요.")]
+    public Transform defaultSpawnPoint;
+
     IEnumerator Start()
     {
         // 1. SaveManager 인스턴스가 생성될 때까지 대기 (안전 장치)
@@ -85,7 +89,7 @@ public class InGameManager : MonoBehaviourPunCallbacks
         if (AuthManager.Instance != null) myUserId = AuthManager.Instance.currentUserId;
 
         int finalJobIndex = -1;
-        Vector3 spawnPos = new Vector3(0, 7f, 0);
+        Vector3 spawnPos = defaultSpawnPoint != null ? defaultSpawnPoint.position : new Vector3(0, 7f, 0);
 
         // 1. SaveManager에서 저장된 데이터(직업, 위치) 조회
         if (SaveManager.Instance.IsDataReady)
@@ -97,7 +101,11 @@ public class InGameManager : MonoBehaviourPunCallbacks
             var myData = SaveManager.Instance.GetCurrentSave().players.FirstOrDefault(p => p.playerId == myUserId);
             if (myData != null && myData.position != null)
             {
-                spawnPos = myData.position.ToVector3();
+                Vector3 loadedPos = myData.position.ToVector3();
+                if (loadedPos != Vector3.zero)
+                {
+                    spawnPos = loadedPos;
+                }
             }
             
         }

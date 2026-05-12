@@ -15,7 +15,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     public float gravity = -9.81f;
     public float swimUpForce = 5f;
 
-    public float sinkSpeed = -1.5f;
+    public float sinkSpeed = -0.3f; //가라앉는 속도
 
     private Vector3 initialPosition;
     private Rigidbody rb;
@@ -29,33 +29,17 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     [Header("Camera")]
     public FirstViewCamera firstViewCamera;
     public bool canMoveCamera = true;
-
     #endregion
 
-    #region Underwater Effect Settings
-    [Header("Underwater Visuals")]
-    public float waterSurfaceY = 645f;
-    public Color underwaterColor = new Color(0.1f, 0.4f, 0.5f, 1f); // 물속 색상 (짙은 청록색)
-    [Range(0.01f, 0.2f)]
-    public float underwaterDensity = 0.05f; // 물속 탁도 (숫자가 클수록 앞이 안 보임)
-
-    // 물 밖에 나왔을 때 원래대로 돌려놓기 위한 저장소
-    private Color normalFogColor;
-    private float normalFogDensity;
-    private bool originalFogState;
-    private FogMode originalFogMode;
-
-
-    private CameraClearFlags originalClearFlags; // 원래 카메라 배경 모드 저장
-    private Color originalBackgroundColor;       // 원래 카메라 배경색 저장
-    private bool isCameraUnderwater = false;     // 현재 카메라가 물속인지 체크
+    #region Environment Controllers
+    [Header("Water & Visuals")]
+    public UnderwaterVisualController visualController;
+    public BuoyancyController buoyancyController;
     #endregion
 
     #region Animation
     [Header("Animation")]
     public Animator animator;
-    //public PlayerStateMachine stateMachine;
-    //public bool isBusy = false;
 
     public EngineerAnimator thirdViewAnimator;
     #endregion
@@ -65,7 +49,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     public bool isMoving; //Condition으로 옮기려 했으나 Player에 연계되는 메서드가 많아 보류
     public bool isRunning; //위와 동일
-    //public bool isJumping = false;
 
     public Condition condition;
 
@@ -74,9 +57,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     public LayerMask groundLayer;
     public LayerMask waterLayer;
     public float checkDistance = 2f;
-    //public float waterSurfaceY = 7f;
-    //public Coroutine BusyCoroutine;
-
     #endregion
 
     #region Job Data
@@ -107,13 +87,12 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         rb.useGravity = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
 
-        //stateMachine = new PlayerStateMachine();
-
         if (photonView.IsMine)
         {
             localPlayer = this;
             Inventory inventory = FindAnyObjectByType<Inventory>();
-            inventory.player = this;
+            if (inventory != null)
+                inventory.player = this;
         }
 
         if (condition == null) condition = GetComponent<Condition>();
@@ -129,23 +108,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             PlayerCanvas.SetActive(true);
             FirstViewLook.SetActive(true);
             ThirdViewLook.SetActive(false);
-            //FindAnyObjectByType<OptionManager>().LoadOptions();
 
-            normalFogColor = RenderSettings.fogColor;
-            normalFogDensity = RenderSettings.fogDensity;
-            originalFogState = RenderSettings.fog;
-            originalFogMode = RenderSettings.fogMode;
-
-            //기본 카메라 상태 저장 (스카이박스 복구용)
-            if (firstViewCamera != null && firstViewCamera.cameraTransform != null)
-            {
-                Camera cam = firstViewCamera.cameraTransform.GetComponent<Camera>();
-                if (cam != null)
-                {
-                    originalClearFlags = cam.clearFlags;
-                    originalBackgroundColor = cam.backgroundColor;
-                }
-            }
             // 초기 직업 적용 (OnPhotonInstantiate에서 설정된 initialJob 사용)
             if (initialJob >= 0)
             {
@@ -158,23 +121,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             if (raycastInteract != null) raycastInteract.enabled = true;
 
             StartCoroutine(condition.getHungry());
-
-            if (firstViewCamera != null && firstViewCamera.cameraTransform != null)
-            {
-                bool startUnderwater = firstViewCamera.cameraTransform.position.y < waterSurfaceY;
-                SetUnderwaterVisuals(startUnderwater); // 태어난 곳이 하늘이면 즉시 안개를 확 꺼버림!
-            }
         }
-        else
-        {
-            PlayerCanvas.SetActive(false);
-            FirstViewLook.SetActive(false);
-            ThirdViewLook.SetActive(true);
-
-            RaycastInteract raycastInteract = GetComponent<RaycastInteract>();
-            if (raycastInteract != null) raycastInteract.enabled = false;
-        }
-
     }
 
     private void Update()
@@ -203,14 +150,18 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             if (canMoveCamera)
                 firstViewCamera.RotateView();
 
-            //if (!isBusy)
-            //Animate();
-
             bool grounded = IsGrounded();
 
-            if (grounded && Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(KeyCode.Space))
             {
-                Jump();
+                // 땅에 있을 때만 점프
+                if (grounded)
+                {
+                    Jump();
+                }
+
+                // 점프 여부와 상관없이 '스페이스바 누르기' 퀘스트 카운트를 1 올림
+                QuestManager.Instance?.ReportObjectiveProgress(ObjectiveType.PressKey, 1);
             }
             /*
             if (!grounded && !isJumping)
@@ -218,18 +169,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
                 rb.AddForce(Vector3.down * 20f, ForceMode.Acceleration);
                 //isJumping = true; //부하를 줄이기 + 어색함을 줄이기 위해 위해 상시 적용을 피하고 싶은데 지금으로선 달리 방법이 없다..
             }
-            */
-
-            if (firstViewCamera != null && firstViewCamera.cameraTransform != null)
-            {
-                bool checkCameraUnderwater = firstViewCamera.cameraTransform.position.y < waterSurfaceY;
-
-                // 상태가 변했을 때만 시각 효과 함수 호출
-                if (checkCameraUnderwater != isCameraUnderwater)
-                {
-                    SetUnderwaterVisuals(checkCameraUnderwater);
-                }
-            }
+            */ 
         }
 
     }
@@ -238,38 +178,32 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (!photonView.IsMine)
         {
             rb.linearVelocity = Vector3.zero; //부들대는 현상 제거용
+            return;
         }
 
         if (!photonView.IsMine || !condition.CanAct(false, true, true)) return;
 
         condition.Run();
+
+        if (buoyancyController != null)
+        {
+            SetUnderwater(buoyancyController.IsInWater());
+        }
+
         if (condition.isUnderwater)
             SwimMove();
         else
             GroundMove();
+
         HandlePlayerPushing();
         condition.restoreBreath();
-
-        //StopPhysics();
     }
 
     public void StopPhysics()
     {
-        //Vector3 vel = rb.linearVelocity;
-        //if (rb != null) rb.linearVelocity = Vector3.zero;
         isMoving = false;
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (!photonView.IsMine) return;
-        if (other.CompareTag("Water"))
-        {
-            SetUnderwater(true);
-            thirdViewAnimator.RequestSetWaterState(true);
-        }
-
-    }
     private void OnCollisionEnter(Collision collision)
     {
         if (!photonView.IsMine) return;
@@ -279,33 +213,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
             condition.onGround = true;
             thirdViewAnimator.RequestSetAirState(false);
-            //isJumping = false;
-        }
-        
-        
-        //if (collision.gameObject.CompareTag("Player")) //Edit -> Project Settings -> Physics -> Settings -> LayerCollisionMatrix에서 끌 수 있다
-        //{
-        //    Player target = collision.gameObject.GetComponent<Player>();
-        //    if (target == this) return;
-        //    otherPlayer = target.gameObject;
-        //    Physics.IgnoreCollision(GetComponent<Collider>(), target.gameObject.GetComponent<Collider>(), true);
-        //}
-        
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (!photonView.IsMine) return;
-        if (other.CompareTag("Water"))
-        {
-            SetUnderwater(false);
-            thirdViewAnimator.RequestSetWaterState(false);
-        }
+        }        
     }
 
     private void OnCollisionExit(Collision collision)
     {
         if (!photonView.IsMine) return;
+
         if (collision.gameObject.CompareTag("Ground"))
         {
             condition.onGround = false;
@@ -355,6 +269,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
         // 일단 수평 이동 속도만 적용
         Vector3 targetVelocity = moveDir * swimSpeed;
+        targetVelocity.y = rb.linearVelocity.y;
 
         // 2. 위아래 (수직) 입력 계산
         float verticalInput = 0f;
@@ -363,7 +278,14 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
         if (verticalInput > 0)
         {
-            targetVelocity.y = swimUpForce; // 스페이스바: 설정해둔 힘으로 위로 헤엄침
+            if (buoyancyController != null && !buoyancyController.IsHeadInWater() && rb.linearVelocity.y > 0)
+            {
+                targetVelocity.y = 0f; // 수면에서는 더 이상 안 올라감
+            }
+            else
+            {
+                targetVelocity.y = swimUpForce; // 물속에서는 위로 헤엄침
+            }
         }
         else if (verticalInput < 0)
         {
@@ -371,12 +293,35 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
         else
         {
-            targetVelocity.y = sinkSpeed;   // 아무것도 안 누름: 중력보다는 느리게 서서히 가라앉음!
+            // 3. 조작을 안 할 때 수면/수중 위치에 따른 처리
+            if (buoyancyController != null)
+            {
+                if (buoyancyController.IsHeadInWater())
+                {
+                    // 깊은 물 속이면 우리가 설정한 sinkSpeed 로 서서히 가라앉음
+                    targetVelocity.y = sinkSpeed;
+                }
+                else
+                {
+                    // 수면 근처라면 수면 유지 (가라앉지 않음)
+                    if (rb.linearVelocity.y < -1f)
+                    {
+                        // 다이빙해서 떨어지던 속도가 있다면 물의 저항을 받아 부드럽게 감속시킴
+                        targetVelocity.y = Mathf.Lerp(rb.linearVelocity.y, 0f, Time.fixedDeltaTime * 5f);
+                    }
+                    else
+                    {
+                        // 떨어지는 관성이 다 죽었거나, 헤엄치다 올라온 상태라면 Y축 속도를 0으로 만들어 수면에 띄움 (Bobbing)
+                        targetVelocity.y = buoyancyController.GetBobbingVelocity();
+                    }
+                }
+            }
         }
 
         rb.linearVelocity = targetVelocity;
 
-        if (input == Vector3.zero)
+        // 애니메이션 처리
+        if (input == Vector3.zero && verticalInput == 0)
         {
             thirdViewAnimator.RequestSetMoveState(false, false);
         }
@@ -452,16 +397,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     }
     #endregion
 
-    #region Animation Mathods
-    void Animate()
-    {
-        if (animator == null) return;
-        float speed = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")).magnitude;
-        //animator.SetFloat("Speed", speed);
-        //animator.SetBool("Underwater", isUnderwater);
-    }
-    #endregion
-
     #region Water & Ground Check
 
     public bool IsGrounded()
@@ -484,37 +419,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
         thirdViewAnimator.RequestSetWaterState(underwater);
     }
-
-    private void SetUnderwaterVisuals(bool isUnder)
-    {
-        isCameraUnderwater = isUnder;
-        Camera cam = firstViewCamera.cameraTransform.GetComponent<Camera>();
-
-        if (isUnder)
-        {
-            if (cam != null)
-            {
-                cam.clearFlags = CameraClearFlags.SolidColor;
-                cam.backgroundColor = underwaterColor;
-            }
-
-            // 2. 안개를 물 색깔로 짙게 설정합니다.
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.ExponentialSquared; // 시야를 꽉 조여주는 모드
-            RenderSettings.fogColor = underwaterColor;
-            RenderSettings.fogDensity = underwaterDensity;
-        }
-        else
-        {
-            if (cam != null)
-            {
-                cam.clearFlags = CameraClearFlags.Skybox;
-            }
-
-            RenderSettings.fog = false;
-        }
-    }
-
     #endregion
 
     #region Save & Sync Methods
@@ -678,14 +582,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             }
         }
     }
-    /*
-    // 에디터에서 범위를 눈으로 확인하기 위한 기즈모
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, pushRadius);
-    }
-    */
+
     InventoryData inventory;
 
     public void SyncInventory(InventoryData data)

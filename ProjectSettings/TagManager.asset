@@ -9,6 +9,10 @@ TagManager:
   - Bullet
   - Water
   - Ground
+  - Monster
+  - TrashCan
+  - Mailbox
+  - MapBoundary
   layers:
   - Default
   - TransparentFX
@@ -21,7 +25,7 @@ TagManager:
   - Player
   - 
   - Interactable
-  - 
+  - SubmarineInterior
   - 
   - 
   - 
