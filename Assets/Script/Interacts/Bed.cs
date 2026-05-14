@@ -21,6 +21,7 @@ public class Bed : InteractableObject
                 SetAwake();
             }
         }
+
     }
 
     public void Start()
@@ -58,7 +59,7 @@ public class Bed : InteractableObject
         
         player.gameObject.transform.position = lyingPoint.position;
         isInteractable = false;
-        player.condition.onWork = true;
+        player.condition.SetIsBusy(true);
         StartCoroutine(getSleepCoroutine());
         player.condition.ResetMove();
 
@@ -78,7 +79,7 @@ public class Bed : InteractableObject
 
         player.gameObject.transform.position = awakePoint.position;
         isInteractable = true;
-        player.condition.onWork = false;
+        player.condition.SetIsBusy(false);
         StopAllCoroutines();
 
         if (usePhoton)
@@ -99,10 +100,10 @@ public class Bed : InteractableObject
     {
         //onWork = true;
         int maxCount = 10;
-        while (player.condition.onWork && maxCount > 0)
+        while (player.condition.GetIsBusy() && maxCount > 0)
         {
             yield return new WaitForSeconds(1f);
-            if (player.condition.onWork)
+            if (player.condition.GetIsBusy())
             {
                 player.condition.RecoverFatigue(1f);
                 maxCount--;
