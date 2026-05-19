@@ -26,10 +26,24 @@ public class OpenableStorageBox : InteractableObject
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            yield return new WaitUntil(() => SaveManager.Instance != null && SaveManager.Instance.IsDataReady);
+            float timeout = 2f;
+            // SaveManager가 아직 초기화되지 않았거나 데이터가 준비되지 않았으면 최대 2초간 대기합니다.
+            while ((SaveManager.Instance == null || !SaveManager.Instance.IsDataReady) && timeout > 0f)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+
+            // SaveManager가 여전히 준비되지 않았다면, 임시로 현재 방 이름을 기반으로 한 빈 저장 데이터를 생성합니다.
+            if (SaveManager.Instance != null && !SaveManager.Instance.IsDataReady)
+            {
+                string roomName = PhotonNetwork.CurrentRoom?.Name;
+                if (string.IsNullOrEmpty(roomName)) roomName = "OfflineRoom";
+                SaveManager.Instance.SetCurrentSave(new SaveData(roomName), false);
+            }
 
             // 1. SaveManager에 내 이름(boxName)으로 된 저장 데이터가 있는지 확인
-            InventoryData savedData = SaveManager.Instance.GetBoxData(boxName);
+            InventoryData savedData = SaveManager.Instance != null ? SaveManager.Instance.GetBoxData(boxName) : null;
 
             if (savedData != null)
             {
@@ -42,9 +56,16 @@ public class OpenableStorageBox : InteractableObject
                 // 없으면 새 게임이므로 새로 생성 후 SaveManager에 등록
                 storageData = new InventoryData();
                 storageData.GenerateData();
-                SaveManager.Instance.UpdateBoxCache(boxName, storageData);
+                SaveManager.Instance?.UpdateBoxCache(boxName, storageData);
                 Debug.Log($"[{boxName}] 새 창고 데이터를 생성했습니다.");
             }
+        }
+
+        if (storageData == null)
+        {
+            // 오프라인 테스트/초기화 순서 이슈에서도 storageData가 null로 남지 않도록 최종 안전망을 둡니다.
+            storageData = new InventoryData();
+            storageData.GenerateData();
         }
     }
 

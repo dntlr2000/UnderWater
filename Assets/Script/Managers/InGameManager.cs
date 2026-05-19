@@ -56,6 +56,10 @@ public class InGameManager : MonoBehaviourPunCallbacks
         {
             Debug.LogWarning("[테스트 모드] 포톤이 오프라인입니다! 가짜 방을 만들고 테스트 캐릭터를 소환합니다.");
 
+            // 에디터에서 SampleScene만 바로 실행할 때 SaveData가 비어 발생하던
+            // 상점/창고 계열 null 참조를 막기 위해 기본 SaveData를 먼저 보장합니다.
+            EnsureTestSaveData();
+
             if (!PhotonNetwork.IsConnected)
             {
                 PhotonNetwork.OfflineMode = true;
@@ -203,6 +207,21 @@ public class InGameManager : MonoBehaviourPunCallbacks
         {
             Debug.LogError($"[InGameManager] 스폰 실패. 유효하지 않은 JobIndex: {finalJobIndex}");
         }
+    }
+
+    private void EnsureTestSaveData()
+    {
+        if (SaveManager.Instance == null) return;
+        if (SaveManager.Instance.IsDataReady) return;
+
+        string roomName = PhotonNetwork.CurrentRoom?.Name;
+        if (string.IsNullOrEmpty(roomName))
+        {
+            roomName = "OfflineRoom";
+        }
+
+        SaveManager.Instance.SetCurrentSave(new SaveData(roomName), false);
+        Debug.Log("[InGameManager] 테스트 모드용 기본 SaveData를 생성했습니다.");
     }
 
     // 참가자 플레이어가 방장에게 자기 정보를 전송하여 저장 데이터에 등록 요청

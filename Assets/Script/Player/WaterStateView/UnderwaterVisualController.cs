@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class UnderwaterVisualController : MonoBehaviour
 {
@@ -10,8 +10,8 @@ public class UnderwaterVisualController : MonoBehaviour
     public float sensorRadius = 0.05f;
     public LayerMask waterLayer;
 
-    [Header("Submarine Interior (¹° ÆÇÁ¤ ¹«½Ã ±¸¿ª)")]
-    public LayerMask interiorLayer; // Àá¼öÇÔ ³»ºÎ ÆÇÁ¤¿ë ·¹ÀÌ¾î
+    [Header("Submarine Interior (ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)")]
+    public LayerMask interiorLayer; // ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¾ï¿½
 
     void Update()
     {
@@ -19,7 +19,7 @@ public class UnderwaterVisualController : MonoBehaviour
 
         Vector3 camPos = cameraTransform.position;
 
-        //Àá¼öÇÔ ³»ºÎÀÎÁö ¸ÕÀú Ã¼Å© (³»ºÎ¶ó¸é ¹° ÆÇÁ¤ ¹«½ÃÇÏ°í ¸¼°Ô À¯Áö)
+        //ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã¼Å© (ï¿½ï¿½ï¿½Î¶ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
         bool isInsideInterior = Physics.CheckSphere(camPos, sensorRadius, interiorLayer);
         if (isInsideInterior)
         {
@@ -30,7 +30,7 @@ public class UnderwaterVisualController : MonoBehaviour
             return;
         }
 
-        //Àá¼öÇÔ ¹ÛÀÌ¶ó¸é Á¤»óÀûÀ¸·Î ¹°¼ÓÀÎÁö Ã¼Å©
+        //ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¶ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã¼Å©
         bool isUnder = Physics.CheckSphere(camPos, sensorRadius, waterLayer);
 
         if (isUnder != fogController.isCameraUnderwater)

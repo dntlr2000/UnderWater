@@ -20,10 +20,9 @@ public class FogController : MonoBehaviour
     private Color originalBackgroundColor;       // 원래 카메라 배경색 저장
     public bool isCameraUnderwater = false;     // 현재 카메라가 물속인지 체크
 
-
     void Start()
     {
-        if (cam == null) GetComponent<Camera>();
+        if (cam == null) cam = GetComponent<Camera>();
 
         normalFogColor = RenderSettings.fogColor;
         normalFogDensity = RenderSettings.fogDensity;
@@ -36,11 +35,12 @@ public class FogController : MonoBehaviour
             originalClearFlags = cam.clearFlags;
             originalBackgroundColor = cam.backgroundColor;
         }
+
     }
 
     public void SetUnderwaterVisuals(bool isUnder)
     {
-        Debug.Log("[FogController] SetUnderwaterVisuals called with isUnder=" + isUnder);
+        // 즉시 전환 방식: 보간 없이 물속/물밖 상태를 바로 적용
         isCameraUnderwater = isUnder;
 
         if (isUnder)
@@ -51,7 +51,6 @@ public class FogController : MonoBehaviour
                 cam.backgroundColor = underwaterColor;
             }
 
-            // 2. 안개를 물 색깔로 짙게 설정합니다.
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             RenderSettings.fogColor = underwaterColor;
@@ -69,6 +68,7 @@ public class FogController : MonoBehaviour
             RenderSettings.fogMode = originalFogMode;
             RenderSettings.fogColor = normalFogColor;
             RenderSettings.fogDensity = normalFogDensity;
+
         }
     }
 

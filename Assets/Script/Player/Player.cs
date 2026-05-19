@@ -121,6 +121,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             if (raycastInteract != null) raycastInteract.enabled = true;
 
             StartCoroutine(condition.getHungry());
+
+            DisableLocalShadowCasting();
         }
     }
 
@@ -615,5 +617,16 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     public void SyncInventory(InventoryData data)
     {
         inventory = data;
+    }
+
+    private void DisableLocalShadowCasting() //자신이 조작하는 캐릭터만 그림자 안보이도록 수정
+    {
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            // 필요 시:
+            // r.receiveShadows = false;
+        }
     }
 }
