@@ -294,6 +294,29 @@ public class Condition : MonoBehaviour
         fatigueBar.SetBarUI(vitality);
     }
 
+    //작업대 연결하느라 추가함
+    public void ApplyGymExercise(float costHunger, float costWater, float bonusMaxHP, float bonusMaxStamina)
+    {
+        // 1. 수치 차감 (0 밑으로 떨어지지 않도록 방어)
+        hunger -= costHunger;
+        if (hunger < 0) hunger = 0f;
+
+        thirst -= costWater;
+        if (thirst < 0) thirst = 0f;
+
+        // 2. 최대치 스탯 영구 증가
+        MAX_HEALTH += bonusMaxHP;
+        MAX_STAMINA += bonusMaxStamina;
+
+        // 최대치가 늘어난 만큼 현재 체력/스테미너도 그만큼 즉시 회복시켜 줍니다.
+        health += bonusMaxHP;
+        stamina += bonusMaxStamina;
+
+        // 3. 갱신된 스탯을 바탕으로 UI 다시 그리기
+        SetBarUI();
+        Debug.Log($"운동 완료! 현재 최대 체력: {MAX_HEALTH}, 최대 스테미너: {MAX_STAMINA}");
+    }
+    //작업대 연결하느라 추가함
 
     #endregion
 
