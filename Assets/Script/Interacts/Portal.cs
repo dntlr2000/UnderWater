@@ -1,3 +1,4 @@
+ï»¿using Unity.VisualScripting;
 using UnityEngine;
 
 public class Portal : InteractableObject
@@ -5,16 +6,16 @@ public class Portal : InteractableObject
     public override InteractionType GetInteractionType() => InteractionType.Gauge;
     public bool Interactable = true;
 
-    //°íÁ¤ ÁÂÇ¥
+    //ê³ ì • ì¢Œí‘œ
     [Header("Fixed Position")]
     public Vector3 coordinate = Vector3.zero;
 
-    //À¯µ¿ ÁÂÇ¥
+    //ìœ ë™ ì¢Œí‘œ
     [Header("Enable when using Fluid Position")]
     public bool useTarget = false;
     public Transform target;
 
-    public override void Interact() //Ä«¸Ş¶ó°¡ ÀÌ ¿ÀºêÁ§Æ®¸¦ ¹Ù¶óº¼ ¶§ È£ÃâµÊ
+    public override void Interact() //ì¹´ë©”ë¼ê°€ ì´ ì˜¤ë¸Œì íŠ¸ë¥¼ ë°”ë¼ë³¼ ë•Œ í˜¸ì¶œë¨
     {
 
         if (Interactable && Input.GetMouseButton(1))
@@ -33,15 +34,13 @@ public class Portal : InteractableObject
 
         if (player== null)
         {
-            Debug.LogWarning("Player Á¤º¸°¡ ÀÔ·ÂµÈ »óÅÂ°¡ ¾Æ´Õ´Ï´Ù.");
+            Debug.LogWarning("Player ì •ë³´ê°€ ì…ë ¥ëœ ìƒíƒœê°€ ì•„ë‹™ë‹ˆë‹¤.");
             return;
         }
         else
         {
             if (!useTarget) player.gameObject.transform.position = coordinate;
             else player.gameObject.transform.position = target.position + coordinate;
-
         }
     }
-
 }

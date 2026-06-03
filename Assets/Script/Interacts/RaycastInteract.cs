@@ -31,6 +31,11 @@ public class RaycastInteract : MonoBehaviour
 
     private void Update()
     {
+        if (player != null && !player.condition.CanAct(true, true, true))
+        {
+            ResetInteractionUI();
+            return;
+        }
         //Debug.Log("RayCast 활성화");
         CanInteract(); //현재 구조상 바라보고 있으면 매 프레임마다 호출되는 방식
     }

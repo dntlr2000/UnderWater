@@ -15,7 +15,7 @@ MonoBehaviour:
   id: 002C
   displayName: "\uD574\uC0B0\uBB3C \uC2A4\uD504"
   icon: {fileID: 0}
-  isBasic: 0
+  isBasic: 1
   recipeDescription: "\uC0DD\uC120\uC73C\uB85C \uB9CC\uB4E0 \uD55C\uB07C"
   cookTime: 10
   ingredients:

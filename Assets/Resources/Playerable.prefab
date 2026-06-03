@@ -344,6 +344,8 @@ GameObject:
   m_Component:
   - component: {fileID: 6171832865811880693}
   - component: {fileID: 3150158565814306109}
+  - component: {fileID: 7994065315244718462}
+  - component: {fileID: 8185788468810828042}
   m_Layer: 8
   m_Name: FirstViewModeObject_X
   m_TagString: Untagged
@@ -385,6 +387,43 @@ MonoBehaviour:
   MouseSensitivityY: 100
   canActivate: 0
   player: {fileID: 7411697451129402638}
+--- !u!114 &7994065315244718462
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2348633237659199538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6912f95bbe5150f4da43725375c09cdb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fogController: {fileID: 8185788468810828042}
+  cameraTransform: {fileID: 6171832865811880693}
+  sensorRadius: 0.05
+  waterLayer:
+    serializedVersion: 2
+    m_Bits: 16
+  interiorLayer:
+    serializedVersion: 2
+    m_Bits: 2048
+--- !u!114 &8185788468810828042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2348633237659199538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c18081364107e43af5d1faf5d9e429, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cam: {fileID: 7872861872906566718}
+  underwaterColor: {r: 0.1, g: 0.4, b: 0.5, a: 1}
+  underwaterDensity: 0.01
+  isCameraUnderwater: 0
 --- !u!1 &3432984275771070951
 GameObject:
   m_ObjectHideFlags: 0
@@ -613,6 +652,8 @@ GameObject:
   - component: {fileID: 1856746806914636969}
   - component: {fileID: -9024019472833989526}
   - component: {fileID: 8785678508657033785}
+  - component: {fileID: 5877144059748263247}
+  - component: {fileID: 6796774076438302937}
   m_Layer: 8
   m_Name: Playerable
   m_TagString: Player
@@ -631,7 +672,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.83771616, y: -1.3945785, z: -1.760365}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 6171832865811880693}
   - {fileID: 8427625828715831362}
@@ -707,9 +748,8 @@ MonoBehaviour:
   sinkSpeed: -1.5
   firstViewCamera: {fileID: 3150158565814306109}
   canMoveCamera: 1
-  waterSurfaceY: 624
-  underwaterColor: {r: 0.1, g: 0.4, b: 0.5, a: 1}
-  underwaterDensity: 0.05
+  visualController: {fileID: 7994065315244718462}
+  buoyancyController: {fileID: 6796774076438302937}
   animator: {fileID: 7748892893612311456}
   thirdViewAnimator: {fileID: 0}
   isMoving: 0
@@ -899,6 +939,42 @@ MonoBehaviour:
   onGround: 0
   onWork: 0
   stateUICollection: {fileID: 0}
+--- !u!114 &5877144059748263247
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5368671032790062748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a50318294265e774ba022858a5342ddc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  firstViewCamera: {fileID: 3150158565814306109}
+--- !u!114 &6796774076438302937
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5368671032790062748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f76a1d3ec4993bf49a3e943c51f1b347, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sensorRadius: 0.03
+  chestHeight: 1.2
+  headHeight: 2.5
+  waterLayer:
+    serializedVersion: 2
+    m_Bits: 16
+  interiorLayer:
+    serializedVersion: 2
+    m_Bits: 2048
+  bobbingFrequency: 2
+  bobbingAmplitude: 0.5
 --- !u!1 &5402255817681753600
 GameObject:
   m_ObjectHideFlags: 0
@@ -1309,6 +1385,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0

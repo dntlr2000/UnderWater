@@ -12,6 +12,10 @@ public class InGameManager : MonoBehaviourPunCallbacks
     [Header("직업별 프리팹")]
     public GameObject[] jobPrefabs;
 
+    [Header("스폰 위치 설정")]
+    [Tooltip("맵에 배치된 빈 게임 오브젝트(SpawnPoint)를 연결하세요.")]
+    public Transform defaultSpawnPoint;
+
     IEnumerator Start()
     {
         // 1. SaveManager 인스턴스가 생성될 때까지 대기 (안전 장치)
@@ -52,6 +56,10 @@ public class InGameManager : MonoBehaviourPunCallbacks
         {
             Debug.LogWarning("[테스트 모드] 포톤이 오프라인입니다! 가짜 방을 만들고 테스트 캐릭터를 소환합니다.");
 
+            // 에디터에서 SampleScene만 바로 실행할 때 SaveData가 비어 발생하던
+            // 상점/창고 계열 null 참조를 막기 위해 기본 SaveData를 먼저 보장합니다.
+            EnsureTestSaveData();
+
             if (!PhotonNetwork.IsConnected)
             {
                 PhotonNetwork.OfflineMode = true;
@@ -85,7 +93,7 @@ public class InGameManager : MonoBehaviourPunCallbacks
         if (AuthManager.Instance != null) myUserId = AuthManager.Instance.currentUserId;
 
         int finalJobIndex = -1;
-        Vector3 spawnPos = new Vector3(0, 7f, 0);
+        Vector3 spawnPos = defaultSpawnPoint != null ? defaultSpawnPoint.position : new Vector3(0, 7f, 0);
 
         // 1. SaveManager에서 저장된 데이터(직업, 위치) 조회
         if (SaveManager.Instance.IsDataReady)
@@ -97,7 +105,11 @@ public class InGameManager : MonoBehaviourPunCallbacks
             var myData = SaveManager.Instance.GetCurrentSave().players.FirstOrDefault(p => p.playerId == myUserId);
             if (myData != null && myData.position != null)
             {
-                spawnPos = myData.position.ToVector3();
+                Vector3 loadedPos = myData.position.ToVector3();
+                if (loadedPos != Vector3.zero)
+                {
+                    spawnPos = loadedPos;
+                }
             }
             
         }
@@ -195,6 +207,21 @@ public class InGameManager : MonoBehaviourPunCallbacks
         {
             Debug.LogError($"[InGameManager] 스폰 실패. 유효하지 않은 JobIndex: {finalJobIndex}");
         }
+    }
+
+    private void EnsureTestSaveData()
+    {
+        if (SaveManager.Instance == null) return;
+        if (SaveManager.Instance.IsDataReady) return;
+
+        string roomName = PhotonNetwork.CurrentRoom?.Name;
+        if (string.IsNullOrEmpty(roomName))
+        {
+            roomName = "OfflineRoom";
+        }
+
+        SaveManager.Instance.SetCurrentSave(new SaveData(roomName), false);
+        Debug.Log("[InGameManager] 테스트 모드용 기본 SaveData를 생성했습니다.");
     }
 
     // 참가자 플레이어가 방장에게 자기 정보를 전송하여 저장 데이터에 등록 요청

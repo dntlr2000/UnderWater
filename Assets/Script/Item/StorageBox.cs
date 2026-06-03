@@ -5,8 +5,8 @@ using UnityEngine.UI;
 
 public class StorageBox : InventoryFrame
 {
-    public int inventoryIndex;
-    public int boxIndex;
+    public int inventoryIndex = -1; // 슬롯 미선택 상태를 -1로 고정하여 잘못된 배열 접근 방지
+    public int boxIndex = -1; // 슬롯 미선택 상태를 -1로 고정하여 잘못된 배열 접근 방지
 
     public Inventory inventory;
     public ItemUIManager boxUI; //박스의 아이템 UI, InventoryFrame의 itemUI는 사용자의 인벤토리의 UI에 할당
@@ -354,6 +354,7 @@ public class StorageBox : InventoryFrame
         //comfirmScreen 오브젝트가 활성화 되어야 스크립트를 사용할 수 있으므로 예외처리 후에 활성화, 그리고 보관/반출 모드 적용
         if (ifDeposit) //보관 모드
         {
+            if (inventory == null || inventoryIndex < 0) return; //인벤토리나 인덱스가 유효하지 않으면 예외처리
             if (inventory.GetItemID(inventoryIndex) == -1 || inventory.GetQuantity(inventoryIndex) <= 0) return;
             depositScreen.gameObject.SetActive(true);
             depositScreen.ConstructComfirmScreen(inventory.GetItemID(inventoryIndex));
@@ -361,6 +362,8 @@ public class StorageBox : InventoryFrame
 
         else if (!ifDeposit) //반출 모드
         {
+            // 박스 인덱스/데이터가 유효하지 않으면 확인창을 열지 않고 중단 (IndexOutOfRange 방지)
+            if (boxIndex < 0 || inventoryData == null || inventoryData.id == null || boxIndex >= inventoryData.id.Length) return;
             if (GetItemID(boxIndex) == -1 || GetQuantity(boxIndex) <= 0) return;
             withdrawScreen.gameObject.SetActive(true);
             withdrawScreen.ConstructComfirmScreen(GetItemID(boxIndex));

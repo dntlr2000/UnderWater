@@ -25,6 +25,8 @@ public class SubmarineOutside : MonoBehaviourPun, ISavable
     public bool onWaterState = false;
     PhotonView pv;
 
+    public FogController fogController;
+
     void Start()
     {
         camRotator = GetComponent<CameraRotator>();
@@ -105,7 +107,7 @@ public class SubmarineOutside : MonoBehaviourPun, ISavable
         
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         //if (!photonView.IsMine) return;
         if (other.CompareTag("Water"))
@@ -133,9 +135,12 @@ public class SubmarineOutside : MonoBehaviourPun, ISavable
                 //->PhotonTransformView의 동기화 권한 옮기기가 가능함
             }
             controllable = true;
-            player.gameObject.SetActive(false); //이후 움직임 통제하는 것으로 기능 교체 예정
+            player.condition.SetIsBusy(true);
+            player.firstViewCamera.gameObject.SetActive(false);
+
             cameraObj.SetActive(true);
             camRotator.canActivate = true;
+            fogController.SetUnderwaterVisuals(fogController.isCameraUnderwater);
 
             OptionManager optionManager = FindAnyObjectByType<OptionManager>();
             if (optionManager != null)
@@ -150,7 +155,10 @@ public class SubmarineOutside : MonoBehaviourPun, ISavable
             if (controllable == false) return;
             camRotator.canActivate = false;
             controllable = false;
-            player.gameObject.SetActive(true);
+            player.condition.SetIsBusy(false);
+            player.firstViewCamera.gameObject.SetActive(true);
+            fogController.SetUnderwaterVisuals(false);
+            //player.fogController.SetUnderwaterVisuals(player.head.GetIfUnderwater());
             cameraObj.SetActive(false);
         }
     }

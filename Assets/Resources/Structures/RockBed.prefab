@@ -197,10 +197,9 @@ MonoBehaviour:
   objectName: Object Name
   player: {fileID: 0}
   usePhoton: 1
+  usingPlayerID: 0
   lyingPoint: {fileID: 6270170562434702003}
   awakePoint: {fileID: 5228913248863163078}
-  isUsing: 0
-  usingPlayerID: 0
 --- !u!114 &6766644039691631166
 MonoBehaviour:
   m_ObjectHideFlags: 0

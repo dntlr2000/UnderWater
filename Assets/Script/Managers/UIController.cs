@@ -95,6 +95,12 @@ public class UIController : MonoBehaviour
             return;
         }
 
+        else if (CookingUIManager.Instance != null && CookingUIManager.Instance.isUIOpen)
+        {
+            CookingUIManager.Instance.CloseUI();
+            return;
+        }
+
         //그 외 -> 일시정지 종료
         else if (!pauseState)
         {
@@ -220,19 +226,21 @@ public class UIController : MonoBehaviour
     // 플레이어 조작(시점 회전 + 이동) 제어
     public void SetPlayerControl(bool canControl)
     {
+        Debug.Log($"[UIController] SetPlayerControl 값 호출됨 : {canControl}");
         CheckPlayerScript();
         if (playerScript != null)
         {
-           
             playerScript.canMoveCamera = canControl;
             // UI가 켜져있으면 isBusy를 true로 만들어 이동/공격을 막음
-            playerScript.condition.SetIsBusy(!canControl);
-
             // 만약 움직이는 중에 UI를 켰다면 멈추게 처리
-            if (!canControl)
+            if (!canControl || !playerScript.condition.CanAct(true, false, false))
             {
                 playerScript.StopPhysics(); // Player.cs에 추가할 함수
             }
+
+            playerScript.condition.SetIsBusy(!canControl);
+
+            
         }
     }
 

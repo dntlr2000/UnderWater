@@ -13,16 +13,21 @@ public class QuestManager : MonoBehaviour
     public int CurrentQuestId => activeQuests.Count > 0 ? int.Parse(activeQuests[0].questID) : 0;
     public int Difficulty => 1;
 
-    public List<QuestData> allQuests;
+    public List<QuestData> allQuests = new List<QuestData>();
 
-    private HashSet<string> completedQuests = new();
-    private List<QuestData> activeQuests = new();
+    private HashSet<string> completedQuests = new HashSet<string>();
+    private List<QuestData> activeQuests = new List<QuestData>();
 
     private Player localPlayer;
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
+    }
+
+    private void Start()
+    {
+        InitStartingQuests();
     }
 
     public void RegisterLocalPlayer(Player player)
@@ -33,6 +38,8 @@ public class QuestManager : MonoBehaviour
         {
             TryUnlockQuests(localPlayer.currentJob);
         }
+
+        NotifyUIUpdate();
     }
 
     public void InitStartingQuests()
@@ -40,6 +47,9 @@ public class QuestManager : MonoBehaviour
         // 1번 퀘스트(혹은 조건 없는 퀘스트) 자동 수주
         foreach (var quest in allQuests)
         {
+            if (completedQuests.Contains(quest.questID) || IsQuestInProgress(quest.questID))
+                continue;
+
             // 선행 퀘스트가 없고, 수동 해금도 아니며, 메인 퀘스트인 경우
             if (quest.prerequisiteQuest == null && quest.questType == QuestType.Main)
             {
@@ -78,13 +88,10 @@ public class QuestManager : MonoBehaviour
 
     public void AddQuest(QuestData quest)
     {
-        if (activeQuests.Any(q => q.questID == quest.questID)) return;
+        if (IsQuestInProgress(quest.questID)) return;
 
-        // 진행 데이터 초기화 (이전에 하던게 아니면)
         foreach (var obj in quest.objectives)
         {
-            // 불러오기 시에는 값을 덮어씌울 것이므로 여기선 0으로 초기화해도 무방
-            // 단, LoadQuestSaveData에서 값을 채워넣어야 함.
             if (!IsQuestInProgress(quest.questID))
                 obj.currentAmount = 0;
         }
@@ -113,6 +120,7 @@ public class QuestManager : MonoBehaviour
         }
         else
         {
+            TryUnlockQuests(null);
             Debug.LogWarning("로컬 플레이어 또는 직업 정보가 없습니다.");
         }
 
@@ -135,6 +143,8 @@ public class QuestManager : MonoBehaviour
 
     public List<QuestData> GetActiveQuestsForPlayer(Player player)
     {
+        JobType? currentJobType = player?.CurrentJobType;
+
         return activeQuests.Where(q =>
             q.questType == QuestType.Main ||
             (q.questType == QuestType.Job && player != null && q.requiredJob == player.CurrentJobType)

@@ -100,6 +100,8 @@ MonoBehaviour:
   - PunRPC_SyncSubmarine
   - PunRPC_SetCharacterProperties
   - PunRPC_AddMoney
+  - PunRPC_SetSpawnerState
+  - PunRPC_Master_InstantiateStructure
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

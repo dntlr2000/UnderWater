@@ -1,9 +1,9 @@
-using System.Collections;
-using Photon.Realtime;
+ï»¿using ExitGames.Client.Photon;
 using Photon.Pun;
-using UnityEngine;
-using ExitGames.Client.Photon;
+using Photon.Realtime;
+using System.Collections;
 using System.Linq;
+using UnityEngine;
 
 public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 {
@@ -15,47 +15,31 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     public float gravity = -9.81f;
     public float swimUpForce = 5f;
 
-    public float sinkSpeed = -1.5f;
+    public float sinkSpeed = -0.3f; //ê°€ë¼ì•‰ëŠ” ì†ë„
 
     private Vector3 initialPosition;
     private Rigidbody rb;
 
     private GameObject otherPlayer;
-    private float pushRadius = 1.0f; //ÇÃ·¹ÀÌ¾î ³¢¸® ¹Ì´Â ÆÇÁ¤ °Å¸®
-    private float pushForce = 3f; //ÇÃ·¹ÀÌ¾î³¢¸® ¹Ì´Â ÆÇÁ¤ Èû
+    private float pushRadius = 1.0f; //í”Œë ˆì´ì–´ ë¼ë¦¬ ë¯¸ëŠ” íŒì • ê±°ë¦¬
+    private float pushForce = 3f; //í”Œë ˆì´ì–´ë¼ë¦¬ ë¯¸ëŠ” íŒì • í˜
     #endregion
 
     #region Camera Settings
     [Header("Camera")]
     public FirstViewCamera firstViewCamera;
     public bool canMoveCamera = true;
-
     #endregion
 
-    #region Underwater Effect Settings
-    [Header("Underwater Visuals")]
-    public float waterSurfaceY = 645f;
-    public Color underwaterColor = new Color(0.1f, 0.4f, 0.5f, 1f); // ¹°¼Ó »ö»ó (Â£Àº Ã»·Ï»ö)
-    [Range(0.01f, 0.2f)]
-    public float underwaterDensity = 0.05f; // ¹°¼Ó Å¹µµ (¼ıÀÚ°¡ Å¬¼ö·Ï ¾ÕÀÌ ¾È º¸ÀÓ)
-
-    // ¹° ¹Û¿¡ ³ª¿ÔÀ» ¶§ ¿ø·¡´ë·Î µ¹·Á³õ±â À§ÇÑ ÀúÀå¼Ò
-    private Color normalFogColor;
-    private float normalFogDensity;
-    private bool originalFogState;
-    private FogMode originalFogMode;
-
-
-    private CameraClearFlags originalClearFlags; // ¿ø·¡ Ä«¸Ş¶ó ¹è°æ ¸ğµå ÀúÀå
-    private Color originalBackgroundColor;       // ¿ø·¡ Ä«¸Ş¶ó ¹è°æ»ö ÀúÀå
-    private bool isCameraUnderwater = false;     // ÇöÀç Ä«¸Ş¶ó°¡ ¹°¼ÓÀÎÁö Ã¼Å©
+    #region Environment Controllers
+    [Header("Water & Visuals")]
+    public UnderwaterVisualController visualController;
+    public BuoyancyController buoyancyController;
     #endregion
 
     #region Animation
     [Header("Animation")]
     public Animator animator;
-    //public PlayerStateMachine stateMachine;
-    //public bool isBusy = false;
 
     public EngineerAnimator thirdViewAnimator;
     #endregion
@@ -63,9 +47,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     #region Player States & Layers
     [Header("States")]
 
-    public bool isMoving; //ConditionÀ¸·Î ¿Å±â·Á ÇßÀ¸³ª Player¿¡ ¿¬°èµÇ´Â ¸Ş¼­µå°¡ ¸¹¾Æ º¸·ù
-    public bool isRunning; //À§¿Í µ¿ÀÏ
-    //public bool isJumping = false;
+    public bool isMoving; //Conditionìœ¼ë¡œ ì˜®ê¸°ë ¤ í–ˆìœ¼ë‚˜ Playerì— ì—°ê³„ë˜ëŠ” ë©”ì„œë“œê°€ ë§ì•„ ë³´ë¥˜
+    public bool isRunning; //ìœ„ì™€ ë™ì¼
 
     public Condition condition;
 
@@ -74,25 +57,22 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     public LayerMask groundLayer;
     public LayerMask waterLayer;
     public float checkDistance = 2f;
-    //public float waterSurfaceY = 7f;
-    //public Coroutine BusyCoroutine;
-
     #endregion
 
     #region Job Data
     public JobData currentJob;
     public JobData[] allJobs;
     public JobType CurrentJobType => currentJob.jobType;
-    public static Player localPlayer; // **À¯Áö**
+    public static Player localPlayer; // **ìœ ì§€**
     private int initialJob = -1;
     #endregion
 
     #region Able Only Player
-    //ÇÃ·¹ÀÌ¾îÀÏ ¶§ È°¼ºÈ­
+    //í”Œë ˆì´ì–´ì¼ ë•Œ í™œì„±í™”
     public GameObject PlayerCanvas;
     public GameObject FirstViewLook;
 
-    //´Ù¸¥ ÇÃ·¹ÀÌ¾îÀÏ ¶§ È°¼ºÈ­
+    //ë‹¤ë¥¸ í”Œë ˆì´ì–´ì¼ ë•Œ í™œì„±í™”
     public GameObject ThirdViewLook;
 
     private float syncTimer;
@@ -107,13 +87,12 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         rb.useGravity = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
 
-        //stateMachine = new PlayerStateMachine();
-
         if (photonView.IsMine)
         {
             localPlayer = this;
             Inventory inventory = FindAnyObjectByType<Inventory>();
-            inventory.player = this;
+            if (inventory != null)
+                inventory.player = this;
         }
 
         if (condition == null) condition = GetComponent<Condition>();
@@ -129,28 +108,12 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             PlayerCanvas.SetActive(true);
             FirstViewLook.SetActive(true);
             ThirdViewLook.SetActive(false);
-            //FindAnyObjectByType<OptionManager>().LoadOptions();
 
-            normalFogColor = RenderSettings.fogColor;
-            normalFogDensity = RenderSettings.fogDensity;
-            originalFogState = RenderSettings.fog;
-            originalFogMode = RenderSettings.fogMode;
-
-            //±âº» Ä«¸Ş¶ó »óÅÂ ÀúÀå (½ºÄ«ÀÌ¹Ú½º º¹±¸¿ë)
-            if (firstViewCamera != null && firstViewCamera.cameraTransform != null)
-            {
-                Camera cam = firstViewCamera.cameraTransform.GetComponent<Camera>();
-                if (cam != null)
-                {
-                    originalClearFlags = cam.clearFlags;
-                    originalBackgroundColor = cam.backgroundColor;
-                }
-            }
-            // ÃÊ±â Á÷¾÷ Àû¿ë (OnPhotonInstantiate¿¡¼­ ¼³Á¤µÈ initialJob »ç¿ë)
+            // ì´ˆê¸° ì§ì—… ì ìš© (OnPhotonInstantiateì—ì„œ ì„¤ì •ëœ initialJob ì‚¬ìš©)
             if (initialJob >= 0)
             {
                 SetJob(initialJob);
-                // JobIndex ¼Ó¼º ´öºĞ¿¡ ¾Æ·¡ ·ÎÁ÷Àº SetJob ³»ºÎ¿¡¼­ CustomProperties¸¦ »ç¿ëÇÏ´Â °ÍÀ¸·Î ´ëÃ¼µÉ ¼ö ÀÖ½À´Ï´Ù.
+                // JobIndex ì†ì„± ë•ë¶„ì— ì•„ë˜ ë¡œì§ì€ SetJob ë‚´ë¶€ì—ì„œ CustomPropertiesë¥¼ ì‚¬ìš©í•˜ëŠ” ê²ƒìœ¼ë¡œ ëŒ€ì²´ë  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
                 // PhotonNetwork.LocalPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "JobIndex", initialJob } }); 
             }
 
@@ -159,22 +122,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
             StartCoroutine(condition.getHungry());
 
-            if (firstViewCamera != null && firstViewCamera.cameraTransform != null)
-            {
-                bool startUnderwater = firstViewCamera.cameraTransform.position.y < waterSurfaceY;
-                SetUnderwaterVisuals(startUnderwater); // ÅÂ¾î³­ °÷ÀÌ ÇÏ´ÃÀÌ¸é Áï½Ã ¾È°³¸¦ È® ²¨¹ö¸²!
-            }
+            DisableLocalShadowCasting();
         }
-        else
-        {
-            PlayerCanvas.SetActive(false);
-            FirstViewLook.SetActive(false);
-            ThirdViewLook.SetActive(true);
-
-            RaycastInteract raycastInteract = GetComponent<RaycastInteract>();
-            if (raycastInteract != null) raycastInteract.enabled = false;
-        }
-
     }
 
     private void Update()
@@ -182,7 +131,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (photonView.IsMine && PhotonNetwork.InRoom)
         {
             syncTimer += Time.deltaTime;
-            // 1ÃÊ¸¶´Ù Àü¼ÛÇÏ¿© ¸¶½ºÅÍ Å¬¶óÀÌ¾ğÆ®ÀÇ SaveManager°¡ Ä³½ÃÇÏµµ·Ï ÇÔ
+            // 1ì´ˆë§ˆë‹¤ ì „ì†¡í•˜ì—¬ ë§ˆìŠ¤í„° í´ë¼ì´ì–¸íŠ¸ì˜ SaveManagerê°€ ìºì‹œí•˜ë„ë¡ í•¨
             if (syncTimer >= 1f)
             {
                 syncTimer = 0f;
@@ -194,7 +143,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         {
             //stateMachine.currentState.Update();
 
-            if (Input.GetMouseButtonDown(0)) //°ø°İ ¾Ö´Ï¸ŞÀÌ¼Ç Ãâ·ÂÀº º°°³ÀÇ ½ºÅ©¸³Æ®/¸Ş¼­µåÇØ¼­ ÇÒµí
+            if (Input.GetMouseButtonDown(0)) //ê³µê²© ì• ë‹ˆë©”ì´ì…˜ ì¶œë ¥ì€ ë³„ê°œì˜ ìŠ¤í¬ë¦½íŠ¸/ë©”ì„œë“œí•´ì„œ í• ë“¯
             {
                 //stateMachine.ChangeState(new PlayerAttackState(this, stateMachine));
                 Attack(1f);
@@ -203,33 +152,27 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             if (canMoveCamera)
                 firstViewCamera.RotateView();
 
-            //if (!isBusy)
-            //Animate();
-
             bool grounded = IsGrounded();
 
-            if (grounded && Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(KeyCode.Space))
             {
-                Jump();
+                // ë•…ì— ìˆì„ ë•Œë§Œ ì í”„
+                if (grounded)
+                {
+                    Jump();
+                }
+
+                // ì í”„ ì—¬ë¶€ì™€ ìƒê´€ì—†ì´ 'ìŠ¤í˜ì´ìŠ¤ë°” ëˆ„ë¥´ê¸°' í€˜ìŠ¤íŠ¸ ì¹´ìš´íŠ¸ë¥¼ 1 ì˜¬ë¦¼
+                QuestManager.Instance?.ReportObjectiveProgress(ObjectiveType.PressKey, 1);
             }
             /*
             if (!grounded && !isJumping)
             {
                 rb.AddForce(Vector3.down * 20f, ForceMode.Acceleration);
-                //isJumping = true; //ºÎÇÏ¸¦ ÁÙÀÌ±â + ¾î»öÇÔÀ» ÁÙÀÌ±â À§ÇØ À§ÇØ »ó½Ã Àû¿ëÀ» ÇÇÇÏ°í ½ÍÀºµ¥ Áö±İÀ¸·Î¼± ´Ş¸® ¹æ¹ıÀÌ ¾ø´Ù..
+                //isJumping = true; //ë¶€í•˜ë¥¼ ì¤„ì´ê¸° + ì–´ìƒ‰í•¨ì„ ì¤„ì´ê¸° ìœ„í•´ ìœ„í•´ ìƒì‹œ ì ìš©ì„ í”¼í•˜ê³  ì‹¶ì€ë° ì§€ê¸ˆìœ¼ë¡œì„  ë‹¬ë¦¬ ë°©ë²•ì´ ì—†ë‹¤..
             }
-            */
-
-            if (firstViewCamera != null && firstViewCamera.cameraTransform != null)
-            {
-                bool checkCameraUnderwater = firstViewCamera.cameraTransform.position.y < waterSurfaceY;
-
-                // »óÅÂ°¡ º¯ÇßÀ» ¶§¸¸ ½Ã°¢ È¿°ú ÇÔ¼ö È£Ãâ
-                if (checkCameraUnderwater != isCameraUnderwater)
-                {
-                    SetUnderwaterVisuals(checkCameraUnderwater);
-                }
-            }
+            */ 
+            useOxygen();
         }
 
     }
@@ -237,39 +180,33 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     {
         if (!photonView.IsMine)
         {
-            rb.linearVelocity = Vector3.zero; //ºÎµé´ë´Â Çö»ó Á¦°Å¿ë
+            rb.linearVelocity = Vector3.zero; //ë¶€ë“¤ëŒ€ëŠ” í˜„ìƒ ì œê±°ìš©
+            return;
         }
 
-        if (!photonView.IsMine || !condition.CanAct(false, true, true)) return;
-
-        condition.Run();
         if (condition.isUnderwater)
             SwimMove();
         else
             GroundMove();
-        HandlePlayerPushing();
-        condition.restoreBreath();
 
-        //StopPhysics();
+        if (!photonView.IsMine || !condition.CanAct(false, true, true)) return;
+
+        condition.Run();
+
+        if (buoyancyController != null)
+        {
+            SetUnderwater(buoyancyController.IsInWater());
+        }
+
+        HandlePlayerPushing();
+        //condition.restoreBreath();
     }
 
     public void StopPhysics()
     {
-        //Vector3 vel = rb.linearVelocity;
-        //if (rb != null) rb.linearVelocity = Vector3.zero;
         isMoving = false;
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (!photonView.IsMine) return;
-        if (other.CompareTag("Water"))
-        {
-            SetUnderwater(true);
-            thirdViewAnimator.RequestSetWaterState(true);
-        }
-
-    }
     private void OnCollisionEnter(Collision collision)
     {
         if (!photonView.IsMine) return;
@@ -279,33 +216,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
             condition.onGround = true;
             thirdViewAnimator.RequestSetAirState(false);
-            //isJumping = false;
-        }
-        
-        
-        //if (collision.gameObject.CompareTag("Player")) //Edit -> Project Settings -> Physics -> Settings -> LayerCollisionMatrix¿¡¼­ ²ø ¼ö ÀÖ´Ù
-        //{
-        //    Player target = collision.gameObject.GetComponent<Player>();
-        //    if (target == this) return;
-        //    otherPlayer = target.gameObject;
-        //    Physics.IgnoreCollision(GetComponent<Collider>(), target.gameObject.GetComponent<Collider>(), true);
-        //}
-        
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (!photonView.IsMine) return;
-        if (other.CompareTag("Water"))
-        {
-            SetUnderwater(false);
-            thirdViewAnimator.RequestSetWaterState(false);
-        }
+        }        
     }
 
     private void OnCollisionExit(Collision collision)
     {
         if (!photonView.IsMine) return;
+
         if (collision.gameObject.CompareTag("Ground"))
         {
             condition.onGround = false;
@@ -326,7 +243,10 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     private void GroundMove()
     {
-        Vector3 input = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical")).normalized;
+        Vector3 input;
+        if (condition.CanAct(true, true, false)) input = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical")).normalized;
+        else input = Vector3.zero;
+
 
         if (input.magnitude >= 0.1f)
         {
@@ -335,7 +255,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             targetVelocity.y = rb.linearVelocity.y + gravity * Time.fixedDeltaTime;
 
             rb.linearVelocity = targetVelocity;
-            isMoving = true; //Run ¸Ş¼­µå¿Í ¿¬°è
+            isMoving = true; //Run ë©”ì„œë“œì™€ ì—°ê³„
             thirdViewAnimator.RequestSetMoveState(true, isRunning);
         }
         else
@@ -349,34 +269,68 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     private void SwimMove()
     {
-        // 1. ¾ÕµÚÁÂ¿ì (¼öÆò) ÀÔ·Â °è»ê
-        Vector3 input = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical")).normalized;
+        // 1. ì•ë’¤ì¢Œìš° (ìˆ˜í‰) ì…ë ¥ ê³„ì‚°
+        Vector3 input;
+        if (condition.CanAct(true, true, false)) input = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical")).normalized;
+        else input = Vector3.zero;
+
         Vector3 moveDir = Quaternion.Euler(0, firstViewCamera.cameraTransform.eulerAngles.y, 0) * input;
 
-        // ÀÏ´Ü ¼öÆò ÀÌµ¿ ¼Óµµ¸¸ Àû¿ë
+        // ì¼ë‹¨ ìˆ˜í‰ ì´ë™ ì†ë„ë§Œ ì ìš©
         Vector3 targetVelocity = moveDir * swimSpeed;
+        targetVelocity.y = rb.linearVelocity.y;
 
-        // 2. À§¾Æ·¡ (¼öÁ÷) ÀÔ·Â °è»ê
+        // 2. ìœ„ì•„ë˜ (ìˆ˜ì§) ì…ë ¥ ê³„ì‚°
         float verticalInput = 0f;
         if (Input.GetKey(KeyCode.Space)) verticalInput += 1f;
         if (Input.GetKey(KeyCode.LeftControl)) verticalInput -= 1f;
 
         if (verticalInput > 0)
         {
-            targetVelocity.y = swimUpForce; // ½ºÆäÀÌ½º¹Ù: ¼³Á¤ÇØµĞ ÈûÀ¸·Î À§·Î Çì¾öÄ§
+            if (buoyancyController != null && !buoyancyController.IsHeadInWater() && rb.linearVelocity.y > 0)
+            {
+                targetVelocity.y = 0f; // ìˆ˜ë©´ì—ì„œëŠ” ë” ì´ìƒ ì•ˆ ì˜¬ë¼ê°
+            }
+            else
+            {
+                targetVelocity.y = swimUpForce; // ë¬¼ì†ì—ì„œëŠ” ìœ„ë¡œ í—¤ì—„ì¹¨
+            }
         }
         else if (verticalInput < 0)
         {
-            targetVelocity.y = -swimSpeed;  // ÄÁÆ®·Ñ: ¾Æ·¡·Î Çì¾öÃÄ¼­ Àá¼öÇÔ
+            targetVelocity.y = -swimSpeed;  // ì»¨íŠ¸ë¡¤: ì•„ë˜ë¡œ í—¤ì—„ì³ì„œ ì ìˆ˜í•¨
         }
         else
         {
-            targetVelocity.y = sinkSpeed;   // ¾Æ¹«°Íµµ ¾È ´©¸§: Áß·Âº¸´Ù´Â ´À¸®°Ô ¼­¼­È÷ °¡¶ó¾ÉÀ½!
+            // 3. ì¡°ì‘ì„ ì•ˆ í•  ë•Œ ìˆ˜ë©´/ìˆ˜ì¤‘ ìœ„ì¹˜ì— ë”°ë¥¸ ì²˜ë¦¬
+            if (buoyancyController != null)
+            {
+                if (buoyancyController.IsHeadInWater())
+                {
+                    // ê¹Šì€ ë¬¼ ì†ì´ë©´ ìš°ë¦¬ê°€ ì„¤ì •í•œ sinkSpeed ë¡œ ì„œì„œíˆ ê°€ë¼ì•‰ìŒ
+                    targetVelocity.y = sinkSpeed;
+                }
+                else
+                {
+                    // ìˆ˜ë©´ ê·¼ì²˜ë¼ë©´ ìˆ˜ë©´ ìœ ì§€ (ê°€ë¼ì•‰ì§€ ì•ŠìŒ)
+                    if (rb.linearVelocity.y < -1f)
+                    {
+                        // ë‹¤ì´ë¹™í•´ì„œ ë–¨ì–´ì§€ë˜ ì†ë„ê°€ ìˆë‹¤ë©´ ë¬¼ì˜ ì €í•­ì„ ë°›ì•„ ë¶€ë“œëŸ½ê²Œ ê°ì†ì‹œí‚´
+                        targetVelocity.y = Mathf.Lerp(rb.linearVelocity.y, 0f, Time.fixedDeltaTime * 5f);
+                    }
+                    else
+                    {
+                        // ë–¨ì–´ì§€ëŠ” ê´€ì„±ì´ ë‹¤ ì£½ì—ˆê±°ë‚˜, í—¤ì—„ì¹˜ë‹¤ ì˜¬ë¼ì˜¨ ìƒíƒœë¼ë©´ Yì¶• ì†ë„ë¥¼ 0ìœ¼ë¡œ ë§Œë“¤ì–´ ìˆ˜ë©´ì— ë„ì›€ (Bobbing)
+                        targetVelocity.y = buoyancyController.GetBobbingVelocity();
+                    }
+                }
+            }
         }
 
         rb.linearVelocity = targetVelocity;
 
-        if (input == Vector3.zero)
+        // ì• ë‹ˆë©”ì´ì…˜ ì²˜ë¦¬
+        if (input == Vector3.zero && verticalInput == 0)
         {
             thirdViewAnimator.RequestSetMoveState(false, false);
         }
@@ -393,43 +347,43 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         object[] data = photonView.InstantiationData;
         if (data == null || data.Length < 2)
         {
-            Debug.LogWarning($"[{photonView.Owner.NickName}] InstantiationData°¡ ºñ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning($"[{photonView.Owner.NickName}] InstantiationDataê°€ ë¹„ì–´ìˆìŠµë‹ˆë‹¤.");
             return;
         }
 
         Vector3 spawnPos = (Vector3)data[0];
         int jobIndex = (int)data[1];
 
-        // À§Ä¡ ÃÊ±âÈ­
+        // ìœ„ì¹˜ ì´ˆê¸°í™”
         transform.position = spawnPos;
 
         if (rb != null)
         {
             rb.position = spawnPos;
-            rb.linearVelocity = Vector3.zero; // Rigidbody ÃÊ±âÈ­
+            rb.linearVelocity = Vector3.zero; // Rigidbody ì´ˆê¸°í™”
             rb.angularVelocity = Vector3.zero;
         }
 
-        // Á÷¾÷ Á¤º¸ Àû¿ë
+        // ì§ì—… ì •ë³´ ì ìš©
         if (allJobs != null && jobIndex >= 0 && jobIndex < allJobs.Length)
         {
             initialJob = jobIndex;
             currentJob = allJobs[jobIndex];
-            Debug.Log($"[{photonView.Owner.NickName}] ÃÊ±â Á÷¾÷ ¼³Á¤ ¿Ï·á: {currentJob.jobName}");
+            Debug.Log($"[{photonView.Owner.NickName}] ì´ˆê¸° ì§ì—… ì„¤ì • ì™„ë£Œ: {currentJob.jobName}");
         }
         else
         {
-            Debug.LogWarning($"[{photonView.Owner.NickName}] À¯È¿ÇÏÁö ¾ÊÀº JobIndex: {jobIndex}");
+            Debug.LogWarning($"[{photonView.Owner.NickName}] ìœ íš¨í•˜ì§€ ì•Šì€ JobIndex: {jobIndex}");
         }
 
-        // ³» ·ÎÄÃ ÇÃ·¹ÀÌ¾îÀÏ ¶§¸¸ Ä«¸Ş¶ó¿Í UI È°¼ºÈ­
+        // ë‚´ ë¡œì»¬ í”Œë ˆì´ì–´ì¼ ë•Œë§Œ ì¹´ë©”ë¼ì™€ UI í™œì„±í™”
         if (photonView.IsMine)
         {
             if (PlayerCanvas != null) PlayerCanvas.SetActive(true);
             if (FirstViewLook != null) FirstViewLook.SetActive(true);
             if (ThirdViewLook != null) ThirdViewLook.SetActive(false);
 
-            Debug.Log($"[{PhotonNetwork.LocalPlayer.NickName}] ³» ·ÎÄÃ ÇÃ·¹ÀÌ¾î Ä«¸Ş¶ó È°¼ºÈ­");
+            Debug.Log($"[{PhotonNetwork.LocalPlayer.NickName}] ë‚´ ë¡œì»¬ í”Œë ˆì´ì–´ ì¹´ë©”ë¼ í™œì„±í™”");
         }
         else
         {
@@ -438,27 +392,17 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             if (ThirdViewLook != null) ThirdViewLook.SetActive(true);
         }
 
-        Debug.Log($"[{photonView.Owner.NickName}] ½ºÆù ¿Ï·á - À§Ä¡: {spawnPos}, JobIndex: {jobIndex}");
+        Debug.Log($"[{photonView.Owner.NickName}] ìŠ¤í° ì™„ë£Œ - ìœ„ì¹˜: {spawnPos}, JobIndex: {jobIndex}");
     }
 
     public void Attack(float duration = 0.5f)
     {
         if (condition.GetIsBusy()) return;
-        //condition.SetInteractable(); //1È¸¿ë Çã°¡Áõ ¹ßÇà
-        if (condition.BusyCoroutine != null) StopCoroutine(condition.BusyCoroutine); //°ø°İ µô·¹ÀÌ
-        condition.BusyCoroutine = StartCoroutine(condition.BusyRoutine(duration));
+        //condition.SetInteractable(); //1íšŒìš© í—ˆê°€ì¦ ë°œí–‰
+        if (condition.BusyCoroutine != null) StopCoroutine(condition.BusyCoroutine); //ê³µê²© ë”œë ˆì´
+        condition.BusyCoroutine = StartCoroutine(condition.workRoutine(duration));
         thirdViewAnimator.RequestSetAttackState(0);
 
-    }
-    #endregion
-
-    #region Animation Mathods
-    void Animate()
-    {
-        if (animator == null) return;
-        float speed = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")).magnitude;
-        //animator.SetFloat("Speed", speed);
-        //animator.SetBool("Underwater", isUnderwater);
     }
     #endregion
 
@@ -474,6 +418,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (!photonView.IsMine || condition.isUnderwater == underwater) return;
 
         condition.isUnderwater = underwater;
+        /*
         if (underwater)
         {
             StartCoroutine(condition.useOxygen());
@@ -482,36 +427,24 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         {
             StopCoroutine(condition.useOxygen());
         }
+        */
+
         thirdViewAnimator.RequestSetWaterState(underwater);
     }
 
-    private void SetUnderwaterVisuals(bool isUnder)
+    private void useOxygen()
     {
-        isCameraUnderwater = isUnder;
-        Camera cam = firstViewCamera.cameraTransform.GetComponent<Camera>();
-
-        if (isUnder)
+        if (photonView.IsMine)
         {
-            if (cam != null)
+            if (condition.GetHeadUnderwaterState())
             {
-                cam.clearFlags = CameraClearFlags.SolidColor;
-                cam.backgroundColor = underwaterColor;
+                condition.useOxygen(Time.deltaTime);
             }
-
-            // 2. ¾È°³¸¦ ¹° »ö±ò·Î Â£°Ô ¼³Á¤ÇÕ´Ï´Ù.
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.ExponentialSquared; // ½Ã¾ß¸¦ ²Ë Á¶¿©ÁÖ´Â ¸ğµå
-            RenderSettings.fogColor = underwaterColor;
-            RenderSettings.fogDensity = underwaterDensity;
-        }
-        else
-        {
-            if (cam != null)
+            else
             {
-                cam.clearFlags = CameraClearFlags.Skybox;
+                condition.ResetOxygenTickTimer();
+                condition.restoreBreath(Time.deltaTime * 10f); // ì›í•˜ë©´ ìì—°íšŒë³µë„ dt ê¸°ë°˜ìœ¼ë¡œ
             }
-
-            RenderSettings.fog = false;
         }
     }
 
@@ -522,7 +455,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     {
         string stableId = GetStablePlayerId(photonView.Owner);
 
-        // ¾ÆÀÌÅÛ Á¤º¸´Â Inventory µî ´Ù¸¥ ÄÄÆ÷³ÍÆ®¿¡¼­ °¡Á®¿Í¾ß ÇÕ´Ï´Ù. ÇöÀç´Â ºó ¹è¿­
+        // ì•„ì´í…œ ì •ë³´ëŠ” Inventory ë“± ë‹¤ë¥¸ ì»´í¬ë„ŒíŠ¸ì—ì„œ ê°€ì ¸ì™€ì•¼ í•©ë‹ˆë‹¤. í˜„ì¬ëŠ” ë¹ˆ ë°°ì—´
         //Item[] currentItems = new Item[0];
 
         return new PlayerData
@@ -532,29 +465,29 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             position = new PlayerLocation(transform.position),
             //items = currentItems,
             items = inventory,
-            jobIndex = JobIndex ?? -1, // Á÷¾÷ÀÌ ¾øÀ¸¸é -1 ¹İÈ¯
+            jobIndex = JobIndex ?? -1, // ì§ì—…ì´ ì—†ìœ¼ë©´ -1 ë°˜í™˜
 
             conditionData = condition != null ? condition.ToConditionData() : null
         };
     }
 
-    // SaveManager¿Í µ¿ÀÏÇÑ ID È®ÀÎ ·ÎÁ÷ »ç¿ë
+    // SaveManagerì™€ ë™ì¼í•œ ID í™•ì¸ ë¡œì§ ì‚¬ìš©
     private string GetStablePlayerId(Photon.Realtime.Player p)
     {
         if (p == null) return "Unknown";
-        // AuthManager ¹× SaveManager¿¡¼­ »ç¿ëÇÏ´Â UserId¸¦ »ç¿ëÇØ¾ß ÇÕ´Ï´Ù.
+        // AuthManager ë° SaveManagerì—ì„œ ì‚¬ìš©í•˜ëŠ” UserIdë¥¼ ì‚¬ìš©í•´ì•¼ í•©ë‹ˆë‹¤.
         if (!string.IsNullOrEmpty(p.UserId)) return p.UserId;
         if (p.ActorNumber > 0) return $"Actor_{p.ActorNumber}";
         if (!string.IsNullOrEmpty(p.NickName)) return p.NickName;
         return $"Unknown_{p.ActorNumber}";
     }
 
-    // ÇÃ·¹ÀÌ¾îÀÇ ÇöÀç »óÅÂ¸¦ ¸¶½ºÅÍ Å¬¶óÀÌ¾ğÆ®¿¡°Ô Àü¼ÛÇÏ¿© SaveManager°¡ Ä³½ÃÇÏµµ·Ï ÇÔ (ÀÌº¥Æ® ÄÚµå 101)
+    // í”Œë ˆì´ì–´ì˜ í˜„ì¬ ìƒíƒœë¥¼ ë§ˆìŠ¤í„° í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ì „ì†¡í•˜ì—¬ SaveManagerê°€ ìºì‹œí•˜ë„ë¡ í•¨ (ì´ë²¤íŠ¸ ì½”ë“œ 101)
     private void SendStateToMaster()
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            // ¸¶½ºÅÍ Å¬¶óÀÌ¾ğÆ®´Â ½º½º·Î¸¦ Ä³½Ã¿¡ ¾÷µ¥ÀÌÆ®ÇÕ´Ï´Ù.
+            // ë§ˆìŠ¤í„° í´ë¼ì´ì–¸íŠ¸ëŠ” ìŠ¤ìŠ¤ë¡œë¥¼ ìºì‹œì— ì—…ë°ì´íŠ¸í•©ë‹ˆë‹¤.
             SaveManager.Instance?.UpdatePlayerCache(this.ToPlayerData());
             return;
         }
@@ -568,12 +501,12 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         string conditionJson = "";
         if (condition != null)
             conditionJson = JsonUtility.ToJson(condition.ToConditionData());
-        else Debug.LogWarning("ConditionÀÌ NullÀÔ´Ï´Ù");
+        else Debug.LogWarning("Conditionì´ Nullì…ë‹ˆë‹¤");
 
-            // ¸¶½ºÅÍ Å¬¶óÀÌ¾ğÆ®°¡ ¾Æ´Ò ¶§¸¸ ÀÌº¥Æ® Àü¼Û
+            // ë§ˆìŠ¤í„° í´ë¼ì´ì–¸íŠ¸ê°€ ì•„ë‹ ë•Œë§Œ ì´ë²¤íŠ¸ ì „ì†¡
             object[] content = new object[]
             {
-            GetStablePlayerId(PhotonNetwork.LocalPlayer), // ¾ÈÁ¤ÀûÀÎ ID »ç¿ë
+            GetStablePlayerId(PhotonNetwork.LocalPlayer), // ì•ˆì •ì ì¸ ID ì‚¬ìš©
             transform.position,
             JobIndex ?? -1,
             inventoryJson,
@@ -581,7 +514,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             };
 
         PhotonNetwork.RaiseEvent(
-            eventCode: 101, // SaveManager¿¡¼­ ÀÌ ÄÚµå¸¦ ±¸µ¶ÇÏ°í ÀÖ½À´Ï´Ù.
+            eventCode: 101, // SaveManagerì—ì„œ ì´ ì½”ë“œë¥¼ êµ¬ë…í•˜ê³  ìˆìŠµë‹ˆë‹¤.
             eventContent: content,
             raiseEventOptions: new Photon.Realtime.RaiseEventOptions
             {
@@ -604,7 +537,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
     }
 
-    // SaveManager°¡ È£ÃâÇÏ¿© Á÷¾÷À» ¼³Á¤ÇÏ´Â ¸Ş¼­µå
+    // SaveManagerê°€ í˜¸ì¶œí•˜ì—¬ ì§ì—…ì„ ì„¤ì •í•˜ëŠ” ë©”ì„œë“œ
     public void SetJob(int jobIndex)
     {
         if (jobIndex < 0 || jobIndex >= allJobs.Length)
@@ -615,7 +548,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
         currentJob = allJobs[jobIndex];
 
-        // Á÷¾÷ ÀÎµ¦½º¸¦ Custom Properties¿¡ ÀúÀåÇÏ¿© ´Ù¸¥ Å¬¶óÀÌ¾ğÆ®¿¡°Ô µ¿±âÈ­
+        // ì§ì—… ì¸ë±ìŠ¤ë¥¼ Custom Propertiesì— ì €ì¥í•˜ì—¬ ë‹¤ë¥¸ í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ë™ê¸°í™”
         ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobIndex", jobIndex } };
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
 
@@ -623,22 +556,22 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         Debug.Log($"[Player] Job set: {currentJob.jobName}");
     }
 
-    // SaveManager°¡ À§Ä¡¸¦ ·ÎµåÇÒ ¶§ È£ÃâÇÏ´Â ¸Ş¼­µå
+    // SaveManagerê°€ ìœ„ì¹˜ë¥¼ ë¡œë“œí•  ë•Œ í˜¸ì¶œí•˜ëŠ” ë©”ì„œë“œ
     public void TeleportTo(Vector3 newPos)
     {
         if (!photonView.IsMine) return;
 
         rb.position = newPos;
-        rb.linearVelocity = Vector3.zero; // ¼ø°£ÀÌµ¿ÀÌ¹Ç·Î ¼Óµµ ÃÊ±âÈ­
+        rb.linearVelocity = Vector3.zero; // ìˆœê°„ì´ë™ì´ë¯€ë¡œ ì†ë„ ì´ˆê¸°í™”
         transform.position = newPos;
     }
-    // ... (OnPlayerPropertiesUpdate, JobSetting µî ±âÁ¸ Job ·ÎÁ÷ À¯Áö) ...
+    // ... (OnPlayerPropertiesUpdate, JobSetting ë“± ê¸°ì¡´ Job ë¡œì§ ìœ ì§€) ...
     #endregion
 
     private void HandlePlayerPushing()
     {
-        // pushRadius ¹İ°æ¿¡ ÀÖ´Â Player ·¹ÀÌ¾îÀÇ ¸ğµç Äİ¶óÀÌ´õ¸¦ Å½»ö
-        // 1 << LayerMask.NameToLayer("Player")´Â Player ·¹ÀÌ¾î¸¸ °Ë»çÇÏ°Ú´Ù´Â ºñÆ®¸¶½ºÅ©
+        // pushRadius ë°˜ê²½ì— ìˆëŠ” Player ë ˆì´ì–´ì˜ ëª¨ë“  ì½œë¼ì´ë”ë¥¼ íƒìƒ‰
+        // 1 << LayerMask.NameToLayer("Player")ëŠ” Player ë ˆì´ì–´ë§Œ ê²€ì‚¬í•˜ê² ë‹¤ëŠ” ë¹„íŠ¸ë§ˆìŠ¤í¬
         int playerLayerMask = 1 << LayerMask.NameToLayer("Player");
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, pushRadius, playerLayerMask);
 
@@ -647,14 +580,14 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             if (hitCollider.gameObject == gameObject) continue;
             if (!hitCollider.CompareTag("Player")) continue;
 
-            //°Å¸®¿Í ¹æÇâ °è»ê
+            //ê±°ë¦¬ì™€ ë°©í–¥ ê³„ì‚°
             Vector3 otherPosition = hitCollider.transform.position;
             Vector3 direction = transform.position - otherPosition;
             direction.y = 0;
 
             float distance = direction.magnitude;
 
-            //°Å¸®°¡ 0ÀÌ¸é(¿Ïº®È÷ °ãÄ¡¸é) ¹æÇâÀ» ¾Ë ¼ö ¾ø¾î ¿¡·¯°¡ ³ª¹Ç·Î ÀÓÀÇÀÇ ¹æÇâ ¼³Á¤
+            //ê±°ë¦¬ê°€ 0ì´ë©´(ì™„ë²½íˆ ê²¹ì¹˜ë©´) ë°©í–¥ì„ ì•Œ ìˆ˜ ì—†ì–´ ì—ëŸ¬ê°€ ë‚˜ë¯€ë¡œ ì„ì˜ì˜ ë°©í–¥ ì„¤ì •
             if (distance == 0)
             {
                 direction = Random.insideUnitSphere;
@@ -662,13 +595,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
                 distance = 0.01f;
             }
 
-            //¹Ğ¾î³»±â ·ÎÁ÷
+            //ë°€ì–´ë‚´ê¸° ë¡œì§
             if (distance < pushRadius)
             {
-                //  °ãÄ£ ¸¸Å­ÀÇ ºñÀ² (0 ~ 1)
+                //  ê²¹ì¹œ ë§Œí¼ì˜ ë¹„ìœ¨ (0 ~ 1)
                 float overlapAmount = 1f - (distance / pushRadius);
 
-                // °ãÄ£ Á¤µµ°¡ Å¬¼ö·Ï ´õ ¼¼°Ô ¹Ğ¾î³¿
+                // ê²¹ì¹œ ì •ë„ê°€ í´ìˆ˜ë¡ ë” ì„¸ê²Œ ë°€ì–´ëƒ„
                 Vector3 pushVector = direction.normalized * overlapAmount * pushForce * Time.fixedDeltaTime;
 
                 if (rb != null)
@@ -678,18 +611,22 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             }
         }
     }
-    /*
-    // ¿¡µğÅÍ¿¡¼­ ¹üÀ§¸¦ ´«À¸·Î È®ÀÎÇÏ±â À§ÇÑ ±âÁî¸ğ
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, pushRadius);
-    }
-    */
+
     InventoryData inventory;
 
     public void SyncInventory(InventoryData data)
     {
         inventory = data;
+    }
+
+    private void DisableLocalShadowCasting() //ìì‹ ì´ ì¡°ì‘í•˜ëŠ” ìºë¦­í„°ë§Œ ê·¸ë¦¼ì ì•ˆë³´ì´ë„ë¡ ìˆ˜ì •
+    {
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            // í•„ìš” ì‹œ:
+            // r.receiveShadows = false;
+        }
     }
 }

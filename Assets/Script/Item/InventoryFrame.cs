@@ -231,6 +231,57 @@ public class InventoryFrame : MonoBehaviour
         return false;
     }
 
+    // 작업대 연결하려고 수정함
+    public int GetOwnedItemCount(int itemID)
+    {
+        int count = 0;
+        // 장비창(INVENTORY_SIZE 이후)은 제외하고 순수 인벤토리 슬롯만 검사
+        if (inventoryData != null && inventoryData.id != null)
+        {
+            for (int i = 0; i < inventoryData.id.Length; i++)
+            {
+                if (inventoryData.id[i] == itemID)
+                {
+                    count += inventoryData.quantity[i];
+                }
+            }
+        }
+        return count;
+    }
+
+    public void ConsumeItemByID(int itemID, int amount)
+    {
+        int remainingAmount = amount;
+
+        if (inventoryData == null || inventoryData.id == null) return;
+
+        for (int i = 0; i < inventoryData.id.Length; i++)
+        {
+            if (inventoryData.id[i] == itemID)
+            {
+                int currentSlotAmount = inventoryData.quantity[i];
+
+                if (currentSlotAmount >= remainingAmount)
+                {
+                    // 이 슬롯에서 필요한 만큼 전부 뺄 수 있으면 완료!
+                    RemoveItem(i, remainingAmount);
+                    return;
+                }
+                else
+                {
+                    // 이 슬롯의 개수가 부족하면 있는 거라도 다 빼고 다음 슬롯 계속 검색
+                    remainingAmount -= currentSlotAmount;
+                    RemoveItem(i, currentSlotAmount);
+                }
+            }
+        }
+
+        if (remainingAmount > 0)
+        {
+            Debug.LogWarning($"[경고] 아이템(ID: {itemID})이 {remainingAmount}개 부족해서 덜 뺐습니다!");
+        }
+    }
+    // 작업대 연결하려고 수정함
 }
 
 

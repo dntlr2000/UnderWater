@@ -163,7 +163,7 @@ public class ItemDatabase : MonoBehaviour
 
         Vector3 dropLocation = Location;
 
-        photonView.RPC("PunRPC_Master_InstantiateDroppedItem", RpcTarget.MasterClient, itemIDToDrop, quantityToDrop, durability, dropLocation);
+        photonView.RPC(nameof(PunRPC_Master_InstantiateDroppedItem), RpcTarget.MasterClient, itemIDToDrop, quantityToDrop, durability, dropLocation);
     }
 
 

@@ -33,6 +33,7 @@ public class CookingUIManager : MonoBehaviour
 
     private CookingRecipe currentSelectedRecipe;
     private UIController cachedUIController;
+    public bool isUIOpen = false;
 
     private void Awake()
     {
@@ -52,6 +53,7 @@ public class CookingUIManager : MonoBehaviour
     {
         // UI 켜기 및 조작 잠금 (UIController 활용)
         cookingBenchWindow.SetActive(true);
+        isUIOpen = true;
 
         if (cachedUIController != null)
         {
@@ -218,6 +220,8 @@ public class CookingUIManager : MonoBehaviour
     public void CloseUI()
     {
         cookingBenchWindow.SetActive(false);
+        isUIOpen = false;
+
         if (cachedUIController != null)
         {
             cachedUIController.SetPlayerControl(true);
