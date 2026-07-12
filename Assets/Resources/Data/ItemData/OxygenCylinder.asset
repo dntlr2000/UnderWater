@@ -12,13 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4952460585b8948458f6f2e51f064d30, type: 3}
   m_Name: OxygenCylinder
   m_EditorClassIdentifier: 
-  itemName: OxygenCylinder
+  itemName: "\uC0B0\uC18C\uD1B5"
   itemId: 6
+  stringID: item_oxygen_tank
   type: equipable
   itemIcon: {fileID: 21300000, guid: e9996b8c848e4ee4194fc46a6b706dd8, type: 3}
-  price: 0
-  weight: 0
+  description: "\uC0B0\uC18C\uB97C \uCDA9\uC804\uD560 \uC218 \uC788\uB294 \uD1B5."
+  modelPath: Structures/OxygenCylinder/Cylinder001
+  equipEffectType: oxygen
+  price: 200
+  weight: 1.5
   durability: 100
   interactable: 0
-  damage: 10
+  damage: 0
   sigularity: 1

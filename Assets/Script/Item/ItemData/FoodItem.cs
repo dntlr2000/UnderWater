@@ -15,7 +15,7 @@ public class FoodItem : ItemData
     {
         player.condition.Damaged(-health);
         player.condition.getFood(hunger, thirst);
-        quantity--;
+        quantity -= discountAmount;
         return quantity;
     }
 }

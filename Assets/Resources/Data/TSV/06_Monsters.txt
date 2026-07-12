@@ -1,0 +1,4 @@
+﻿monsterID	displayName	description	maxHP	attackPower	moveSpeed	dropItemID	dropChance	spawnZoneID	modelPath	notes
+monster_fish_common	일반 물고기	가장 흔한 수중 어류. 위협도가 낮다.	20	2	4	item_fish	0.8	zone_dive_01	Models/Monsters/fish_common	튜토리얼/기본 사냥 대상
+monster_pufferfish	복어	느리지만 다가가면 부풀어 위협한다.	25	4	2	item_fish	0.6	zone_dive_01	Models/Monsters/pufferfish	1차 검증: 특수효과 없이 일반 공격으로 단순화
+monster_shark	상어	수중 최상위 포식자. 전투원 직업 타겟용.	80	15	5	item_fish	0.9	zone_dive_02	Models/Monsters/shark	고위험 고보상 — 전투원 퀘스트 권장 대상

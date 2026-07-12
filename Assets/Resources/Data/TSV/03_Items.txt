@@ -1,0 +1,18 @@
+﻿itemID	displayName	description	itemType	maxStack	price	weight	iconPath	modelPath	isDroppable	isTradeable	rarity	damage	legacyItemId	equipEffectType	notes
+item_stone	돌	평범한 돌.	Material	99	2	0.4	Icons/Items/stone		TRUE	TRUE	Common	0	7		즉시채집 — 돌무더기
+item_wood	나무	평범한 목재.	Material	99	3	0.6	Icons/Items/wood		TRUE	TRUE	Common	0	8		다회채집 — 5회 상호작용
+item_seaweed	해초	평범한 해초.	Material	99	2	0.3	Icons/Items/seaweed		TRUE	TRUE	Common	0	9		즉시채집 — 해초 군락
+item_scrap	고철	부식된 폐품을 해체해 얻은 금속 조각.	Material	99	8	0.7	Icons/Items/scrap		TRUE	TRUE	Common	0	10		다회채집 — 해체 오브젝트
+item_harpoon	작살	수중 전투용 무기.	Equipment	1	150	2	Icons/Items/harpoon	Equipment/Harpoon/Harpoon_001	TRUE	FALSE	Uncommon	25	11		1차 검증: 내구도 무한 처리
+item_water	물	물.	Consumable	5	20	0.5	Icons/Items/water		TRUE	TRUE	Common	0	12		
+item_fish	생선	물고기에서 얻은 식재료.	Consumable	10	15	0.4	Icons/Items/fish		TRUE	TRUE	Common	0	13		조리 재료 — 단독 식용은 비권장
+item_dried_seaweed	말린 해초	해초를 말려 보존성을 높인 간식.	Consumable	10	15	0.2	Icons/Items/dried_seaweed		TRUE	TRUE	Common	0	14		
+item_energy_drink	에너지드링크	활력 음료.	Consumable	5	35	0.4	Icons/Items/energy_drink		TRUE	TRUE	Uncommon	0	15		
+item_energy_bar	에너지바	고열량 휴대식.	Consumable	5	40	0.3	Icons/Items/energy_bar		TRUE	TRUE	Uncommon	0	16		
+item_fish_stew	어죽	생선으로 끓인 든든한 한끼.	Consumable	3	60	0.6	Icons/Items/fish_stew		TRUE	TRUE	Rare	0	17		화로(bench_galley) 전용 레시피
+item_gem	보석	값비싼 보물. 수집 가치가 있다.	Collectible	10	100	0.2	Icons/Items/gem		TRUE	TRUE	Rare	0	18		탐험가 전용 수집형 보상
+item_doll	인형	침수 전 시대의 낡은 인형. 수집 가치가 있다.	Collectible	10	80	0.3	Icons/Items/doll		TRUE	TRUE	Rare	0	19		탐험가 전용 수집형 보상
+item_key	열쇠	잠금 해제용 열쇠.	Equipment	1	100	0	Icons/Item/key		FALSE	FALSE	Epic	0	4		
+item_oxygen_tank	산소통	산소를 충전할 수 있는 통.	Equipment	1	200	1.5	Icons/Item_Oxygen_tank	Structures/OxygenCylinder/Cylinder001	TRUE	FALSE	Uncommon	0	6	oxygen	
+item_dummy_001	더미박스	1차 검증용 임시 아이템.	Material	99	100	0			TRUE	TRUE	Common	0	1		
+item_dummy_002	더미무기	1차 검증용 임시 아이템.	Equipment	1	300	0			TRUE	FALSE	Uncommon	50	3		

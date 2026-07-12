@@ -143,6 +143,12 @@ public class ItemDatabase : MonoBehaviour
         return GetItem(itemId).type;
     }
 
+    public string GetEquipEffectType(int itemId)
+    {
+        if (itemId == -1) return "";
+        return GetItem(itemId).equipEffectType;
+    }
+
     public Sprite GetIcons(int itemId)
     {
         if (itemId == -1 || GetItem(itemId).itemIcon == null) return GetItem(0).itemIcon;
@@ -196,7 +202,7 @@ public class ItemDatabase : MonoBehaviour
         }
     }
 }
-
+/*
 [CreateAssetMenu(fileName = "NewItem", menuName = "Items/ItemData")]
 public class ItemData : ScriptableObject
 {
@@ -205,6 +211,10 @@ public class ItemData : ScriptableObject
     public int itemId; //ID
     public string type = "item";
     public Sprite itemIcon;
+    [TextArea(2, 4)]
+    public string description;       // 신규 — 03_Items.description, 툴팁용
+    public string modelPath;          // 신규 — 03_Items.modelPath, 인게임 3D 모델 경로
+    public string equipEffectType;    // 신규 — 03_Items.equipEffectType, 장비 특수효과 분기 (oxygen 등)
 
     [Header("Attributes")]
     public int price; //개당 가격
@@ -222,4 +232,4 @@ public class ItemData : ScriptableObject
         quantity--;
         return quantity;
     }
-}
+}*/

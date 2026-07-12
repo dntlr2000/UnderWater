@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using System.Linq;
 
 public class QuestUI : MonoBehaviour
 {
@@ -21,7 +22,7 @@ public class QuestUI : MonoBehaviour
     public TMP_Text rewardsText;
 
     public Button completeButton;
-    private QuestData currentSelectedQuest;
+    private QuestRuntimeData currentSelectedQuest;
 
     public bool isActive = false; //isActive
 
@@ -95,7 +96,8 @@ public class QuestUI : MonoBehaviour
             }
         }
 
-        if (currentSelectedQuest != null && activeQuests.Contains(currentSelectedQuest))
+        if (currentSelectedQuest != null &&
+        activeQuests.Any(q => q.questID == currentSelectedQuest.questID))
         {
             ShowQuestDetail(currentSelectedQuest);
         }
@@ -105,7 +107,7 @@ public class QuestUI : MonoBehaviour
         }
     }
 
-    void ShowQuestDetail(QuestData quest)
+    void ShowQuestDetail(QuestRuntimeData quest)
     {
         currentSelectedQuest = quest;
 

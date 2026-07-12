@@ -53,7 +53,8 @@ public abstract class BaseWorkbench<T> : InteractableObject where T : WorkbenchD
                 }
             }
         }
-
+        Debug.Log($"dataList 개수: {dataList.Count}");
+        Debug.Log($"availableData 개수: {availableData.Count}");
         // 자식 클래스에게 "필터링된 데이터"와 "권한"을 넘겨주며 UI 오픈 요청
         OpenSpecificUI(availableData, isSpecialist);
     }

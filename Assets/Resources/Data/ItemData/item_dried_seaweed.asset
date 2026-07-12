@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 832ac8b6ffef1a34790891e9f6ee475b, type: 3}
+  m_Name: item_dried_seaweed
+  m_EditorClassIdentifier: 
+  itemName: "\uB9D0\uB9B0 \uD574\uCD08"
+  itemId: 14
+  stringID: item_dried_seaweed
+  type: item
+  itemIcon: {fileID: 0}
+  description: "\uD574\uCD08\uB97C \uB9D0\uB824 \uBCF4\uC874\uC131\uC744 \uB192\uC778
+    \uAC04\uC2DD."
+  modelPath: 
+  equipEffectType: 
+  price: 15
+  weight: 0.2
+  durability: 0
+  interactable: 0
+  damage: 0
+  sigularity: 0
+  discountAmount: 1
+  health: 0
+  hunger: 0
+  thirst: 0

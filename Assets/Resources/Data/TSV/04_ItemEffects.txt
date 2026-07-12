@@ -1,0 +1,8 @@
+﻿effectRowID	itemID	seq	effectType	value	durationSec	discountAmount	notes
+eff_water_001	item_water	1	RestoreThirst	40	0	1	
+eff_dried_001	item_dried_seaweed	1	RestoreHunger	15	0	1	
+eff_energy_drk_001	item_energy_drink	1	RestoreThirst	25	0	1	
+eff_energy_drk_002	item_energy_drink	2	BuffMoveSpeed	15	45	1	45초간 이동속도 +15%
+eff_energy_bar_001	item_energy_bar	1	RestoreHunger	30	0	1	
+eff_stew_001	item_fish_stew	1	RestoreHunger	50	0	1	
+eff_stew_002	item_fish_stew	2	HealHP	20	0	1	
