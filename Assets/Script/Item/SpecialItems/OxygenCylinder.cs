@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class OxygenCylinder : FieldItem
 {
-    public float MAX_OXYGEN = 100f;
-
     ///public float remainOxygen; 
     //durability에서 대체
 

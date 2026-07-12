@@ -1,0 +1,9 @@
+﻿rewardID	questID	seq	rewardType	amount	itemID	recipeID	notes
+rwd_m001_001	quest_main_001	1	Experience	100			
+rwd_m002_001	quest_main_002	1	Item	200			
+rwd_m002_002	quest_main_002	2	Experience	150			
+rwd_m003_001	quest_main_003	1	Money	200			
+rwd_chef_001	quest_job_chef_001	1	Experience	250			
+rwd_fighter_001	quest_job_fighter_001	1	Item	1	item_harpoon		작살 미보유 시 지급
+rwd_explorer_001	quest_job_explorer_001	1	Money	300			
+rwd_tech_001	quest_job_tech_001	1	UnlockRecipe	1		recipe_harpoon	작살 레시피 해금

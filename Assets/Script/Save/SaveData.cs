@@ -10,7 +10,7 @@ public class SaveData
     public string createdDate;    // 저장일자 (yyyy-MM-dd HH:mm:ss)
 
     public int dayCount;  // 예: 게임 진행 시간/일수
-    public Dictionary<string, int> jobAssignments = new(); // PlayerID (UserId) → JobIndex 
+    public Dictionary<string, string> jobAssignments = new(); // PlayerID (UserId) → JobIndex 
 
     public List<PlayerData> players = new(); // 플레이어별 데이터
     public WorldProgress worldProgress = new();
@@ -37,7 +37,7 @@ public class PlayerData
     public string playerName; // Nickname
     public PlayerLocation position;
     public InventoryData items;
-    public int jobIndex; // 선택된 직업 인덱스
+    public string jobType = "";
     public ConditionData conditionData;
 
     public List<string> completedQuestIds = new List<string>(); // 완료된 퀘스트 ID 목록

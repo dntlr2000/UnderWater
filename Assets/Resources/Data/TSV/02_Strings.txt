@@ -1,0 +1,32 @@
+﻿stringKey	context	KO	EN	notes		[ 범례 / Legend ]
+btn_complete_quest	Button	퀘스트 완료	Complete Quest			Button
+btn_accept_quest	Button	수락	Accept			Label
+btn_cancel	Button	취소	Cancel			Toast
+btn_confirm	Button	확인	Confirm			Tooltip
+btn_close	Button	닫기	Close			Title
+btn_craft	Button	제작	Craft	작업대 UI		
+btn_harvest	Button	채집	Harvest	필드 상호작용		
+label_quest_list	Label	진행 중인 퀘스트	Active Quests			
+label_objectives	Label	목표	Objectives			
+label_rewards	Label	보상	Rewards			
+label_required_job	Label	필요 직업	Required Class			
+label_required_materials	Label	필요 재료	Required Materials	작업대 UI		
+label_select_class	Title	직업 선택	Select Class			
+label_class_taken	Toast	이미 선택된 직업입니다.	Class already taken.			
+reward_item	Label	아이템	Item			
+reward_money	Label	골드	Gold			
+reward_exp	Label	경험치	EXP			
+reward_recipe	Label	레시피 해금	Recipe Unlocked			
+quest_type_main	Label	[메인]	[Main]			
+quest_type_job	Label	[직업]	[Class]			
+toast_quest_start	Toast	새 퀘스트 시작!	New Quest Accepted!			
+toast_quest_complete	Toast	퀘스트 완료!	Quest Complete!			
+toast_craft_success	Toast	제작 완료!	Crafted!			
+toast_craft_failed	Toast	재료가 부족합니다.	Not enough materials.			
+toast_harvest_depleted	Toast	더 이상 채집할 수 없습니다.	Nothing left to harvest.	채집노드 소진		
+item_type_material	Label	재료	Material			
+item_type_consumable	Label	소모품	Consumable			
+item_type_equipment	Label	장비	Equipment			
+item_type_quest	Label	퀘스트 아이템	Quest Item			
+item_type_collectible	Label	수집품	Collectible	탐험가 보석/인형		
+tooltip_stack	Tooltip	최대 {0}개까지 겹칩니다.	Stacks up to {0}.	{0} = maxStack 값		

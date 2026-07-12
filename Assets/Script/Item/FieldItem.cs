@@ -67,7 +67,8 @@ public class FieldItem : InteractableObject, ISavable
     public override void HoldInteract()
     {
         // 게이지가 다 차면 아이템 습득을 요청
-        RequestGetItem();
+        /*RequestGetItem();*/
+        GetItem(); //임시
         isInteractable = false;
 
     }
@@ -88,6 +89,10 @@ public class FieldItem : InteractableObject, ISavable
         if (!inventory.CheckInventoryEmpty()) return;
         inventory.GetItem(itemID, amount);
         //gameObject.SetActive(false);
+        var itemData = ItemDatabase.Instance.GetItem(itemID);
+        if (itemData != null && QuestManager.Instance != null)
+            QuestManager.Instance.ReportObjectiveProgress(ObjectiveType.CollectItem, amount, itemData.stringID);
+
         Destroy(gameObject);
     }
 

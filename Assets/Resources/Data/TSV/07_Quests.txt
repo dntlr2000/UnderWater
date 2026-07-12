@@ -1,0 +1,8 @@
+﻿questID	title	description	questType	requiredJob	prerequisiteQuestID	isUnlockedManually	iconPath	sortOrder	notes
+quest_main_001	잠수 준비	기본 재료(돌, 나무, 해초)를 채집하라.	Main			FALSE	Icons/Quests/q_gather	10	튜토리얼 — 채집 메커니즘 학습
+quest_main_002	고철 회수	부식된 잔해를 해체해 고철을 모아라.	Main		quest_main_001	FALSE	Icons/Quests/q_scrap	20	다회채집 메커니즘 학습
+quest_main_003	첫 끼니	물과 식재료로 음식을 만들어 섭취하라.	Main		quest_main_002	FALSE	Icons/Quests/q_eat	30	제작 메커니즘 학습
+quest_job_chef_001	주방 입문	화로에서 어죽을 끓여내라.	Job	chef		FALSE	Icons/Quests/q_cook	100	
+quest_job_fighter_001	첫 사냥	작살로 물고기 몬스터를 처치하라.	Job	fighter		FALSE	Icons/Quests/q_fight	100	
+quest_job_explorer_001	수집가의 눈	보석과 인형을 각 1개 이상 수집하라.	Job	explorer		FALSE	Icons/Quests/q_collect	100	
+quest_job_tech_001	장비 제작	작살을 제작하라.	Job	technician		FALSE	Icons/Quests/q_craft	100	

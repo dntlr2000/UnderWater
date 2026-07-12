@@ -2,8 +2,8 @@
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
-using System.Linq;
 using UnityEngine;
+using System.Linq;
 
 public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 {
@@ -17,8 +17,12 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     public float sinkSpeed = -0.3f; //가라앉는 속도
 
+    [Header("Step Up")]
+    public PlayerStepUp stepUp;
+
     private Vector3 initialPosition;
     private Rigidbody rb;
+    private bool canContinueSwimUp;
 
     private GameObject otherPlayer;
     private float pushRadius = 1.0f; //플레이어 끼리 미는 판정 거리
@@ -62,9 +66,9 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     #region Job Data
     public JobData currentJob;
     public JobData[] allJobs;
-    public JobType CurrentJobType => currentJob.jobType;
+    public JobType CurrentJobType => currentJob != null ? currentJob.jobType : default;
     public static Player localPlayer; // **유지**
-    private int initialJob = -1;
+    private string initialJobType = "";
     #endregion
 
     #region Able Only Player
@@ -82,6 +86,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        if (stepUp == null) stepUp = GetComponent<PlayerStepUp>();
         animator = GetComponent<Animator>();
         thirdViewAnimator = GetComponent<EngineerAnimator>();
         rb.useGravity = false;
@@ -110,9 +115,9 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             ThirdViewLook.SetActive(false);
 
             // 초기 직업 적용 (OnPhotonInstantiate에서 설정된 initialJob 사용)
-            if (initialJob >= 0)
+            if (!string.IsNullOrEmpty(initialJobType))
             {
-                SetJob(initialJob);
+                SetJob(initialJobType);
                 // JobIndex 속성 덕분에 아래 로직은 SetJob 내부에서 CustomProperties를 사용하는 것으로 대체될 수 있습니다.
                 // PhotonNetwork.LocalPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "JobIndex", initialJob } }); 
             }
@@ -237,6 +242,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     private void Jump()
     {
         //isJumping = true;
+        condition.onGround = false; // 점프 즉시 Step-up이 다시 발동하지 않도록 지면 상태를 먼저 해제합니다.
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, 5f, rb.linearVelocity.z);
         thirdViewAnimator.RequestSetJumpState(true);
     }
@@ -251,8 +257,11 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (input.magnitude >= 0.1f)
         {
             Vector3 moveDir = Quaternion.Euler(0, firstViewCamera.cameraTransform.eulerAngles.y, 0) * input;
+            // 낮은 턱을 감지하면 이동 속도를 적용하기 전에 먼저 발 높이를 보정합니다.
+            bool steppedUp = stepUp != null && stepUp.TryStepUp(moveDir, IsGrounded());
+
             Vector3 targetVelocity = moveDir * moveSpeed * (isRunning ? runSpeedMultiply : 1f);
-            targetVelocity.y = rb.linearVelocity.y + gravity * Time.fixedDeltaTime;
+            targetVelocity.y = steppedUp ? 0f : rb.linearVelocity.y + gravity * Time.fixedDeltaTime;
 
             rb.linearVelocity = targetVelocity;
             isMoving = true; //Run 메서드와 연계
@@ -281,20 +290,29 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         targetVelocity.y = rb.linearVelocity.y;
 
         // 2. 위아래 (수직) 입력 계산
+        bool spaceHeld = Input.GetKey(KeyCode.Space);
+        bool descendHeld = Input.GetKey(KeyCode.LeftControl);
+        bool headInWater = buoyancyController != null && buoyancyController.IsHeadInWater();
+
+        // 상승 래치: 머리가 물속일 때 시작한 Space 입력만 수면을 통과할 때까지 유지합니다.
+        // 수면에서 새로 Space를 누르면 headInWater가 false라서 상승이 시작되지 않습니다.
+        if (!spaceHeld || descendHeld)
+        {
+            canContinueSwimUp = false;
+        }
+        else if (headInWater)
+        {
+            canContinueSwimUp = true;
+        }
+
         float verticalInput = 0f;
-        if (Input.GetKey(KeyCode.Space)) verticalInput += 1f;
-        if (Input.GetKey(KeyCode.LeftControl)) verticalInput -= 1f;
+        if (spaceHeld && canContinueSwimUp) verticalInput += 1f;
+        if (descendHeld) verticalInput -= 1f;
 
         if (verticalInput > 0)
         {
-            if (buoyancyController != null && !buoyancyController.IsHeadInWater() && rb.linearVelocity.y > 0)
-            {
-                targetVelocity.y = 0f; // 수면에서는 더 이상 안 올라감
-            }
-            else
-            {
-                targetVelocity.y = swimUpForce; // 물속에서는 위로 헤엄침
-            }
+            // 래치가 통과한 상승 입력만 처리하므로, 머리가 수면 밖으로 나와도 계속 위로 헤엄칠 수 있습니다.
+            targetVelocity.y = swimUpForce;
         }
         else if (verticalInput < 0)
         {
@@ -352,7 +370,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
 
         Vector3 spawnPos = (Vector3)data[0];
-        int jobIndex = (int)data[1];
+        string jobType = (string)data[1];
 
         // 위치 초기화
         transform.position = spawnPos;
@@ -365,15 +383,14 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
 
         // 직업 정보 적용
-        if (allJobs != null && jobIndex >= 0 && jobIndex < allJobs.Length)
+        if (!string.IsNullOrEmpty(jobType))
         {
-            initialJob = jobIndex;
-            currentJob = allJobs[jobIndex];
-            Debug.Log($"[{photonView.Owner.NickName}] 초기 직업 설정 완료: {currentJob.jobName}");
-        }
-        else
-        {
-            Debug.LogWarning($"[{photonView.Owner.NickName}] 유효하지 않은 JobIndex: {jobIndex}");
+            initialJobType = jobType;
+            currentJob = allJobs.FirstOrDefault(j => j.jobType.ToString() == jobType);
+            if (currentJob != null)
+                Debug.Log($"[{photonView.Owner.NickName}] 초기 직업 설정 완료: {currentJob.jobName}");
+            else
+                Debug.LogWarning($"[{photonView.Owner.NickName}] 유효하지 않은 JobType: {jobType}");
         }
 
         // 내 로컬 플레이어일 때만 카메라와 UI 활성화
@@ -392,7 +409,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             if (ThirdViewLook != null) ThirdViewLook.SetActive(true);
         }
 
-        Debug.Log($"[{photonView.Owner.NickName}] 스폰 완료 - 위치: {spawnPos}, JobIndex: {jobIndex}");
+        Debug.Log($"[{photonView.Owner.NickName}] 스폰 완료 - 위치: {spawnPos}, JobType: {jobType}");
     }
 
     public void Attack(float duration = 0.5f)
@@ -418,6 +435,12 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (!photonView.IsMine || condition.isUnderwater == underwater) return;
 
         condition.isUnderwater = underwater;
+
+        if (!underwater)
+        {
+            // 물 밖으로 완전히 나온 뒤에는 다음 상승 입력을 다시 물속에서 시작해야 합니다.
+            canContinueSwimUp = false;
+        }
         /*
         if (underwater)
         {
@@ -465,7 +488,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             position = new PlayerLocation(transform.position),
             //items = currentItems,
             items = inventory,
-            jobIndex = JobIndex ?? -1, // 직업이 없으면 -1 반환
+            jobType = JobType, // 직업이 없으면 -1 반환
 
             conditionData = condition != null ? condition.ToConditionData() : null
         };
@@ -503,15 +526,15 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             conditionJson = JsonUtility.ToJson(condition.ToConditionData());
         else Debug.LogWarning("Condition이 Null입니다");
 
-            // 마스터 클라이언트가 아닐 때만 이벤트 전송
-            object[] content = new object[]
-            {
-            GetStablePlayerId(PhotonNetwork.LocalPlayer), // 안정적인 ID 사용
+        // 마스터 클라이언트가 아닐 때만 이벤트 전송
+        object[] content = new object[]
+        {
+            GetStablePlayerId(PhotonNetwork.LocalPlayer),
             transform.position,
-            JobIndex ?? -1,
+            JobType,
             inventoryJson,
             conditionJson
-            };
+        };
 
         PhotonNetwork.RaiseEvent(
             eventCode: 101, // SaveManager에서 이 코드를 구독하고 있습니다.
@@ -527,32 +550,29 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     #endregion
 
     #region Job Assignment
-    public int? JobIndex
+    public string JobType
     {
         get
         {
-            if (photonView.Owner.CustomProperties.TryGetValue("JobIndex", out object jobIndexObj))
-                return (int)jobIndexObj;
-            return null;
+            if (photonView.Owner.CustomProperties.TryGetValue("JobType", out object val))
+                return (string)val ?? "";
+            return "";
         }
     }
 
     // SaveManager가 호출하여 직업을 설정하는 메서드
-    public void SetJob(int jobIndex)
+    public void SetJob(string jobType)
     {
-        if (jobIndex < 0 || jobIndex >= allJobs.Length)
+        currentJob = allJobs.FirstOrDefault(j => j.jobType.ToString() == jobType);
+        if (currentJob == null)
         {
-            Debug.LogError("[Player] Invalid JobIndex: " + jobIndex);
+            Debug.LogError("[Player] Invalid JobType: " + jobType);
             return;
         }
 
-        currentJob = allJobs[jobIndex];
-
-        // 직업 인덱스를 Custom Properties에 저장하여 다른 클라이언트에게 동기화
-        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobIndex", jobIndex } };
+        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobType", jobType } };
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
 
-        // QuestManager.Instance?.TryUnlockQuests(currentJob); // Optional: null check
         Debug.Log($"[Player] Job set: {currentJob.jobName}");
     }
 

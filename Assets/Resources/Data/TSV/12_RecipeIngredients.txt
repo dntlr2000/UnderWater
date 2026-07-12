@@ -1,0 +1,12 @@
+﻿ingredientRowID	recipeID	seq	itemID	amount	notes
+ing_cup_1	recipe_cup	1	item_wood	2	
+ing_harpoon_1	recipe_harpoon	1	item_wood	2	
+ing_harpoon_2	recipe_harpoon	2	item_scrap	2	
+ing_dried_1	recipe_dried_001	1	item_seaweed	3	
+ing_energy_drk_1	recipe_energy_drk	1	item_water	1	
+ing_energy_drk_2	recipe_energy_drk	2	item_seaweed	2	
+ing_energy_bar_1	recipe_energy_bar	1	item_fish	1	
+ing_energy_bar_2	recipe_energy_bar	2	item_seaweed	2	
+ing_stew_1	recipe_fish_stew	1	item_water	1	
+ing_stew_2	recipe_fish_stew	2	item_fish	2	
+ing_key_1	recipe_key	1	item_scrap	3	

@@ -919,6 +919,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isGameLoadedFromSave: 0
   autoSaveInterval: 1
+  inGameSceneName: SampleScene
 --- !u!114 &1421149350
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -931,6 +932,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92536ef8bf30cd64580fa08b97844181, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isLoginProcessing: 0
   currentNickname: 
 --- !u!114 &1421149351
 MonoBehaviour:
@@ -981,7 +983,7 @@ Transform:
   m_GameObject: {fileID: 1421149345}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 843.931, y: 239.55762, z: 4984.129}
+  m_LocalPosition: {x: 25.523273, y: -147.64821, z: -309.96463}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

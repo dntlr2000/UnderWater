@@ -2,7 +2,7 @@ using NUnit.Framework;
 using UnityEngine;
 using System.Collections.Generic;
 
-public enum QuestType { Main, Job }
+/*public enum QuestType { Main, Job }
 public enum ObjectiveType
 {
     CollectItem,   // 아이템 수집
@@ -21,7 +21,7 @@ public enum RewardType
     Money,
     Experience,
     UnlockRecipe
-}
+}*/
 
 [CreateAssetMenu(fileName = "QuestData", menuName = "Quests/Quest")]
 public class QuestData : ScriptableObject
@@ -37,27 +37,12 @@ public class QuestData : ScriptableObject
     public List<QuestObjective> objectives = new();
     public List<QuestReward> rewards = new();
 
-    public QuestData prerequisiteQuest; //선행퀘스트
     public bool isCompleted;
 
-    [SerializeField]
-    private bool isUnlockedManually = false;
-
-    public bool IsUnlocked
-    {
-        get
-        {
-            return isUnlockedManually || prerequisiteQuest == null || QuestManager.Instance.IsQuestCompleted(prerequisiteQuest);
-        }
-    }
-    public void Unlock()
-    {
-        // 내부 bool 필드 사용
-        isUnlockedManually = true;
-    }
+    public bool isUnlockedManually = false;
 
 }
-
+/*
 [System.Serializable]
 public class QuestObjective
 {
@@ -75,4 +60,4 @@ public class QuestReward
 {
     public RewardType rewardType;
     public int amount;
-}
+}*/

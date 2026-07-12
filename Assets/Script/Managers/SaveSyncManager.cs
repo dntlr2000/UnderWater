@@ -65,7 +65,7 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
                 {
                     playerId = userId,
                     playerName = AuthMngr.currentNickname,
-                    jobIndex = -1,
+                    jobType = "",
                     // 기타 초기화 데이터
                 }
             }

@@ -161,7 +161,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         }
     }
 
-    public void UpdateLocalPlayerJob(string userId, string nickname, int newJobIndex)
+    public void UpdateLocalPlayerJob(string userId, string nickname, string newJobType)
     {
         if (string.IsNullOrEmpty(userId)) userId = GetMyCurrentId();
 
@@ -174,14 +174,14 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         // 1. 방장이면 -> 즉시 처리
         if (PhotonNetwork.IsMasterClient)
         {
-            ProcessJobUpdate(userId, nickname, newJobIndex);
+            ProcessJobUpdate(userId, nickname, newJobType);
         }
         // 2. 게스트면 -> 방장에게 RPC 요청
         else
         {
             if (photonView != null)
             {
-                photonView.RPC(nameof(RPC_RequestJobChange), RpcTarget.MasterClient, userId, nickname, newJobIndex);
+                photonView.RPC(nameof(RPC_RequestJobChange), RpcTarget.MasterClient, userId, nickname, newJobType);
             }
             else
             {
@@ -205,11 +205,10 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             else Debug.LogWarning("pd.items가 존재하지 않습니다!");
             if (pd.conditionData != null) existing.conditionData = pd.conditionData;
             else Debug.LogWarning("pd.conditionData가 존재하지 않습니다!");
-            if (pd.jobIndex != -1)
+            if (!string.IsNullOrEmpty(pd.jobType))
             {
                 existing.position = pd.position;
-                //existing.items = pd.items;
-                if (pd.jobIndex != -1) existing.jobIndex = pd.jobIndex;
+                existing.jobType = pd.jobType;
 
                 if (pd.completedQuestIds != null && pd.completedQuestIds.Count > 0)
                     existing.completedQuestIds = pd.completedQuestIds;
@@ -219,7 +218,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             else
             {
                 currentSave.players.Add(pd);
-                existing = pd; // 신규 추가된 객체 참조
+                existing = pd;
             }
             runtimePlayerCache[pd.playerId] = existing;
         }
@@ -279,7 +278,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         if (currentSave == null) return null;
 
         currentSave.players = runtimePlayerCache.Values.ToList();
-        currentSave.jobAssignments = currentSave.players.ToDictionary(p => p.playerId, p => p.jobIndex);
+        currentSave.jobAssignments = currentSave.players.ToDictionary(p => p.playerId, p => p.jobType);
         currentSave.createdDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
 
         currentSave.storageBoxes = new List<BoxSaveData>();
@@ -335,18 +334,18 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
     #region Utility & Accessors
 
-    public int? GetSavedJob(string userId)
+    public string GetSavedJobType(string userId)
     {
-        if (string.IsNullOrEmpty(userId) || currentSave == null) return -1;
+        if (string.IsNullOrEmpty(userId) || currentSave == null) return "";
         var pd = currentSave.players.FirstOrDefault(p => p.playerId == userId);
-        return pd?.jobIndex ?? -1;
+        return pd?.jobType ?? "";
     }
 
     public bool CanChangeJob(string userId)
     {
         if (isGameLoadedFromSave) return false;
         var pd = currentSave?.players.FirstOrDefault(p => p.playerId == userId);
-        return pd == null || pd.jobIndex < 0;
+        return pd == null || string.IsNullOrEmpty(pd.jobType);
     }
 
     #endregion
@@ -360,20 +359,22 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         object[] data = (object[])photonEvent.CustomData;
         string playerId = (string)data[0];
         Vector3 pos = (Vector3)data[1];
-        int jobIndex = (int)data[2];
+        string jobType = (string)data[2];
         string inventoryJson = data.Length > 3 ? (string)data[3] : "";
         string conditionJson = data.Length > 4 ? (string)data[4] : "";
 
-        int? savedJob = GetSavedJob(playerId);
-        if (savedJob.HasValue && savedJob.Value != -1 && jobIndex == 0)
+        string savedJobType = GetSavedJobType(playerId);
+        if (!string.IsNullOrEmpty(savedJobType) && string.IsNullOrEmpty(jobType))
         {
-            jobIndex = savedJob.Value; // 기존 저장된 직업 유지
+            jobType = savedJobType;
         }
+
         InventoryData receivedInventory = null;
         if (!string.IsNullOrEmpty(inventoryJson))
         {
             receivedInventory = JsonUtility.FromJson<InventoryData>(inventoryJson);
         }
+
         ConditionData receivedCondition = null;
         if (!string.IsNullOrEmpty(conditionJson))
         {
@@ -382,14 +383,14 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         }
         else Debug.LogWarning("recivedCondition를 받지 못했습니다!");
 
-            PlayerData pd = new PlayerData
-            {
-                playerId = playerId,
-                position = new PlayerLocation(pos),
-                jobIndex = jobIndex,
-                items = receivedInventory, // [추가] PlayerData에 인벤토리 할당!
-                conditionData = receivedCondition
-            };
+        PlayerData pd = new PlayerData
+        {
+            playerId = playerId,
+            position = new PlayerLocation(pos),
+            jobType = jobType,
+            items = receivedInventory,
+            conditionData = receivedCondition
+        };
 
         if (PhotonNetwork.IsMasterClient)
         {
@@ -410,10 +411,10 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         {
             string myId = AuthMngr.currentUserId;
 
-            int loadedJob = GetSavedJob(AuthMngr.currentUserId) ?? -1;
+            string loadedJobType = GetSavedJobType(AuthMngr.currentUserId);
             if (RoomManager.Instance != null)
             {
-                RoomManager.Instance.ApplyLoadedJobToPhoton(loadedJob);
+                RoomManager.Instance.ApplyLoadedJobToPhoton(loadedJobType);
             }
         }
     }
@@ -424,28 +425,15 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         if (AuthMngr == null || string.IsNullOrEmpty(AuthMngr.currentUserId)) return;
 
         string myId = AuthMngr.currentUserId;
-
-        // 내 데이터 찾기
-        PlayerData myData = null;
-        if (runtimePlayerCache.ContainsKey(myId))
-        {
-            myData = runtimePlayerCache[myId];
-        }
-        // 만약 캐시에 없으면 원본 save에서 찾기 시도
-        else if (currentSave != null)
-        {
-            myData = currentSave.players.FirstOrDefault(p => p.playerId == myId);
-        }
+        PlayerData myData = runtimePlayerCache.ContainsKey(myId)
+        ? runtimePlayerCache[myId]
+        : currentSave?.players.FirstOrDefault(p => p.playerId == myId);
 
         if (myData != null)
         {
-            // 직업 정보 (퀘스트 해금 조건 체크용)
-            JobData myJobData = null;
-            int jobIndex = GetSavedJob(myId) ?? -1;
-            if (jobIndex >= 0 && jobIndex < RoomManager.Instance.jobDatas.Length)
-            {
-                myJobData = RoomManager.Instance.jobDatas[jobIndex];
-            }
+            string savedJobType = GetSavedJobType(myId);
+            JobData myJobData = RoomManager.Instance.jobDatas
+                .FirstOrDefault(j => j.jobType.ToString() == savedJobType);
 
             Debug.Log($"[SaveManager] 저장된 퀘스트 데이터 복구 시작 (ID: {myId})");
             QuestManager.Instance.LoadQuestSaveData(myData.completedQuestIds, myData.activeQuests, myJobData);
@@ -458,24 +446,24 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
     // RPC 함수 (방장만 수신)
     [PunRPC]
-    private void RPC_RequestJobChange(string userId, string nickname, int newJobIndex)
+    private void RPC_RequestJobChange(string userId, string nickname, string newJobType)
     {
-        Debug.Log($"[SaveManager] RPC 수신: {nickname}님이 직업 {newJobIndex} 선택");
-        ProcessJobUpdate(userId, nickname, newJobIndex);
+        Debug.Log($"[SaveManager] RPC 수신: {nickname}님이 직업 {newJobType} 선택");
+        ProcessJobUpdate(userId, nickname, newJobType);
     }
 
     // 내부 처리 함수
-    private void ProcessJobUpdate(string userId, string nickname, int newJobIndex)
+    private void ProcessJobUpdate(string userId, string nickname, string newJobType)
     {
         if (currentSave == null)
         {
             currentSave = new SaveData(PhotonNetwork.CurrentRoom?.Name ?? "Room");
             currentSave.players = new List<PlayerData>();
-            currentSave.jobAssignments = new Dictionary<string, int>();
+            currentSave.jobAssignments = new Dictionary<string, string>();
         }
 
         if (currentSave.players == null) currentSave.players = new List<PlayerData>();
-        if (currentSave.jobAssignments == null) currentSave.jobAssignments = new Dictionary<string, int>();
+        if (currentSave.jobAssignments == null) currentSave.jobAssignments = new Dictionary<string, string>();
 
         PlayerData pd = currentSave.players.FirstOrDefault(p => p.playerId == userId);
         if (pd == null)
@@ -483,15 +471,15 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             pd = new PlayerData { playerId = userId, playerName = nickname, position = new PlayerLocation(Vector3.zero) };
             currentSave.players.Add(pd);
         }
-        pd.jobIndex = newJobIndex;
+        pd.jobType = newJobType;
         runtimePlayerCache[userId] = pd;
 
-        if (newJobIndex >= 0)
+        if (!string.IsNullOrEmpty(newJobType))
         {
             if (currentSave.jobAssignments.ContainsKey(userId))
-                currentSave.jobAssignments[userId] = newJobIndex;
+                currentSave.jobAssignments[userId] = newJobType;
             else
-                currentSave.jobAssignments.Add(userId, newJobIndex);
+                currentSave.jobAssignments.Add(userId, newJobType);
         }
         else if (currentSave.jobAssignments.ContainsKey(userId))
         {

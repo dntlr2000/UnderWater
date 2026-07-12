@@ -407,7 +407,7 @@ public class Condition : MonoBehaviour
         //    oxygen = durability;
         //}
 
-        else if (itemId == 6)
+        else if (ItemDatabase.Instance.GetEquipEffectType(itemId) == "oxygen")
         {
             SaveHumanOxygen(oxygen); //장착 전 산소량 저장
             oxygen = durability;

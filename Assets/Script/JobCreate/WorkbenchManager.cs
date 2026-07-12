@@ -38,19 +38,26 @@ public class WorkbenchManager : InteractableObject
         if (!Input.GetKeyDown(KeyCode.E)) return;
         if (Player.localPlayer == null) return;
 
+        Debug.Log($"dataList 개수: {dataList.Count}");
+
         JobType userJob = Player.localPlayer.CurrentJobType;
         bool isSpecialist = (userJob == ownerJob);
+        Debug.Log($"직업:{userJob}, ownerJob:{ownerJob}, isSpecialist:{isSpecialist}");
 
         List<WorkbenchData> availableData = new List<WorkbenchData>();
 
         foreach (var data in dataList)
         {
-            if (GlobalUnlockManager.Instance != null && !GlobalUnlockManager.Instance.IsUnlocked(data.id)) continue;
-
+            if (GlobalUnlockManager.Instance != null && !GlobalUnlockManager.Instance.IsUnlocked(data.id))
+            {
+                Debug.Log($"잠금으로 필터링됨: {data.id}");
+                continue;
+            }
             if (isSpecialist) availableData.Add(data);
             else if (data.isBasic) availableData.Add(data);
         }
 
+        Debug.Log($"availableData 개수: {availableData.Count}");
         if (WorkbenchUIManager.Instance != null)
         {
             string title = isSpecialist ? $"[전문가] {workbenchName}" : workbenchName;

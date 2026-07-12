@@ -3,6 +3,7 @@ using Photon.Pun;
 using System.Linq;
 using System.Collections;
 using Photon.Realtime;
+using Unity.Jobs.LowLevel.Unsafe;
 
 public class InGameManager : MonoBehaviourPunCallbacks
 {
@@ -72,34 +73,36 @@ public class InGameManager : MonoBehaviourPunCallbacks
             }
 
             Vector3 testSpawnPos = new Vector3(600f, 1000f, 600f);
-            int testJobIndex = 0;
+            string testJobType = "chef";
 
             if (jobPrefabs != null && jobPrefabs.Length > 0)
             {
-                object[] testData = new object[] { testSpawnPos, testJobIndex };
-                PhotonNetwork.Instantiate(jobPrefabs[testJobIndex].name, testSpawnPos, Quaternion.identity, 0, testData);
-                Debug.Log($"[테스트 모드] {jobPrefabs[testJobIndex].name} 소환 완료!");
+                int testJobPrefabIndex = 0;
+                object[] testData = new object[] { testSpawnPos, testJobType };
+                PhotonNetwork.Instantiate(jobPrefabs[testJobPrefabIndex].name, testSpawnPos, Quaternion.identity, 0, testData);
+                Debug.Log($"[테스트 모드] {jobPrefabs[testJobPrefabIndex].name} 소환 완료!");
             }
             else
             {
                 Debug.LogError("[테스트 모드 실패] 인스펙터에 jobPrefabs가 비어있습니다!");
             }
 
-            return; // 🚨 여기서 함수 종료! 절대 아래 에러나는 코드로 내려가지 않습니다.
+            return;
         }
 
         string myUserId = PhotonNetwork.LocalPlayer.UserId;
 
         if (AuthManager.Instance != null) myUserId = AuthManager.Instance.currentUserId;
 
-        int finalJobIndex = -1;
+        string finalJobType = "";
+        int finalJobPrefabIndex = -1;
         Vector3 spawnPos = defaultSpawnPoint != null ? defaultSpawnPoint.position : new Vector3(0, 7f, 0);
 
         // 1. SaveManager에서 저장된 데이터(직업, 위치) 조회
         if (SaveManager.Instance.IsDataReady)
         {
             // 직업 조회
-            finalJobIndex = SaveManager.Instance.GetSavedJob(myUserId) ?? -1;
+            finalJobType = SaveManager.Instance.GetSavedJobType(myUserId);
 
             // 위치 조회
             var myData = SaveManager.Instance.GetCurrentSave().players.FirstOrDefault(p => p.playerId == myUserId);
@@ -115,18 +118,32 @@ public class InGameManager : MonoBehaviourPunCallbacks
         }
 
         // 2. SaveManager에 없으면 CustomProperties 확인 (보완책 - 로비에서 설정한 값)
-        if (finalJobIndex < 0 && PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object jobObj))
+        if (string.IsNullOrEmpty(finalJobType) && 
+    PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobType", out object jobObj))
         {
-            finalJobIndex = (int)jobObj;
+            finalJobType = (string)jobObj;
+        }
+
+        if (!string.IsNullOrEmpty(finalJobType))
+        {
+            for (int i = 0; i < jobPrefabs.Length; i++)
+            {
+                Player prefabPlayer = jobPrefabs[i].GetComponent<Player>();
+                if (prefabPlayer != null && prefabPlayer.allJobs != null)
+                {
+                    var matchJob = prefabPlayer.allJobs.FirstOrDefault(j => j.jobType.ToString() == finalJobType);
+                    if (matchJob != null) { finalJobPrefabIndex = i; break; }
+                }
+            }
         }
 
         // 3. 유효한 직업 인덱스가 확인되면 스폰 진행
-        if (finalJobIndex >= 0 && finalJobIndex < jobPrefabs.Length)
+        if (finalJobPrefabIndex >= 0 && finalJobPrefabIndex < jobPrefabs.Length)
         {
-            object[] initData = new object[] { spawnPos, finalJobIndex };
+            object[] initData = new object[] { spawnPos, finalJobType };
 
             GameObject playerObj = PhotonNetwork.Instantiate(
-                jobPrefabs[finalJobIndex].name,
+                jobPrefabs[finalJobPrefabIndex].name,
                 spawnPos,
                 Quaternion.identity,
                 0,
@@ -138,8 +155,8 @@ public class InGameManager : MonoBehaviourPunCallbacks
 
             if (player != null)
             {
-                player.SetJob(finalJobIndex);
-                Debug.Log($"[InGameManager] {PhotonNetwork.LocalPlayer.NickName} 스폰 완료 - 위치:{spawnPos}, 직업Index:{finalJobIndex}");
+                player.SetJob(finalJobType);
+                Debug.Log($"[InGameManager] {PhotonNetwork.LocalPlayer.NickName} 스폰 완료 - 위치:{spawnPos}, 직업Index:{finalJobType}");
 
                 if (SaveManager.Instance.isGameLoadedFromSave)
                 {
@@ -167,7 +184,7 @@ public class InGameManager : MonoBehaviourPunCallbacks
                 {
                     playerId = myUserId,
                     playerName = PhotonNetwork.NickName,
-                    jobIndex = finalJobIndex,
+                    jobType = finalJobType,
                     position = new PlayerLocation(spawnPos) // 끊겼던 부분 수정 완료
                 };
 
@@ -180,7 +197,7 @@ public class InGameManager : MonoBehaviourPunCallbacks
                     photonView.RPC("RPC_SendPlayerInfoToMaster", RpcTarget.MasterClient,
                         myUserId,
                         PhotonNetwork.LocalPlayer.NickName,
-                        finalJobIndex,
+                        finalJobType,
                         spawnPos);
                 }
             }
@@ -205,7 +222,7 @@ public class InGameManager : MonoBehaviourPunCallbacks
         }
         else
         {
-            Debug.LogError($"[InGameManager] 스폰 실패. 유효하지 않은 JobIndex: {finalJobIndex}");
+            Debug.LogError($"[InGameManager] 스폰 실패. 유효하지 않은 JobIndex: {finalJobType}");
         }
     }
 
@@ -226,17 +243,17 @@ public class InGameManager : MonoBehaviourPunCallbacks
 
     // 참가자 플레이어가 방장에게 자기 정보를 전송하여 저장 데이터에 등록 요청
     [PunRPC]
-    void RPC_SendPlayerInfoToMaster(string playerId, string playerName, int jobIndex, Vector3 position)
+    void RPC_SendPlayerInfoToMaster(string playerId, string playerName, string jobType, Vector3 position)
     {
         if (!PhotonNetwork.IsMasterClient) return;
 
-        Debug.Log($"[InGameManager] 비마스터로부터 정보 수신: {playerId} (JobIndex:{jobIndex})");
+        Debug.Log($"[InGameManager] 비마스터로부터 정보 수신: {playerId} (JobIndex:{jobType})");
 
         PlayerData newData = new PlayerData
         {
             playerId = playerId,
             playerName = playerName,
-            jobIndex = jobIndex,
+            jobType = jobType,
             position = new PlayerLocation(position)
         };
 
