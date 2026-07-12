@@ -3,6 +3,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
 using UnityEngine;
+using System.Linq;
 
 public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 {
