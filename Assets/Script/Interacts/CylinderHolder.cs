@@ -62,7 +62,7 @@ public class CylinderHolder : InteractableObject, ISavable
         else if (!isHolding)
         {
             if (playerHoldingID == -1) return;
-            if (!ItemDatabase.Instance.ifEquipable(playerHoldingID)) return;
+            if (ItemDatabase.Instance.GetEquipEffectType(playerHoldingID) != "oxygen") return;
 
             RequestSetCylinder(playerHoldingID);
         }
@@ -87,10 +87,10 @@ public class CylinderHolder : InteractableObject, ISavable
 
     public void SetPrefab(int itemID)
     {
-        string prefabPath = $"Structures/OxygenCylinder/Cylinder{itemID}";
-        if (Resources.Load(prefabPath) == null)
+        string prefabPath = ItemDatabase.Instance.GetItem(itemID)?.modelPath;
+        if (string.IsNullOrEmpty(prefabPath) || Resources.Load(prefabPath) == null)
         {
-            prefabPath = $"Structures/OxygenCylinder/Cylinder{5}"; // Fallback prefab
+            prefabPath = "Structures/OxygenCylinder/Cylinder_Default";
         }
         holdingCylinder = Instantiate(Resources.Load<GameObject>(prefabPath), this.transform);
         if (holdingCylinder == null)

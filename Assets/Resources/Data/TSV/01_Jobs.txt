@@ -1,0 +1,5 @@
+﻿jobType	jobName	description	iconPath	primaryStat	maxPlayers	notes
+chef	요리사	5성급 호텔 쉐프 출신. 팀원을 먹여살리기 위해 다양한 요리를 개발.	Icons/Jobs/chef	Cooking	1	팀 버프 중심
+fighter	전투원	특수부대 출신. 운동을 좋아하며, 체력이 상당히 좋음.	Icons/Jobs/fighter	Attack	1	작살 등 무기 사용
+explorer	탐험가	눈썰미 하나는 끝내주는 재간둥이.	Icons/Jobs/explorer	Agility	1	보석/인형 수집형 보상
+technician	기술자	무엇이든 해체하고 보는 천재 발명가. 	Icons/Jobs/technician	Crafting	1	작업대 레시피 다수 보유

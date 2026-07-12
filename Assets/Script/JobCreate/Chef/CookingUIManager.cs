@@ -182,7 +182,7 @@ public class CookingUIManager : MonoBehaviour
 
     private void ClaimReward(CookingRecipe recipe)
     {
-        /*Inventory myInventory = FindAnyObjectByType<Inventory>();
+        Inventory myInventory = FindAnyObjectByType<Inventory>();
 
         if (myInventory != null)
         {
@@ -195,7 +195,7 @@ public class CookingUIManager : MonoBehaviour
             // 2. 완성품 획득
             myInventory.GetItem(recipe.resultItemID, recipe.resultAmount);
             Debug.Log($"[{recipe.displayName}] 요리 완성! 인벤토리에 지급되었습니다.");
-        }*/
+        }
 
         // 로그만 띄워서 작동 확인
         Debug.Log($"[{recipe.displayName}] 요리 완성 테스트! (인벤토리 차감/지급 건너뜀)");

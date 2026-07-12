@@ -2,6 +2,7 @@
 
 public class UIController : MonoBehaviour
 {
+    [SerializeField] private WatchUIController watchUI;
     private ItemUIManager itemUIManager;
     private OptionManager optionManager;
     public PauseScreen pauseScreen;
@@ -63,6 +64,13 @@ public class UIController : MonoBehaviour
     private void HandleEscapeInput()
     {
         CheckPlayerScript();
+
+        //워치가 켜져 있는 경우
+        if (watchUI != null && watchUI.IsOpen)
+        {
+            watchUI.CloseWatch();
+            return;
+        }
 
         //아이템창이 켜져 있는 경우
         if (itemUIManager.showInventory)
@@ -205,6 +213,21 @@ public class UIController : MonoBehaviour
             LockCursor(true);
             SetPlayerControl(true);
         }
+    }
+
+    //워치 UI를 위한
+    public bool IsAllUIClosed()
+    {
+        bool cookingOpen = CookingUIManager.Instance != null
+                           && CookingUIManager.Instance.isUIOpen;
+
+        return !pauseState
+               && !itemUIManager.showInventory
+               && !questUI.isActive
+               && !shop.ifShopOn
+               && !storageBox.activeSelf
+               && !optionManager.ifOptionActive
+               && !cookingOpen;
     }
 
     public void LockCursor(bool isLocked)

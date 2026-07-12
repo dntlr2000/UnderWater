@@ -162,6 +162,10 @@ public class Inventory : InventoryFrame
     {
         GetItem(id, quantity, durability); // 기존에 있던 아이템 추가 로직 호출
         Debug.Log($"네트워크를 통해 아이템 수신: ID {id}, 수량 {quantity}");
+
+        var itemData = ItemDatabase.Instance.GetItem(id);
+        if (itemData != null && QuestManager.Instance != null)
+            QuestManager.Instance.ReportObjectiveProgress(ObjectiveType.CollectItem, quantity, itemData.stringID);
     }
 
     [PunRPC]

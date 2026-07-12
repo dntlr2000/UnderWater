@@ -1,0 +1,3 @@
+﻿workbenchID	displayName	description	requiredJob	isPortable	isCraftable	iconPath	modelPath	notes
+bench_basic	기본 작업대	휴대 가능한 간이 제작대. 나무/고철 가공에 사용.		TRUE	TRUE	Icons/Workbenches/basic	Models/Workbenches/basic_001	1차 검증용 — 단순 모델로 충분
+bench_galley	취사장 화로	기지/잠수함에 기업이 지급한 고정 취사 설비.		FALSE	FALSE	Icons/Workbenches/galley	Models/Workbenches/galley_001	맵에 고정 배치 — 플레이어 제작 불가, 전력 희귀 설정 반영

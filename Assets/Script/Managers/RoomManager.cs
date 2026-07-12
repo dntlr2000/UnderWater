@@ -56,37 +56,36 @@ public class RoomManager : MonoBehaviourPunCallbacks
         // 3. 방장이라면 로컬 데이터를 다시 한 번 확실하게 방에 뿌림 (동기화 보장)
         if (PhotonNetwork.IsMasterClient && SaveMngr != null)
         {
-            SaveMngr.UpdateLocalPlayerJob(AuthMngr.currentUserId, PhotonNetwork.NickName, SaveMngr.GetSavedJob(AuthMngr.currentUserId) ?? -1);
+            string masterJobType = SaveMngr.GetSavedJobType(AuthMngr.currentUserId);
+            SaveMngr.UpdateLocalPlayerJob(AuthMngr.currentUserId, PhotonNetwork.NickName, masterJobType);
         }
 
         // 4. 내 직업 확인 및 적용
-        int mySavedJobIndex = -1;
-        if (SaveMngr != null)
-        {
-            mySavedJobIndex = SaveMngr.GetSavedJob(AuthMngr.currentUserId) ?? -1;
-            Debug.Log($"[RoomManager] 로드된 데이터에서 내 직업 확인: {mySavedJobIndex} (ID: {AuthMngr.currentUserId})");
-        }
+        string mySavedJobType = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
+        Debug.Log($"[RoomManager] 로드된 데이터에서 내 직업 확인: {mySavedJobType} (ID: {AuthMngr.currentUserId})");
 
         // 5. 직업 설정 분기
         if (isLoadedGameRoom)
         {
-            if (mySavedJobIndex != -1)
+            if (!string.IsNullOrEmpty(mySavedJobType))
             {
-                // 저장된 직업이 있으면 그걸로 강제 고정
-                SetLocalPlayerJobProperty(mySavedJobIndex);
-                Debug.Log($"[RoomManager] 저장된 직업({mySavedJobIndex})으로 고정합니다.");
+                // 저장된 직업이 있으면 고정
+                SetLocalPlayerJobProperty(mySavedJobType);
+                Debug.Log($"[RoomManager] 저장된 직업({mySavedJobType})으로 고정합니다.");
                 OutgameCanvasManager.Instance.SetStatus("저장된 게임입니다. 직업이 고정됩니다.");
             }
             else
             {
-                // 로드된 게임이지만 내 정보가 없으면(신규 유저) -1
-                Debug.Log("[RoomManager] 저장된 데이터에 내 정보가 없습니다. (신규 참가)");
+                // 로드된 게임이지만 내 정보가 없는 신규 유저 → 직업 선택 허용
+                SetLocalPlayerJobProperty("");
+                Debug.Log("[RoomManager] 저장된 데이터에 내 정보가 없습니다. (신규 참가) 직업 선택 가능.");
+                OutgameCanvasManager.Instance.SetStatus("신규 참가자입니다. 직업을 선택해주세요.");
             }
         }
         else
         {
-            // 새 게임이면 -1
-            SetLocalPlayerJobProperty(-1);
+            // 새 게임 → 직업 선택 허용
+            SetLocalPlayerJobProperty("");
         }
 
         RoomRenewal();
@@ -105,15 +104,17 @@ public class RoomManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.IsMasterClient && SaveMngr != null && SaveMngr.isGameLoadedFromSave)
         {
             // 방장이 가진 최신 SaveData에서 새로 들어온 플레이어의 ID 검색
-            int savedJob = SaveMngr.GetSavedJob(newPlayer.UserId) ?? -1;
+            string savedJobType = SaveMngr.GetSavedJobType(newPlayer.UserId);
 
-            if (savedJob != -1)
+            if (!string.IsNullOrEmpty(savedJobType))
             {
-                Debug.Log($"[RoomManager] (Master) 입장한 {newPlayer.NickName}의 저장된 직업({savedJob})을 찾아 강제 설정합니다.");
-
-                // 타겟 플레이어의 커스텀 프로퍼티를 방장이 직접 수정 (권한 행사)
-                ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobIndex", savedJob } };
+                Debug.Log($"[RoomManager] (Master) 입장한 {newPlayer.NickName}의 저장된 직업({savedJobType})을 찾아 강제 설정합니다.");
+                ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobType", savedJobType } };
                 newPlayer.SetCustomProperties(props);
+            }
+            else
+            {
+                Debug.Log($"[RoomManager] (Master) {newPlayer.NickName}은 신규 참가자입니다. 직업 선택 허용.");
             }
         }
         RefreshPlayerSlots();
@@ -167,8 +168,8 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
         foreach (var player in PhotonNetwork.PlayerList)
         {
-            int jobIndex = SaveMngr?.GetSavedJob(player.UserId) ?? -1;
-            if (jobIndex < 0)
+            string jobType = SaveMngr?.GetSavedJobType(player.UserId) ?? "";
+            if (string.IsNullOrEmpty(jobType))
             {
                 OutgameCanvasManager.Instance.SetStatus($"{player.NickName}이 직업을 선택하지 않았습니다.");
                 return;
@@ -207,9 +208,9 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
     #region Job Management
 
-    private void SetLocalPlayerJobProperty(int jobIndex)
+    private void SetLocalPlayerJobProperty(string jobType)
     {
-        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobIndex", jobIndex } };
+        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobType", jobType } };
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
     }
 
@@ -224,20 +225,13 @@ public class RoomManager : MonoBehaviourPunCallbacks
             if (string.IsNullOrEmpty(safeUserId)) safeUserId = "UnknownUser_" + targetPlayer.ActorNumber;
         }
 
-        if (changedProps.ContainsKey("job") || changedProps.ContainsKey("JobIndex") || changedProps.ContainsKey("Job"))
+        if (changedProps.ContainsKey("JobType"))
         {
-            object jobValue = null;
-            if (changedProps.TryGetValue("job", out jobValue) ||
-                changedProps.TryGetValue("Job", out jobValue) ||
-                changedProps.TryGetValue("JobIndex", out jobValue))
-            {
-                int newJobIndex = (int)jobValue;
-                if (SaveManager.Instance != null)
-                {
-                    SaveManager.Instance.UpdateLocalPlayerJob(safeUserId, targetPlayer.NickName, newJobIndex);
-                }
-            }
+            string newJobType = (string)changedProps["JobType"];
+            if (SaveManager.Instance != null)
+                SaveManager.Instance.UpdateLocalPlayerJob(safeUserId, targetPlayer.NickName, newJobType);
         }
+
         RefreshJobButtons();
         RefreshPlayerSlots();
     }
@@ -246,42 +240,34 @@ public class RoomManager : MonoBehaviourPunCallbacks
     {
         if (jobDatas == null || index < 0 || index >= jobDatas.Length) return;
 
-        int currentSavedJob = SaveMngr?.GetSavedJob(AuthMngr.currentUserId) ?? -1;
-
+        string selectedJobType = jobDatas[index].jobType.ToString();
         bool isRoomLoaded = CheckIsLoadedGameRoom();
 
         // 1. 로드된 게임이고, 내 직업이 데이터에 존재한다면 -> 절대 변경 불가
         if (isRoomLoaded)
         {
-            if (currentSavedJob != -1)
+            string savedJob = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
+            if (!string.IsNullOrEmpty(savedJob))
             {
-                if (index != currentSavedJob)
+                if (selectedJobType != savedJob)
                     OutgameCanvasManager.Instance.SetStatus("저장된 게임에서는 직업을 변경할 수 없습니다.");
                 return;
-            }
-            if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object val))
-            {
-                int propJob = (int)val;
-                if (propJob != -1 && propJob != index)
-                {
-                    OutgameCanvasManager.Instance.SetStatus("저장된 정보 동기화 중입니다. 변경할 수 없습니다.");
-                    return;
-                }
             }
         }
 
         bool isTakenByOther = false;
-        if (SaveMngr != null && SaveMngr.GetCurrentSave() != null && SaveMngr.GetCurrentSave().players != null)
+        if (SaveMngr?.GetCurrentSave()?.players != null)
         {
             foreach (var pData in SaveMngr.GetCurrentSave().players)
             {
-                if (pData.playerId != AuthMngr.currentUserId && pData.jobIndex == index)
+                if (pData.playerId != AuthMngr.currentUserId && pData.jobType == selectedJobType)
                 {
                     isTakenByOther = true;
                     break;
                 }
             }
         }
+
 
         if (isTakenByOther)
         {
@@ -290,23 +276,28 @@ public class RoomManager : MonoBehaviourPunCallbacks
         }
 
         // 3. [토글 로직] 현재 내가 선택한 상태인지 확인 (Photon Property 기준)
-        int myCurrentPropJob = -1;
-        if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object val2))
-        {
-            myCurrentPropJob = (int)val2;
-        }
+        string myCurrentJobType = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
 
-        if (myCurrentPropJob == index)
+        if (myCurrentJobType == selectedJobType)
         {
-            SetLocalPlayerJobProperty(-1);
+            SetLocalPlayerJobProperty("");
+            SaveMngr?.UpdateLocalPlayerJob(AuthMngr.currentUserId, PhotonNetwork.NickName, "");
             OutgameCanvasManager.Instance.SetStatus("직업 선택을 취소했습니다.");
         }
         else
         {
-            // 새로운 직업 선택
-            SetLocalPlayerJobProperty(index);
+            SetLocalPlayerJobProperty(selectedJobType);
+            SaveMngr?.UpdateLocalPlayerJob(AuthMngr.currentUserId, PhotonNetwork.NickName, selectedJobType);
             OutgameCanvasManager.Instance.SetStatus($"{jobDatas[index].jobName}을(를) 선택했습니다.");
         }
+    }
+
+    private int GetMyJobIndex()
+    {
+        string myJobType = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
+        for (int i = 0; i < jobDatas.Length; i++)
+            if (jobDatas[i].jobType.ToString() == myJobType) return i;
+        return -1;
     }
 
     public void RefreshJobButtons()
@@ -317,36 +308,25 @@ public class RoomManager : MonoBehaviourPunCallbacks
         // 내가 고정되어야 하는 상태인지 확인
         bool isRoomLoaded = CheckIsLoadedGameRoom();
 
-        bool isMyJobFixed = false;
-        int myFixedJobIndex = -1;
+        string myJobType = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
+        bool isMyJobFixed = isRoomLoaded && !string.IsNullOrEmpty(myJobType);
 
-        if (isRoomLoaded && SaveMngr != null)
-        {
-            int savedJob = SaveMngr.GetSavedJob(AuthMngr.currentUserId) ?? -1;
-            if (savedJob != -1)
-            {
-                isMyJobFixed = true;
-                myFixedJobIndex = savedJob;
-            }
-        }
-
-        int myCurrentPropJob = -1;
-        if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobIndex", out object val))
-        {
-            myCurrentPropJob = (int)val;
-        }
+        string myCurrentPropJobType = "";
+        if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobType", out object val))
+            myCurrentPropJobType = (string)val ?? "";
 
         for (int i = 0; i < canvas.JobBtns.Length; i++)
         {
             if (canvas.JobBtns[i] == null) continue;
 
-            // 다른 사람이 선점했는지 확인
+            string thisJobType = jobDatas[i].jobType.ToString();
+
             bool isTakenByOther = false;
             if (SaveMngr != null && SaveMngr.GetCurrentSave() != null && SaveMngr.GetCurrentSave().players != null)
             {
                 foreach (var pData in SaveMngr.GetCurrentSave().players)
                 {
-                    if (pData.playerId != AuthMngr.currentUserId && pData.jobIndex == i)
+                    if (pData.playerId != AuthMngr.currentUserId && pData.jobType == thisJobType)
                     {
                         isTakenByOther = true;
                         break;
@@ -355,17 +335,11 @@ public class RoomManager : MonoBehaviourPunCallbacks
             }
 
             // 고정된 상태라면 fixedIndex, 아니면 프로퍼티 상의 Index
-            bool isThisButtonMyJob = isMyJobFixed ? (myFixedJobIndex == i) : (myCurrentPropJob == i);
+            bool isThisButtonMyJob = isMyJobFixed
+                ? myJobType == thisJobType
+                : myCurrentPropJobType == thisJobType;
 
-            if (isMyJobFixed)
-            {
-                // [고정 상태] 내 직업이든 아니든 모두 '클릭 불가'로 만듦
-                canvas.JobBtns[i].interactable = false;
-            }
-            else
-            {
-                canvas.JobBtns[i].interactable = !isTakenByOther;
-            }
+            canvas.JobBtns[i].interactable = isMyJobFixed ? false : !isTakenByOther;
 
             // 색상 처리 (고정 상태라도 내 직업은 초록색으로 표시)
             var img = canvas.JobBtns[i].GetComponent<Image>();
@@ -397,7 +371,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
         for (int i = 0; i < players.Length; i++)
         {
             var p = players[i];
-            int jobIndex = SaveMngr?.GetSavedJob(p.UserId) ?? -1;
+            string jobType = SaveMngr?.GetSavedJobType(p.UserId) ?? "";
 
             PlayerInfo info = new PlayerInfo
             {
@@ -407,12 +381,18 @@ public class RoomManager : MonoBehaviourPunCallbacks
                 JobIcon = null
             };
 
-            if (jobIndex >= 0 && jobIndex < jobDatas.Length)
+            if (!string.IsNullOrEmpty(jobType))
             {
-                info.JobName = jobDatas[jobIndex].jobName;
-                if (OutgameCanvasManager.Instance.JobIcons != null && jobIndex < OutgameCanvasManager.Instance.JobIcons.Length)
+                for (int j = 0; j < jobDatas.Length; j++)
                 {
-                    info.JobIcon = OutgameCanvasManager.Instance.JobIcons[jobIndex];
+                    if (jobDatas[j].jobType.ToString() == jobType)
+                    {
+                        info.JobName = jobDatas[j].jobName;
+                        if (OutgameCanvasManager.Instance.JobIcons != null &&
+                            j < OutgameCanvasManager.Instance.JobIcons.Length)
+                            info.JobIcon = OutgameCanvasManager.Instance.JobIcons[j];
+                        break;
+                    }
                 }
             }
             playerInfos.Add(info);
@@ -428,16 +408,9 @@ public class RoomManager : MonoBehaviourPunCallbacks
     }
     #endregion
 
-    public void ApplyLoadedJobToPhoton(int loadedJobIndex)
+    public void ApplyLoadedJobToPhoton(string loadedJobType)
     {
-        if (loadedJobIndex >= 0)
-        {
-            Debug.Log($"[RoomManager] Loaded Job ({loadedJobIndex}) applied to Photon Custom Properties.");
-            SetLocalPlayerJobProperty(loadedJobIndex);
-        }
-        else
-        {
-            SetLocalPlayerJobProperty(-1);
-        }
+        SetLocalPlayerJobProperty(loadedJobType ?? ""); // ★ 변경
+        Debug.Log($"[RoomManager] Loaded Job ({loadedJobType}) applied to Photon Custom Properties.");
     }
 }

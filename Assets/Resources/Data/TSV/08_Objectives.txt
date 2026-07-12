@@ -1,0 +1,11 @@
+﻿objectiveID	questID	seq	description	objectiveType	targetAmount	collectItemID	areaID	notes
+obj_m001_001	quest_main_001	1	돌 3개 수집	CollectItem	3	item_stone		
+obj_m001_002	quest_main_001	2	나무 3개 수집	CollectItem	3	item_wood		
+obj_m001_003	quest_main_001	3	해초 3개 수집	CollectItem	3	item_seaweed		
+obj_m002_001	quest_main_002	1	고철 5개 수집	CollectItem	5	item_scrap		
+obj_m003_001	quest_main_003	1	음식 또는 음료 1회 제작 및 사용	CraftItem	1	item_any		FoodItem 계열 아이템 사용으로 충족
+obj_chef_001	quest_job_chef_001	1	어죽 1개 제작	CraftItem	1	item_fish_stew		화로(bench_galley) 필요
+obj_fighter_001	quest_job_fighter_001	1	물고기 3마리 처치	KillMonster	3			물고기 계열 몬스터 전부 인정
+obj_explorer_001a	quest_job_explorer_001	1	보석 1개 수집	CollectItem	1	item_gem		
+obj_explorer_001b	quest_job_explorer_001	2	인형 1개 수집	CollectItem	1	item_doll		
+obj_tech_001	quest_job_tech_001	1	열쇠 1개 제작	CraftItem	1	item_key		

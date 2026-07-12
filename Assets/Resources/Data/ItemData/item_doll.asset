@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ea50759f144194297022e1eba23985, type: 3}
+  m_Name: item_doll
+  m_EditorClassIdentifier: 
+  itemName: "\uC778\uD615"
+  itemId: 19
+  stringID: item_doll
+  type: item
+  itemIcon: {fileID: 0}
+  description: "\uCE68\uC218 \uC804 \uC2DC\uB300\uC758 \uB0A1\uC740 \uC778\uD615.
+    \uC218\uC9D1 \uAC00\uCE58\uAC00 \uC788\uB2E4."
+  modelPath: 
+  equipEffectType: 
+  price: 80
+  weight: 0.3
+  durability: 0
+  interactable: 0
+  damage: 0
+  sigularity: 0

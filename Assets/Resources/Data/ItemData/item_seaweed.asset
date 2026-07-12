@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8ea50759f144194297022e1eba23985, type: 3}
+  m_Name: item_seaweed
+  m_EditorClassIdentifier: 
+  itemName: "\uD574\uCD08"
+  itemId: 9
+  stringID: item_seaweed
+  type: item
+  itemIcon: {fileID: 0}
+  description: "\uD3C9\uBC94\uD55C \uD574\uCD08."
+  modelPath: 
+  equipEffectType: 
+  price: 2
+  weight: 0.3
+  durability: 0
+  interactable: 0
+  damage: 0
+  sigularity: 0

@@ -1,0 +1,6 @@
+﻿nodeID	displayName	harvestType	requiredHits	itemID	amountPerHit	respawnSec	destroyOnDepleted	modelPath	notes
+node_stone	돌무더기	Instant	1	item_stone	1	120	TRUE	Models/Harvest/stone_pile	1회 상호작용 즉시 획득
+node_seaweed	해초 군락	Instant	1	item_seaweed	1	90	TRUE	Models/Harvest/seaweed_bed	1회 상호작용 즉시 획득
+node_tree	나무	Multi	5	item_wood	1	180	TRUE	Models/Harvest/tree_dead	스페이스바 5회 입력 완료 시 소멸
+node_scrap_car	부식된 자동차	Multi	5	item_scrap	1	300	TRUE	Models/Harvest/car_wreck	해체 5회 후 소멸
+node_scrap_device	부식된 전자제품	Multi	3	item_scrap	1	240	TRUE	Models/Harvest/device_wreck	해체 3회 후 소멸 — 소형 오브젝트
