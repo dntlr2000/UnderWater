@@ -2,7 +2,6 @@
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
-using System.Linq;
 using UnityEngine;
 
 public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
@@ -17,8 +16,12 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     public float sinkSpeed = -0.3f; //가라앉는 속도
 
+    [Header("Step Up")]
+    public PlayerStepUp stepUp;
+
     private Vector3 initialPosition;
     private Rigidbody rb;
+    private bool canContinueSwimUp;
 
     private GameObject otherPlayer;
     private float pushRadius = 1.0f; //플레이어 끼리 미는 판정 거리
@@ -82,6 +85,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        if (stepUp == null) stepUp = GetComponent<PlayerStepUp>();
         animator = GetComponent<Animator>();
         thirdViewAnimator = GetComponent<EngineerAnimator>();
         rb.useGravity = false;
@@ -237,6 +241,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     private void Jump()
     {
         //isJumping = true;
+        condition.onGround = false; // 점프 즉시 Step-up이 다시 발동하지 않도록 지면 상태를 먼저 해제합니다.
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, 5f, rb.linearVelocity.z);
         thirdViewAnimator.RequestSetJumpState(true);
     }
@@ -251,8 +256,11 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (input.magnitude >= 0.1f)
         {
             Vector3 moveDir = Quaternion.Euler(0, firstViewCamera.cameraTransform.eulerAngles.y, 0) * input;
+            // 낮은 턱을 감지하면 이동 속도를 적용하기 전에 먼저 발 높이를 보정합니다.
+            bool steppedUp = stepUp != null && stepUp.TryStepUp(moveDir, IsGrounded());
+
             Vector3 targetVelocity = moveDir * moveSpeed * (isRunning ? runSpeedMultiply : 1f);
-            targetVelocity.y = rb.linearVelocity.y + gravity * Time.fixedDeltaTime;
+            targetVelocity.y = steppedUp ? 0f : rb.linearVelocity.y + gravity * Time.fixedDeltaTime;
 
             rb.linearVelocity = targetVelocity;
             isMoving = true; //Run 메서드와 연계
@@ -281,20 +289,29 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         targetVelocity.y = rb.linearVelocity.y;
 
         // 2. 위아래 (수직) 입력 계산
+        bool spaceHeld = Input.GetKey(KeyCode.Space);
+        bool descendHeld = Input.GetKey(KeyCode.LeftControl);
+        bool headInWater = buoyancyController != null && buoyancyController.IsHeadInWater();
+
+        // 상승 래치: 머리가 물속일 때 시작한 Space 입력만 수면을 통과할 때까지 유지합니다.
+        // 수면에서 새로 Space를 누르면 headInWater가 false라서 상승이 시작되지 않습니다.
+        if (!spaceHeld || descendHeld)
+        {
+            canContinueSwimUp = false;
+        }
+        else if (headInWater)
+        {
+            canContinueSwimUp = true;
+        }
+
         float verticalInput = 0f;
-        if (Input.GetKey(KeyCode.Space)) verticalInput += 1f;
-        if (Input.GetKey(KeyCode.LeftControl)) verticalInput -= 1f;
+        if (spaceHeld && canContinueSwimUp) verticalInput += 1f;
+        if (descendHeld) verticalInput -= 1f;
 
         if (verticalInput > 0)
         {
-            if (buoyancyController != null && !buoyancyController.IsHeadInWater() && rb.linearVelocity.y > 0)
-            {
-                targetVelocity.y = 0f; // 수면에서는 더 이상 안 올라감
-            }
-            else
-            {
-                targetVelocity.y = swimUpForce; // 물속에서는 위로 헤엄침
-            }
+            // 래치가 통과한 상승 입력만 처리하므로, 머리가 수면 밖으로 나와도 계속 위로 헤엄칠 수 있습니다.
+            targetVelocity.y = swimUpForce;
         }
         else if (verticalInput < 0)
         {
@@ -418,6 +435,12 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (!photonView.IsMine || condition.isUnderwater == underwater) return;
 
         condition.isUnderwater = underwater;
+
+        if (!underwater)
+        {
+            // 물 밖으로 완전히 나온 뒤에는 다음 상승 입력을 다시 물속에서 시작해야 합니다.
+            canContinueSwimUp = false;
+        }
         /*
         if (underwater)
         {

@@ -1,0 +1,216 @@
+Underwater Project Status And Shader Log
+Last updated: 2026-06-02
+
+Purpose
+이 문서는 현재 Unity 프로젝트의 구조, 셰이더/라이팅 관련 작업 현황, 확인된 이슈, 앞으로의 변경 로그를 기록하기 위한 파일이다.
+앞으로 프로젝트 구조, 셰이더, 라이팅, Fog, 카메라 전환, 빌드 설정에 의미 있는 변경이 생기면 이 파일의 "Change Log" 섹션에 내용을 추가한다.
+
+
+Project Summary
+- Project path: E:\Unity\Underwater
+- Unity version: 6000.0.69f1
+- Render pipeline: Universal Render Pipeline 17.0.4
+- Main active build scenes:
+  - Assets/Scenes/Lobby.unity
+  - Assets/Scenes/SampleScene.unity
+- Main external SDKs:
+  - Photon PUN
+  - Firebase Auth / Realtime Database / Analytics
+  - TextMesh Pro
+- Main gameplay flow:
+  - Firebase login
+  - Photon lobby/room
+  - job selection
+  - SampleScene load
+  - player spawn by job prefab
+  - master client periodically saves game state
+
+
+Important Project Systems
+- Assets/Script/Managers
+  - NetworkBootstrap, AuthManager, LobbyManager, RoomManager, SaveManager, UIController, ShopManager, etc.
+- Assets/Script/Player
+  - Player movement, condition, oxygen, camera, underwater state handling.
+- Assets/Script/Player/WaterStateView
+  - FogController controls RenderSettings.fog and camera clear flags.
+  - UnderwaterVisualController checks whether the camera/pivot is inside water.
+- Assets/Script/Submarine
+  - SubmarineOutside switches control between player camera and submarine camera.
+  - CameraRotator controls submarine camera rotation.
+- Assets/Script/Save
+  - JSON save system and Photon save synchronization.
+- Assets/Resources
+  - Playerable prefab, sample design prefabs, item/quest/job data, baked dummy textures.
+- Assets/Shader
+  - Shader Graph and custom shader work area.
+
+
+Camera And Underwater Fog Structure
+- Player camera structure:
+  - Playerable.prefab
+  - Player
+    - FirstViewModeObject_X
+      - Camera_firstView
+- FirstViewModeObject_X has:
+  - FirstViewCamera
+  - UnderwaterVisualController
+  - FogController
+- Player UnderwaterVisualController currently checks water using FirstViewModeObject_X transform, not Camera_firstView transform.
+- Player FogController references Camera_firstView.
+
+- Submarine camera structure:
+  - Submarine_simple.prefab
+  - Submarine_simple
+    - CameraPivot
+      - SubmarineCamera
+- SubmarineCamera has:
+  - Camera
+  - AudioListener
+  - UniversalAdditionalCameraData
+  - BoxCollider
+  - UnderwaterVisualController
+  - FogController
+
+- Submarine control flow:
+  - Handle.HoldInteract() calls SubmarineOutside.SwitchSubmarineState(true).
+  - SwitchSubmarineState(true):
+    - disables player.firstViewCamera.gameObject
+    - enables SubmarineCamera object
+    - enables submarine CameraRotator control
+    - calls submarine FogController.SetUnderwaterVisuals(...)
+  - SwitchSubmarineState(false):
+    - re-enables player.firstViewCamera.gameObject
+    - calls submarine FogController.SetUnderwaterVisuals(false)
+    - disables SubmarineCamera object
+
+- Important implication:
+  - RenderSettings.fog is global for the scene, not per camera.
+  - Player FogController and Submarine FogController both modify the same global RenderSettings.
+  - This can cause one camera controller to overwrite fog state saved/restored by another.
+
+
+Fog Issue Investigation
+Observed issue:
+- In editor, underwater fog affects terrain/objects as expected.
+- In built player, logs show RenderSettings.fog is enabled and fog parameters are applied, but terrain/objects do not appear fogged/filtered as expected.
+
+Confirmed from build logs:
+- FogController initializes correctly in builds.
+- UnderwaterVisualController runs in builds.
+- waterLayer value is correct: 16.
+- Underwater state changes are detected in builds.
+- RenderSettings.fog becomes true in builds.
+- RenderSettings.fogMode becomes ExponentialSquared in builds.
+- RenderSettings.fogColor and fogDensity are applied in builds.
+
+Most likely remaining cause:
+- Fog shader variants are probably missing/stripped for object shaders in player builds.
+- This explains why RenderSettings values change but object/terrain fog is not visible.
+
+Why editor differs from build:
+- The editor can compile/use shader variants more flexibly.
+- Builds strip unused shader variants aggressively.
+- If scene fog is disabled at build time, runtime-enabled fog variants may not be included for all shaders.
+
+Important settings checked:
+- ProjectSettings/GraphicsSettings.asset already keeps fog variants:
+  - m_FogStripping: 0
+  - m_FogKeepLinear: 1
+  - m_FogKeepExp: 1
+  - m_FogKeepExp2: 1
+- Assets/Settings/UniversalRenderPipelineGlobalSettings.asset has URP unused variant stripping enabled by default.
+
+Attempted but reverted:
+- Disabled URP unused variant stripping globally:
+  - m_StripUnusedVariants: 0
+  - m_StripUnusedPostProcessingVariants: 0
+- Result:
+  - Build time exploded. User cancelled after about 45 minutes.
+- Action taken:
+  - Reverted those settings back to 1.
+- Conclusion:
+  - Do not solve this by globally disabling all URP unused variant stripping.
+
+Recommended next Fog fix attempt:
+1. Enable default Fog in Assets/Scenes/SampleScene.unity through Lighting settings.
+2. Use very low density so normal gameplay is not visually affected at scene load.
+3. Let runtime code still turn fog off/on depending on underwater state.
+4. Rebuild and test whether object/terrain fog appears in player build.
+
+Suggested SampleScene default fog values:
+- Fog: On
+- Mode: Exponential Squared
+- Density: 0.001 to 0.005
+- Color: existing scene fog color or a neutral blue-gray.
+
+Alternative future option:
+- Create a dedicated Shader Variant Collection for needed fog variants instead of disabling all stripping globally.
+- This is more precise but more complex to set up correctly.
+
+
+Shader Work Completed
+1. Hair shader
+- Created:
+  - Assets/Resources/Dummy/HairBakedURP.shader
+  - Assets/Resources/Dummy/M_Hair_Baked.mat
+- Uses baked textures:
+  - Hair_BaseColor_Bake.png
+  - Hair_Normal_Bake.png
+  - Hair_Alpha_Bake.png, but currently Use Alpha Mask is set to 0 because base texture alpha gave better hair-tip transparency.
+- Important behavior:
+  - Uses Alpha Blend for soft hair tips.
+  - Uses ZWrite On to reduce transparent sorting issues between multiple hair parts.
+  - ShadowCaster disabled in material to reduce hair self-shadow artifacts.
+  - Receive Shadow Strength added and defaulted to 0 to avoid harsh shadow patterns.
+
+2. Submerged mud shader
+- Created:
+  - Assets/Shader/SubmergedMudURP.shader
+  - Assets/Shader/M_SubmergedMud.mat
+- Purpose:
+  - Procedural wet/submerged mud material.
+- Features:
+  - Wet mud color and dark crevice color.
+  - Water tint.
+  - Procedural noise patches.
+  - Light wet specular/rim highlight.
+  - Fog support through multi_compile_fog and MixFog.
+
+
+Files Modified During Investigation
+- Assets/Script/Player/WaterStateView/FogController.cs
+  - Added build diagnostic logs.
+  - Logs initialization, camera reference, original fog state, and fog apply/restore values.
+- Assets/Script/Player/WaterStateView/UnderwaterVisualController.cs
+  - Added build diagnostic logs.
+  - Logs missing references, initial active state, water/interior layer values, and underwater state changes.
+- Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+  - Temporarily changed stripping options to 0, then reverted to original values due to extreme build time.
+
+
+Known Issues / Risks
+- Multiple FogController instances modify global RenderSettings.fog.
+- Player camera and submarine camera both have their own FogController/UnderwaterVisualController.
+- SubmarineCamera can save/restore original fog values while inactive/activated, which may not match scene baseline.
+- Underwater detection uses Physics.CheckSphere with sensorRadius 0.05, which can flicker near water surface.
+- Build logs show frequent autosaves from SaveManager, which may be noisy and potentially costly.
+- Missing script warnings exist in build logs:
+  - ButtonHandler
+  - NetworkManger
+  - PlayerManager
+  - Unknown missing scripts
+- Firebase logs include "Database URL not set in the Firebase config", though custom Database URL is set in code.
+
+
+Recommended Next Steps
+1. Test SampleScene default Fog enabled with low density.
+2. If build fog works after that, remove or reduce diagnostic logs.
+3. Refactor fog ownership so only the currently active camera/controller modifies RenderSettings.
+4. Add hysteresis to underwater detection to prevent rapid true/false toggling near the water surface.
+5. If default scene Fog does not solve build object fog, create a targeted Shader Variant Collection for fog variants.
+
+
+Change Log
+2026-06-02
+- Created this status/log document.
+- Recorded current project structure, camera/Fog architecture, shader work, build Fog investigation, failed global stripping attempt, and recommended next steps.
