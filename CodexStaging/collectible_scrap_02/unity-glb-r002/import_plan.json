@@ -1,0 +1,71 @@
+{
+  "schema_version": "0.9.0",
+  "plan_id": "underwater.collectible_scrap_02.unity-glb-r002-root-container-remediation",
+  "handoff_manifest_sha256": "5973182d0e9206a575b706d8b29b76eb9a6bac0bfcafa61f900cf768e4f1a658",
+  "package_manifest_sha256": "47f05befb5c2f94210fd138f916b081c75bef390770c5ecbf0d1ec4fa492dc45",
+  "detected_engine": "Unity",
+  "detected_version": "6000.0.69f1 (5f8607f5118b)",
+  "detected_render_pipeline": "Universal Render Pipeline 17.0.4; Linear color space; active PC_RPAsset with PC_Renderer in Forward+ mode",
+  "detection_evidence": [
+    "This is a narrow remediation plan following the approved r001 plan SHA-256 73b2f88ed8212ea3754340c4ccf997236ff211375ef545072b451a5c64f06106 and approval token APPROVE_UNITY_IMPORT_PLAN_COLLECTIBLE_SCRAP_02_R008_73b2f88ed8212ea3.",
+    "The immutable source GLB still hashes to c50cede216212021ce65421db2cc69051c37dc0f282c3308a4203885975a83da at 2426264 bytes. The destination copy has the same hash and byte size.",
+    "Unity compiled the job-local Editor adapter and glTFast imported Models/collectible_scrap_02.glb with no ScriptedImporter report items or missing dependencies. Its .meta records generateSecondaryUVSet=0, nodeNameMethod=OriginalUnique, animationMethod=None, generateMipMaps=1, texturesReadable=0, anisotropicFilterLevel=1, component mask=Mesh only, layer=0, and sceneObjectCreation=WhenMultipleRootNodes.",
+    "The first Unity validation stopped before authored-node inspection because AssetDatabase.LoadAssetAtPath<GameObject> returned the main-object name collectible_scrap_02 rather than the r001 candidate Scene. The exact Unity log error is: InvalidOperationException: Unexpected imported GLB root name: collectible_scrap_02.",
+    "The r001 failure receipt is Assets/Art/Collectibles/collectible_scrap_02/import_receipt.json, SHA-256 eadba5ba223931c2fabe0625a6ec281929bdc298caf1345e855f96430e8e1e91. The r001 failure validation is Assets/Art/Collectibles/collectible_scrap_02/import_validation.json, SHA-256 5d8b0f6dc0efffb2a4801ba9bc61f43de0a30dd0ff7e5e5a3f2fd8eaedf519c3, status=failed. Both validate against their bundled schemas.",
+    "The preserved r001 failure log is Logs/CollectibleScrap02_Import_20260816.log, SHA-256 3da6210757fa8787aaa6d62bdddb0f772c63df52722e91bb34d7ee314e174ae0.",
+    "The container-name mismatch concerns only glTFast's generated main-object label derived from the destination filename. No authored scrap.* node, mesh, material, texture, transform, geometry, UV, importer setting, or source file was changed to produce the observation.",
+    "Pre-apply and post-failure SHA-256 values are identical for the shared CollectibleVisualAssetImporter, the submarine glTF postprocessor, Packages/manifest.json, Packages/packages-lock.json, and the inspected ProjectSettings files. No shared code, package, pipeline setting, or existing collectible changed."
+  ],
+  "unit_axis_pivot_plan": [
+    "Keep the approved source-to-Unity candidate source(x,y,z)->Unity(-x,z,-y), Unity 1 unit=1 meter, object origins, flat authored membership, and concept scale unchanged. Do not normalize, recenter, scale-correct, bake, merge, reparent, or rewrite the GLB.",
+    "Accept exactly one glTFast-generated technical main-object container named collectible_scrap_02, derived from the destination filename. Treat this container as non-semantic and require it at identity; do not rename it to Scene or alter the imported asset.",
+    "Continue to require the same eight direct authored children and expected Unity local positions: base_sheet=[0,0,0], fastener=[-0.87,0.28,0.5], folded_plate=[0.05,0.3,-0.04], front_lip=[0.1,0.39,0.34], pipe=[-0.65,0.84,-0.18], rebar=[0,0,0], right_flange=[-1.02,0.42,-0.03], upper_sheet=[0.08,0.5,-0.03], with identity rotations and unit scales.",
+    "Continue to compare combined model-root-local bounds to min[-1.516929,-0.095273,-0.645929], max[1.547153,1.591384,0.717737], size[3.064082,1.686657,1.363666], center[0.015112,0.7480555,0.035904] m, using fixed per-axis tolerance X=0.01532041 m, Y=0.008433285 m, Z=0.00681833 m.",
+    "The only approved expectation change is the generated technical root label. Any subsequent axis, transform, pivot, bounds, semantic-node, or scale mismatch remains a validation failure requiring another report and stop."
+  ],
+  "hierarchy_plan": [
+    "Keep the single native glTFast 6.19.0 ScriptedImporter route and the existing byte-identical Assets/Art/Collectibles/collectible_scrap_02/Models/collectible_scrap_02.glb. Do not recopy or modify the model and do not change its approved .meta settings.",
+    "Modify only the job-local Assets/Art/Collectibles/collectible_scrap_02/Editor/CollectibleScrap02NativeGltfValidator.cs so its plan hash gate binds this r002 plan and its generated-container check expects collectible_scrap_02 instead of Scene. Preserve all eight child-name, flat-root, transform, mesh, triangle, material, bounds, UV, tangent, component-zero, scene, preview, and report checks unchanged.",
+    "The exact authored child contract remains scrap.base_sheet__LOD0, scrap.fastener__LOD0, scrap.folded_plate__LOD0, scrap.front_lip__LOD0, scrap.pipe__LOD0, scrap.rebar__LOD0, scrap.right_flange__LOD0, and scrap.upper_sheet__LOD0 as direct children of the generated container.",
+    "Continue to require eight MeshFilters, eight MeshRenderers, two material identities, per-node triangle counts 512,108,44,192,792,1580,148,40, and total triangles=3416. Do not merge, reparent, rename, or create a prefab.",
+    "Update r002 report identifiers and import_plan_sha256 binding in the job-local adapter. Do not modify Assets/Art/Collectibles/Editor/CollectibleVisualAssetImporter.cs, Assets/Editor/SunkenSubmarineGltfImportPostprocessor.cs, any existing collectible, ProjectSettings, Packages, or shared validation artifact.",
+    "If the amended validator encounters any further discrepancy, write a new failed receipt/validation with the exact evidence and stop without changing the model, material, texture, importer setting, or project configuration."
+  ],
+  "material_texture_plan": [
+    "No material or texture change is authorized. Continue using only the native embedded glTF metallic-roughness route and the imported glTF-pbrMetallicRoughness material/texture subassets.",
+    "Continue to require material identities mat.scrap.rusted_metal__PORTABLE and mat.scrap.rebar__PORTABLE, base color and emission as sRGB, normal and metallic-roughness as non-sRGB data, G=roughness, B=metallic, UV0 bindings, and no occlusion texture.",
+    "Do not create external .mat or PNG assets, extract embedded images, make a Materials or Textures folder, create a smoothness derivative, flip normal green, or add a custom shader. Native-route failure still requires a separate plan rather than fallback."
+  ],
+  "uv_coordinate_plan": [
+    "Keep all r001 UV0, finite normal/tangent, tangent.w, material texCoord 0, and atlas-render checks unchanged. The root-container label has no authority over mesh vertex attributes or texture sampling.",
+    "After structural success, create the same job-local neutral URP validation scene and 1920x1080 preview, then explicitly inspect material identity, atlas orientation, metallic-roughness response, emission, and normal relief polarity.",
+    "Preview existence alone does not set material_render_verified=true. runtime_parity_verified remains false."
+  ],
+  "lod_collider_plan": [
+    "LOD reconstruction remains N/A. Require LODGroup=0 and keep __LOD0 only as semantic identity.",
+    "Collider and physics reconstruction remain N/A. Require Collider=0, Collider2D=0, Rigidbody=0, Rigidbody2D=0, CharacterController=0, Joint=0, Joint2D=0, Trigger=0, and navigation components=0.",
+    "Continue to require SkinnedMeshRenderer=0, Animator=0, Animation=0, runtime MonoBehaviour/gameplay components=0, and all eight static renderers active."
+  ],
+  "expected_changes": [
+    "Planning phase only: CREATE E:/Unity/Underwater/CodexStaging/collectible_scrap_02/unity-glb-r002/import_plan.json. No Assets file is changed before exact r002 hash approval.",
+    "After exact r002 approval: REPLACE only the job-local Assets/Art/Collectibles/collectible_scrap_02/import_plan.json with this r002 plan byte-for-byte; retain its existing .meta GUID.",
+    "After exact r002 approval: MODIFY only Assets/Art/Collectibles/collectible_scrap_02/Editor/CollectibleScrap02NativeGltfValidator.cs to bind the r002 plan hash, accept the observed generated root label collectible_scrap_02, and use r002 report identifiers. Retain its existing .meta GUID and every other validation gate.",
+    "After exact r002 approval: REWRITE the job-local failed import_receipt.json and import_validation.json with actual r002 results; retain their existing .meta GUIDs.",
+    "After exact r002 approval and structural success: CREATE Assets/Art/Collectibles/collectible_scrap_02/Validation/CollectibleScrap02_ImportCheck.unity, its .meta, Validation/collectible_scrap_02_import_preview.png, and its .meta.",
+    "After exact r002 approval: CREATE Logs/CollectibleScrap02_R002_Import_20260816.log and Logs/CollectibleScrap02_CompileCheck_20260816.log. Preserve the existing r001 failure log unchanged as failure evidence.",
+    "Do not modify or recopy Models/collectible_scrap_02.glb or its .meta. Do not modify any root/folder .meta, shared Editor code, existing collectible, ProjectSettings, Packages, or Handoff file. Unity may update only generated Library/Temp cache state.",
+    "No prefab, external material, texture, shader, Collider, LOD, animation, rig, gameplay, navigation, or runtime script is created."
+  ],
+  "known_losses": [
+    "The r001 Unity run completed compile and native GLB import but did not inspect the eight authored children because the technical root-label assertion failed first.",
+    "The generated root label collectible_scrap_02 is actual destination evidence; its acceptance does not prove child hierarchy, bounds, UV, tangent, material appearance, or component-zero results. Those remain pending r002 execution.",
+    "All original format losses remain: height/displacement is normal-only, procedural/master-shader behavior is atlas-baked, and unavailable occlusion/opacity remain absent.",
+    "All six source warnings remain: axis metadata, unit metadata, custom split-normal equivalence, exported tangent equivalence, UV loop-to-vertex association, and UV coordinate-summary preservation are not fully proven.",
+    "Native material appearance, atlas orientation, roughness/metal response, emission, and OpenGL +Y normal polarity remain unverified until a successful Unity render and explicit visual inspection.",
+    "Runtime material parity, platform compression, gameplay scale, pickup behavior, physics, navigation, runtime instancing, and performance remain unverified; runtime_parity_verified=false.",
+    "The r001 failed receipt, failed validation, and failure log are preserved evidence. This plan authorizes replacing only the two job-local JSON reports after r002 execution, not deleting the r001 log or changing the model to force success."
+  ],
+  "user_approval_required": true,
+  "approved": false,
+  "created_at": "2026-08-16T07:24:59.019Z"
+}

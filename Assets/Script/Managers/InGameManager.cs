@@ -16,6 +16,17 @@ public class InGameManager : MonoBehaviourPunCallbacks
     [Header("스폰 위치 설정")]
     [Tooltip("맵에 배치된 빈 게임 오브젝트(SpawnPoint)를 연결하세요.")]
     public Transform defaultSpawnPoint;
+    [Tooltip("빈사 시간 만료 또는 포기 시 이동할 지점입니다. 비어 있으면 기본 스폰 지점을 사용합니다.")]
+    public Transform respawnPoint;
+
+    /// <summary>
+    /// 패널티 부활 지점을 반환하고 미설정 시 기존 기본 스폰 지점으로 대체합니다.
+    /// </summary>
+    public Vector3 GetRespawnPosition()
+    {
+        Transform targetPoint = respawnPoint != null ? respawnPoint : defaultSpawnPoint;
+        return targetPoint != null ? targetPoint.position : new Vector3(0f, 7f, 0f);
+    }
 
     IEnumerator Start()
     {

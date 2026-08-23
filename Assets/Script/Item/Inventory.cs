@@ -53,6 +53,7 @@ public class Inventory : InventoryFrame
 
         if (Input.GetKeyDown(KeyCode.Q))
         {
+            if (!player.condition.CanAct(false, true, false)) return;
             //RemoveAllItem(index);
             //RemoveItem(index, 1);
             DropItem(index, 1);
@@ -102,6 +103,7 @@ public class Inventory : InventoryFrame
         //아이템 사용하기
         if (Input.GetMouseButtonDown(1))
         {
+            if (!player.condition.CanAct(false, true, false)) return;
             if (inventoryData.id[index] < 0) return;
             if (!canUseItem) return;
             //if (!HoldingInteractableItem()) return; //들고 있는 아이템이 상호작용을 거부하는 아이템인 경우 false가 리턴됨
@@ -258,6 +260,39 @@ public class Inventory : InventoryFrame
         }
         RefreshEquipments();
         Debug.Log("저장된 인벤토리 데이터 복구 완료!");
+    }
+
+    /// <summary>
+    /// 패널티 부활 시 일반 슬롯과 장비 슬롯의 모든 아이템을 제거합니다.
+    /// </summary>
+    public void LoseAllItemsOnDeath()
+    {
+        if (inventoryData == null || inventoryData.id == null)
+        {
+            Debug.LogWarning("사망 패널티를 적용할 인벤토리 데이터가 없습니다.");
+            return;
+        }
+
+        for (int slot = 0; slot < inventoryData.id.Length; slot++)
+        {
+            RemoveAllItem(slot);
+        }
+
+        index = 0;
+        if (IndexLine != null)
+        {
+            IndexSetter();
+        }
+
+        if (player != null && player.condition != null)
+        {
+            player.condition.LoadHumanOxygen(); //사망 시 산소 게이지 초기화
+        }
+
+        if (player != null)
+        {
+            player.SyncInventory(inventoryData);
+        }
     }
 
     public void RefreshEquipments()

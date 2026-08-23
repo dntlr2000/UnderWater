@@ -189,6 +189,11 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             return;
         }
 
+        if (buoyancyController != null)
+        {
+            SetUnderwater(buoyancyController.IsInWater());
+        }
+
         if (condition.isUnderwater)
             SwimMove();
         else
@@ -197,11 +202,6 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         if (!photonView.IsMine || !condition.CanAct(false, true, true)) return;
 
         condition.Run();
-
-        if (buoyancyController != null)
-        {
-            SetUnderwater(buoyancyController.IsInWater());
-        }
 
         HandlePlayerPushing();
         //condition.restoreBreath();
@@ -239,8 +239,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
 
     #region Movement Methods
+    /// <summary>
+    /// 행동 가능한 플레이어에게만 지상 점프 속도와 애니메이션을 적용합니다.
+    /// </summary>
     private void Jump()
     {
+        if (!condition.CanAct(false, true, false)) return;
+
         //isJumping = true;
         condition.onGround = false; // 점프 즉시 Step-up이 다시 발동하지 않도록 지면 상태를 먼저 해제합니다.
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, 5f, rb.linearVelocity.z);
@@ -290,13 +295,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         targetVelocity.y = rb.linearVelocity.y;
 
         // 2. 위아래 (수직) 입력 계산
-        bool spaceHeld = Input.GetKey(KeyCode.Space);
-        bool descendHeld = Input.GetKey(KeyCode.LeftControl);
+        bool spaceHeld = Input.GetKey(KeyCode.Space) || !condition.CanAct(false, true, false);
+        bool descendHeld = Input.GetKey(KeyCode.LeftControl) && condition.CanAct(false, true, false);
         bool headInWater = buoyancyController != null && buoyancyController.IsHeadInWater();
 
         // 상승 래치: 머리가 물속일 때 시작한 Space 입력만 수면을 통과할 때까지 유지합니다.
         // 수면에서 새로 Space를 누르면 headInWater가 false라서 상승이 시작되지 않습니다.
-        if (!spaceHeld || descendHeld)
+        if (!spaceHeld || descendHeld )
         {
             canContinueSwimUp = false;
         }
@@ -306,7 +311,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
 
         float verticalInput = 0f;
-        if (spaceHeld && canContinueSwimUp) verticalInput += 1f;
+        if ((spaceHeld && canContinueSwimUp)) verticalInput += 1f;
         if (descendHeld) verticalInput -= 1f;
 
         if (verticalInput > 0)
@@ -412,8 +417,12 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         Debug.Log($"[{photonView.Owner.NickName}] 스폰 완료 - 위치: {spawnPos}, JobType: {jobType}");
     }
 
+    /// <summary>
+    /// 빈사 상태가 아닐 때만 공격 동작과 공격 지연을 시작합니다.
+    /// </summary>
     public void Attack(float duration = 0.5f)
     {
+        if (!condition.CanAct(false, true, false)) return;
         if (condition.GetIsBusy()) return;
         //condition.SetInteractable(); //1회용 허가증 발행
         if (condition.BusyCoroutine != null) StopCoroutine(condition.BusyCoroutine); //공격 딜레이
@@ -546,6 +555,20 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             sendOptions: ExitGames.Client.Photon.SendOptions.SendReliable
         );
 
+    }
+
+    /// <summary>
+    /// 사망 패널티 또는 구조 직후 현재 위치와 상태를 저장 캐시에 즉시 동기화합니다.
+    /// </summary>
+    public void ForceSyncState()
+    {
+        if (!photonView.IsMine || !PhotonNetwork.InRoom)
+        {
+            return;
+        }
+
+        syncTimer = 0f;
+        SendStateToMaster();
     }
     #endregion
 
