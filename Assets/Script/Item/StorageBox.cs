@@ -51,25 +51,27 @@ public class StorageBox : InventoryFrame
             inventory = FindAnyObjectByType<Inventory>(); //플레이어 인벤토리
         }
         int invLen = ItemUI.itemSlots.Length;
-
+        
         for (int i = 0; i < invLen; i++)
         {
-            ItemUI.itemSlots[i].itemSlotIcon.gameObject.SetActive(true);
-            ItemUI.itemSlots[i].quatitiy.gameObject.SetActive(true);
+            ItemUI.ResetIcons(i);
         }
+        
 
         //인벤토리에서 로드
         for (int i = 0; i < invLen; i++)
         {
             if (inventory.GetItemID(i) == -1)
             {
-                ItemUI.itemSlots[i].itemSlotIcon.gameObject.SetActive(false);
-                ItemUI.itemSlots[i].quatitiy.gameObject.SetActive(false);
+                //ItemUI.itemSlots[i].itemSlotIcon.gameObject.SetActive(false);
+                //ItemUI.itemSlots[i].quatitiy.gameObject.SetActive(false);
+                //ItemUI.itemSlots[i].durabilityRoot.gameObject.SetActive(false);
+                ItemUI.ResetIcons(i);
                 continue;
             }
-            ItemUI.SetQuantity(i, inventory.GetQuantity(i));
+            ItemUI.SetQuantity(i, inventory.GetQuantity(i), inventory.GetSingularity(i));
             ItemUI.LoadIcons(i, inventory.GetIcon(inventory.GetItemID(i)));
-
+            ItemUI.SetDurability(i, inventory.GetDurability(i), ItemDatabase.Instance.getMaxDurability(inventory.GetItemID(i)));
         }
 
         ItemUI.UpdateMoney(inventory.GetMoneyData());
@@ -84,11 +86,15 @@ public class StorageBox : InventoryFrame
         }
         int invLen = boxUI.itemSlots.Length;
 
+        
         for (int i = 0; i < invLen; i++)
         {
-            boxUI.itemSlots[i].itemSlotIcon.gameObject.SetActive(true);
-            boxUI.itemSlots[i].quatitiy.gameObject.SetActive(true);
+            //boxUI.itemSlots[i].itemSlotIcon.gameObject.SetActive(true);
+            //boxUI.itemSlots[i].quatitiy.gameObject.SetActive(true);
+            //boxUI.itemSlots[i].durabilityRoot.gameObject.SetActive(true);
+            boxUI.ResetIcons(i, true);
         }
+        
 
         //박스창에서 로드
         //Debug.Log("박스창에서 로드를 시도합니다.");
@@ -98,10 +104,12 @@ public class StorageBox : InventoryFrame
             {
                 boxUI.itemSlots[i].itemSlotIcon.gameObject.SetActive(false);
                 boxUI.itemSlots[i].quatitiy.gameObject.SetActive(false);
+                boxUI.itemSlots[i].durabilityRoot.gameObject.SetActive(false);
                 continue;
             }
-            boxUI.SetQuantity(i, GetQuantity(i));
+            boxUI.SetQuantity(i, GetQuantity(i), GetSingularity(i)  );
             boxUI.LoadIcons(i, GetIcon(GetItemID(i)));
+            boxUI.SetDurability(i, GetDurability(i), ItemDatabase.Instance.getMaxDurability(GetItemID(i)));
         }
         boxUI.UpdateMoney(GetMoneyData());
         //Debug.Log("박스창에서 로드를 마쳤습니다.");

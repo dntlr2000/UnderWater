@@ -88,10 +88,12 @@ public class CylinderHolder : InteractableObject, ISavable
     public void SetPrefab(int itemID)
     {
         string prefabPath = ItemDatabase.Instance.GetItem(itemID)?.modelPath;
+        Debug.Log($"[CylinderHolder] Trying to set Prefab Path: {prefabPath}");
         if (string.IsNullOrEmpty(prefabPath) || Resources.Load(prefabPath) == null)
         {
-            prefabPath = "Structures/OxygenCylinder/Cylinder_Default";
+            prefabPath = "Structures/OxygenCylinder/Cylinder5";
         }
+        Debug.Log($"[CylinderHolder] Setted Prefab Path: {prefabPath}");
         holdingCylinder = Instantiate(Resources.Load<GameObject>(prefabPath), this.transform);
         if (holdingCylinder == null)
             holdingCylinder.transform.localPosition = new Vector3(0, 0, 0.01f);
