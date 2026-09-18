@@ -16,6 +16,8 @@ public class DraggableItem : MonoBehaviour,
     Inventory inventory;
     Vector2 dragOffset;
 
+    private int originalSiblingIndex; //이미지가 UI를 가리는 현상 방지용 
+
     void Awake()
     {
         rect = GetComponent<RectTransform>();
@@ -29,6 +31,7 @@ public class DraggableItem : MonoBehaviour,
     {
         //원래 슬롯 정보 저장
         originalParent = transform.parent;
+        originalSiblingIndex = transform.GetSiblingIndex();
         originalAnchoredPos = rect.anchoredPosition;
         var slot = originalParent.GetComponent<ItemSlot>();
         originalSlotID = slot != null ? slot.SlotID : -1;
@@ -103,6 +106,7 @@ public class DraggableItem : MonoBehaviour,
         }
 
         transform.SetParent(originalParent, false); //원래 부모로 복원하기
+        transform.SetSiblingIndex(originalSiblingIndex);
         rect.anchoredPosition = originalAnchoredPos;
         rect.localScale = Vector3.one;
     }

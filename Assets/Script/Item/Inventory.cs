@@ -108,7 +108,7 @@ public class Inventory : InventoryFrame
             if (!canUseItem) return;
             //if (!HoldingInteractableItem()) return; //들고 있는 아이템이 상호작용을 거부하는 아이템인 경우 false가 리턴됨
             inventoryData.useItem(index);
-            ItemUI.SetQuantity(index, inventoryData.quantity[index]);
+            ItemUI.SetQuantity(index, inventoryData.quantity[index],GetSingularity(index));
             if (inventoryData.quantity[index] <= 0)
             {
                 inventoryData.id[index] = -1;
@@ -255,7 +255,8 @@ public class Inventory : InventoryFrame
             {
                 Sprite itemSprite = ItemDatabase.Instance.GetIcons(inventoryData.id[i]);
                 ItemUI.LoadIcons(i, itemSprite);
-                ItemUI.SetQuantity(i, inventoryData.quantity[i]);
+                ItemUI.SetQuantity(i, inventoryData.quantity[i], GetSingularity(i));
+                SetDurability(i, inventoryData.durability[i]);
             }
         }
         RefreshEquipments();

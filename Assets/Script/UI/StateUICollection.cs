@@ -8,4 +8,5 @@ public class StateUICollection : MonoBehaviour
     public StateUIManager oxygenBar;
     public StateUIManager fatigueBar;
     public StateUIManager staminaBar;
+    public FaintUIController faintUIController;
 }

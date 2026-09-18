@@ -39,15 +39,15 @@ public class ItemUIManager : MonoBehaviour
         {
             showInventory = false;
             InventoryScreen.SetActive(false);
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            //Cursor.lockState = CursorLockMode.Locked;
+            //Cursor.visible = false;
         }
         else
         {
             showInventory= true;
             InventoryScreen.SetActive(true);
-            Cursor.lockState = CursorLockMode.None; //Option이랑 충돌나지 않게 조정 예정
-            Cursor.visible = true;
+            //Cursor.lockState = CursorLockMode.None; //Option이랑 충돌나지 않게 조정 예정
+            //Cursor.visible = true;
             
         }
     }
@@ -76,7 +76,7 @@ public class ItemUIManager : MonoBehaviour
         //Debug.Log($"added item icon on slot {index}");
     }
 
-    public void SetQuantity(int index, int quantity)
+    public void SetQuantity(int index, int quantity, bool isSingular)
     {
         if (index < 0 || index >= itemSlots.Length)
         {
@@ -84,14 +84,16 @@ public class ItemUIManager : MonoBehaviour
             return;
         }
         itemSlots[index].quatitiy.text = quantity.ToString();
-        itemSlots[index].quatitiy.gameObject.SetActive(true);
+        if (isSingular) itemSlots[index].quatitiy.gameObject.SetActive(false);
+        else itemSlots[index].quatitiy.gameObject.SetActive(true);
     }
 
 
-    public void ResetIcons(int index)
+    public void ResetIcons(int index, bool setActive = false)
     {
-        itemSlots[index].itemSlotIcon.gameObject.SetActive(false);
-        itemSlots[index].quatitiy.gameObject.SetActive(false);
+        itemSlots[index].itemSlotIcon.gameObject.SetActive(setActive);
+        itemSlots[index].quatitiy.gameObject.SetActive(setActive);
+        itemSlots[index].durabilityRoot.gameObject.SetActive(setActive);
     }
 
     public void UpdateMoney(int value)
@@ -102,5 +104,15 @@ public class ItemUIManager : MonoBehaviour
     public void SetColors(int index, byte r = 63, byte g = 63, byte b = 63)
     {
         itemSlots[index].SetColor(r, g, b);
+    }
+
+    public void SetDurability(int index, float current, float max)
+    {
+        if (index < 0 || index >= itemSlots.Length)
+        {
+            return;
+        }
+
+        itemSlots[index].SetDurability(current, max);
     }
 }

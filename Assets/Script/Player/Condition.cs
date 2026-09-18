@@ -159,6 +159,11 @@ public class Condition : MonoBehaviour
         //if (optionScript != null) optionScript.player = player;
 
         SetBarUI();
+
+        if (stateUICollection.faintUIController != null)
+        {
+            stateUICollection.faintUIController.Bind(this);
+        }
     }
 
     public void SetBarUI()
@@ -308,9 +313,35 @@ public class Condition : MonoBehaviour
         }
         if (inventory == null) inventory = FindAnyObjectByType<Inventory>();
 
+        
+        int cylinderSlot = OxygenCylinderSlotIndex;
+        int equippedItemId = inventory.GetItemID(cylinderSlot);
+        /*
+        if (equippedItemId == -1 || ItemDatabase.Instance.GetEquipEffectType(equippedItemId) != "oxygen")
+        {
+            LoadHumanOxygen();
+            return;
+        }
+        */
+        // 산소통 내구도 회복 방지
+        float currentDurability = Mathf.Max(0f, inventory.GetDurability(cylinderSlot));
+        if (currentDurability <= 0f)
+        {
+            inventory.SetDurability(cylinderSlot, 0f);
+            LoadHumanOxygen();
+            return;
+        }
+
+        //산소통은 소비만 가능하므로 기존 내구도보다 커질 수 없습니다.
+        float nextDurability = Mathf.Min(
+            currentDurability,
+            Mathf.Max(oxygen, 0f));
+
+
         //if (inventory.GetItemID(OxygenCylinderSlotIndex) == 5) //구버전 산소통 로직
         //{
-        inventory.SetDurability(OxygenCylinderSlotIndex, oxygen);
+        //inventory.SetDurability(OxygenCylinderSlotIndex, oxygen);
+        inventory.SetDurability(cylinderSlot, nextDurability);
         return;
         //}
     }
@@ -866,6 +897,8 @@ public class Condition : MonoBehaviour
         {
             player.ForceSyncState();
         }
+
+        //stateUICollection.faintUIController.RefreshVisibility();
     }
 
     /// <summary>
@@ -957,6 +990,7 @@ public class Condition : MonoBehaviour
     /// </summary>
     public void SetFaint(bool value)
     {
+        Debug.Log("[Condition] SetFaint 값 호출됨 : " + value);
         isFainted = value;
         if (isFainted)
         {
@@ -969,6 +1003,14 @@ public class Condition : MonoBehaviour
         if (player != null && player.thirdViewAnimator != null)
         {
             player.thirdViewAnimator.SetDown(isFainted);
+        }
+
+        if (player != null
+        && player.photonView.IsMine
+        && stateUICollection != null
+        && stateUICollection.faintUIController != null) {
+            stateUICollection.faintUIController.RefreshVisibility();
+            
         }
     }
 }

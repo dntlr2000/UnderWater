@@ -21,6 +21,37 @@ public class InventoryFrame : MonoBehaviour
         Debug.Log($"Generated InventorySize = {inventoryData.id.Length}");
     }
 
+    // 아이템 추가 전후의 실제 수량을 비교해 획득 성공 여부를 반환
+    public bool TryAddItem(int id, int quantity = 1, float durability = -1f)
+    {
+        if (quantity <= 0 ||
+            inventoryData == null ||
+            inventoryData.id == null ||
+            ItemUI == null ||
+            ItemDatabase.Instance == null ||
+            ItemDatabase.Instance.GetItem(id) == null)
+        {
+            return false;
+        }
+
+        int beforeCount = GetOwnedItemCount(id);
+
+        GetItem(id, quantity, durability);
+
+        return GetOwnedItemCount(id) == beforeCount + quantity;
+    }
+
+    // 획득 직후의 인벤토리 데이터를 저장·전송용 복사본으로 반환합니다.
+    public InventoryData CaptureInventorySnapshot()
+    {
+        if (inventoryData == null)
+            return null;
+
+        string json = JsonUtility.ToJson(inventoryData);
+        return JsonUtility.FromJson<InventoryData>(json);
+    }
+
+
     public void GetItem(int id, int quantitiy = 1, float durability = -1)
     {
         Debug.Log($"InventorySIze = {INVENTORY_SIZE}, {inventoryData.id.Length}");
@@ -33,7 +64,7 @@ public class InventoryFrame : MonoBehaviour
 
                 inventoryData.quantity[i] += quantitiy;
                 Debug.Log($"Item added in slot{i}. current quantity = {inventoryData.quantity[i]}");
-                ItemUI.SetQuantity(i, inventoryData.quantity[i]);
+                ItemUI.SetQuantity(i, inventoryData.quantity[i], GetSingularity(i));
                 return;
             }
         }
@@ -45,7 +76,8 @@ public class InventoryFrame : MonoBehaviour
                 Debug.Log($"Found empty slots. Slot index = {i}");
                 inventoryData.quantity[i] = quantitiy;
                 inventoryData.id[i] = id;
-                if (durability != -1) inventoryData.durability[i] = durability;
+                //if (durability != -1) inventoryData.durability[i] = durability;
+                SetDurability(i, durability);
 
                 //inventoryData.item.LoadIcons(inventoryData.id[i]);
 
@@ -61,7 +93,7 @@ public class InventoryFrame : MonoBehaviour
                 }
 
                 ItemUI.LoadIcons(i, ItemSprite);
-                ItemUI.SetQuantity(i, quantitiy);
+                ItemUI.SetQuantity(i, quantitiy, GetSingularity(i));
                 return;
             }
         }
@@ -76,7 +108,7 @@ public class InventoryFrame : MonoBehaviour
         else
         {
             inventoryData.quantity[index] -= amount;
-            ItemUI.SetQuantity(index, inventoryData.quantity[index]);
+            ItemUI.SetQuantity(index, inventoryData.quantity[index], GetSingularity(index));
 
             if (inventoryData.quantity[index] <= 0)
             {
@@ -113,12 +145,14 @@ public class InventoryFrame : MonoBehaviour
 
             inventoryData.id[after] = inventoryData.id[before];
             inventoryData.quantity[after] = inventoryData.quantity[before];
-            inventoryData.durability[after] = inventoryData.durability[before];
+            //inventoryData.durability[after] = inventoryData.durability[before];
+            SetDurability(after, inventoryData.durability[before]); //내구도 UI 작업은 여기에 포함되어 있음
 
             ItemSpriteAfter = ItemDatabase.Instance.GetIcons(inventoryData.id[after]);
 
             ItemUI.LoadIcons(after, ItemSpriteAfter);
-            ItemUI.SetQuantity(after, inventoryData.quantity[after]);
+            ItemUI.SetQuantity(after, inventoryData.quantity[after], GetSingularity(after));
+            ItemUI.SetDurability(after, inventoryData.durability[after], ItemDatabase.Instance.getMaxDurability(inventoryData.id[after]));
 
             RemoveAllItem(before);
         }
@@ -143,10 +177,12 @@ public class InventoryFrame : MonoBehaviour
             ItemSpriteAfter = ItemDatabase.Instance.GetIcons(inventoryData.id[after]);
             Sprite ItemSpriteBefore = ItemDatabase.Instance.GetIcons(inventoryData.id[before]);
             ItemUI.LoadIcons(after, ItemSpriteAfter);
-            ItemUI.SetQuantity(after, inventoryData.quantity[after]);
+            ItemUI.SetQuantity(after, inventoryData.quantity[after], GetSingularity(after));
+            ItemUI.SetDurability(after, inventoryData.durability[after], ItemDatabase.Instance.getMaxDurability(inventoryData.id[after]));
 
             ItemUI.LoadIcons(before, ItemSpriteBefore);
-            ItemUI.SetQuantity(before, inventoryData.quantity[before]);
+            ItemUI.SetQuantity(before, inventoryData.quantity[before], GetSingularity(before));
+            ItemUI.SetDurability(before, inventoryData.durability[before], ItemDatabase.Instance.getMaxDurability(inventoryData.id[before]));
         }
 
         Debug.Log($"Switched Items Slot {before} <-> Slot {after}");
@@ -195,6 +231,17 @@ public class InventoryFrame : MonoBehaviour
     public void SetDurability(int index, float durability)
     {
         inventoryData.durability[index] = durability;
+
+        int itemId = inventoryData.id[index];
+        float maxDurability = -1;
+        if (itemId != -1) maxDurability = ItemDatabase.Instance.getMaxDurability(itemId);
+        if (itemId == -1 || maxDurability == -1)
+        {
+            ItemUI.itemSlots[index].durabilityRoot.gameObject.SetActive(false);
+            return;
+        }
+        
+        ItemUI.SetDurability(index, inventoryData.durability[index], maxDurability);
     }
 
     public float GetDurability(int index)
