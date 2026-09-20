@@ -81,6 +81,7 @@ public class DataLoader : MonoBehaviour
         return result;
     }
 
+    // 스토리 안내와 자동 완료 설정을 포함한 퀘스트 정의를 읽습니다.
     private Dictionary<string, QuestRuntimeData> LoadQuests()
     {
         var objectivesByQuest = ParseGrouped("Data/TSV/08_Objectives", "questID");
@@ -105,10 +106,12 @@ public class DataLoader : MonoBehaviour
                 isUnlockedManually = TSVParser.GetBool(row, "isUnlockedManually"),
                 iconPath = TSVParser.Get(row, "iconPath"),
                 sortOrder = TSVParser.GetInt(row, "sortOrder"),
+                storyMessage = TSVParser.Get(row, "storyMessage"),
+                autoComplete = TSVParser.GetBool(row, "autoComplete"),
             };
 
             if (objectivesByQuest.TryGetValue(id, out var objRows))
-                quest.objectives = objRows.Select(ParseObjective).ToList();
+                quest.objectives = objRows.OrderBy(row => TSVParser.GetInt(row, "seq")).Select(ParseObjective).ToList();
 
             if (rewardsByQuest.TryGetValue(id, out var rwdRows))
                 quest.rewards = rwdRows.Select(ParseReward).ToList();
@@ -215,6 +218,7 @@ public class DataLoader : MonoBehaviour
         return result;
     }
 
+    // 아이템 ID를 사용하는 수집·제작 목표의 정의를 읽습니다.
     private QuestObjective ParseObjective(Dictionary<string, string> row) => new QuestObjective
     {
         objectiveID = TSVParser.Get(row, "objectiveID"),
@@ -225,10 +229,16 @@ public class DataLoader : MonoBehaviour
         collectItemName = TSVParser.Get(row, "collectItemID"),
     };
 
+    // 보상 ID와 대상 경로를 읽으며 기존 행은 명시적으로 켜기 전까지 지급하지 않습니다.
     private QuestReward ParseReward(Dictionary<string, string> row) => new QuestReward
     {
+        rewardID = TSVParser.Get(row, "rewardID"),
         rewardType = TSVParser.GetEnum<RewardType>(row, "rewardType"),
         amount = TSVParser.GetInt(row, "amount"),
+        itemID = TSVParser.Get(row, "itemID"),
+        enabled = TSVParser.GetBool(row, "enabled"),
+        destination = TSVParser.GetEnum<RewardDestination>(row, "destination"),
+        mailboxID = TSVParser.Get(row, "mailboxID"),
     };
 
     private List<Dictionary<string, string>> Parse(string path)

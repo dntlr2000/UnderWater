@@ -29,6 +29,7 @@ public class FieldItem : InteractableObject, ISavable
         
     }
 
+    // 실제 인벤토리 획득 결과에 따라 대상 수명을 결정합니다.
     public override void Interact() //카메라가 이 오브젝트를 바라볼 때 호출됨
     {
         //Debug.Log("Item Detected");
@@ -38,7 +39,7 @@ public class FieldItem : InteractableObject, ISavable
             {
                 //Debug.Log("아이템 습득 시도");
                 GetItem();
-                RPC_Deactivate();
+
             }
 
             if (isInteractable && Input.GetKey(KeyCode.E))
@@ -64,38 +65,31 @@ public class FieldItem : InteractableObject, ISavable
         
     }
 
+    // 실패한 획득은 다음 상호작용으로 다시 시도할 수 있게 유지합니다.
     public override void HoldInteract()
     {
-        // 게이지가 다 차면 아이템 습득을 요청
-        /*RequestGetItem();*/
-        GetItem(); //임시
-        isInteractable = false;
-
+        GetItem();
     }
 
     //현재로서는 Instant, Guage만 정의되어있음
 
+    // 아이템 ID로 수집을 보고하며, 추가 실패 시 필드 아이템을 그대로 남깁니다.
     public virtual void GetItem()
     {
-        inventory = FindAnyObjectByType<Inventory>();
-        if (inventory == null)
-        {
-            Debug.LogWarning("Inventory를 찾을 수 없습니다.");
-            return;
-        }
-        //if (!inventory.HoldingInteractableItem()) return; //아이템을 주울 수 있는 상태인지 판단 기준1 : 손에 든 채로 또 아이템을 주울 수 있는 아이템을 들고 있는지 리턴
-        //소모형 아이템이 1개 남아서 사용하고 아이템이 비워지자마자 아이템이 주워지는 현상 발생. inventory의 아이템 사용 스크립트가 먼저 처리되기 때문
-        //해결 방안1 : 아이템이 소모되어 삭제되는 시점을 코루틴 등으로 미루기
-        if (!inventory.CheckInventoryEmpty()) return;
-        inventory.GetItem(itemID, amount);
-        //gameObject.SetActive(false);
+        if (!gameObject.activeSelf) return;
+        if (inventory == null) inventory = FindAnyObjectByType<Inventory>();
+        if (inventory == null || !inventory.TryAddItem(itemID, amount, durability)) return;
+        isInteractable = false;
+        // 방장에게 진행을 보내기 전에 필드 대상을 숨겨 완료 저장에 다시 포함되지 않게 합니다.
+        if (PhotonNetwork.InRoom && usePhoton && pv != null && pv.ViewID != 0)
+            pv.RPC(nameof(RPC_Deactivate), RpcTarget.AllBuffered);
+        else Destroy(gameObject);
+        gameObject.SetActive(false);
         var itemData = ItemDatabase.Instance.GetItem(itemID);
-        if (itemData != null && QuestManager.Instance != null)
-            QuestManager.Instance.ReportObjectiveProgress(ObjectiveType.CollectItem, amount, itemData.stringID);
-
-        Destroy(gameObject);
+        if (itemData != null) QuestManager.Instance?.ReportObjectiveProgress(ObjectiveType.CollectItem, amount, itemData.stringID);
     }
 
+    // 기존 RPC 진입점에서 로컬 인벤토리의 획득 요청을 방장에게 전달합니다.
     public void RequestGetItem()
     {
         if (!isInteractable) return;
@@ -127,6 +121,7 @@ public class FieldItem : InteractableObject, ISavable
         isInteractable = true;
     }
 
+    // 방장이 일반 아이템 지급 요청을 처리하며 기존 RPC 서명을 유지합니다.
     [PunRPC]
     protected void PunRPC_TryToPickup(int requesterViewID, PhotonMessageInfo info)
     {
@@ -143,6 +138,8 @@ public class FieldItem : InteractableObject, ISavable
         {
             // 요청자에게만 "PunRPC_AddItem" RPC를 보내 아이템을 인벤토리에 추가하도록 합니다.
             // (이전에 창고 기능 구현 시 Inventory.cs에 만들어 둔 RPC를 재사용합니다.)
+            // 방장 자신에게 즉시 지급되는 경우에도 완료 저장에서 이 대상을 제외합니다.
+            gameObject.SetActive(false);
             requesterView.RPC("PunRPC_AddItem", info.Sender, this.itemID, this.amount, this.durability);
 
             // 아이템 지급에 성공했으므로, 이 필드 아이템을 네트워크에서 파괴합니다.

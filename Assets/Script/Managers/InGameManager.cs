@@ -28,40 +28,31 @@ public class InGameManager : MonoBehaviourPunCallbacks
         return targetPoint != null ? targetPoint.position : new Vector3(0f, 7f, 0f);
     }
 
+    // 데이터, 방, 인벤토리, 플레이어 순서로 준비한 뒤 퀘스트를 단 한 번 초기화합니다.
     IEnumerator Start()
     {
-        // 1. SaveManager 인스턴스가 생성될 때까지 대기 (안전 장치)
-        yield return new WaitUntil(() => SaveManager.Instance != null);
-
-        // 2. 데이터 동기화 대기 (씬 이동 직후 데이터가 도착하지 않았을 수 있음)
-        // 최대 3초간 데이터를 기다립니다.
-        float timeout = 3f;
-        while (!SaveManager.Instance.IsDataReady && timeout > 0)
+        yield return new WaitUntil(() => SaveManager.Instance != null && DataLoader.Instance != null);
+        bool testSession = isTestMode || FindAnyObjectByType<AuthManager>() == null;
+        if (testSession)
         {
-            timeout -= Time.deltaTime;
-            yield return null;
+            EnsureTestSaveData();
+            if (!PhotonNetwork.IsConnected) PhotonNetwork.OfflineMode = true;
+            if (!PhotonNetwork.InRoom) PhotonNetwork.JoinOrCreateRoom("OfflineRoom", new RoomOptions(), TypedLobby.Default);
         }
-
-        if (SaveManager.Instance.isGameLoadedFromSave && PhotonNetwork.IsMasterClient)
-        {
-            RestoreWorldObjects();
-        }
-
-
-        // 3. 데이터 수신 결과 확인
-        if (!SaveManager.Instance.IsDataReady)
-        {
-            Debug.LogWarning("[InGameManager] 저장 데이터를 받지 못했습니다. (Timeout or New Game). 기본값으로 진행합니다.");
-        }
-        else
-        {
-            Debug.Log("[InGameManager] 저장 데이터 준비 완료.");
-        }
-
-        // 4. 플레이어 스폰 로직 실행
+        // 저장 수신 지연을 새 게임으로 간주하지 않습니다.
+        yield return new WaitUntil(() => SaveManager.Instance.IsDataReady && PhotonNetwork.InRoom);
+        Inventory inventory = null;
+        yield return new WaitUntil(() => (inventory = FindAnyObjectByType<Inventory>()) != null && inventory.CaptureInventorySnapshot()?.id != null);
+        bool loaded = SaveManager.Instance.isGameLoadedFromSave;
+        if (loaded && PhotonNetwork.IsMasterClient) RestoreWorldObjects();
         SpawnPlayer();
+        yield return new WaitUntil(() => Player.localPlayer != null && QuestManager.Instance != null);
+        // Instantiate 직후의 Start 작업이 마무리된 다음 복원된 인벤토리로 초기화합니다.
+        yield return null;
+        QuestManager.Instance.InitializeForSession(Player.localPlayer, SaveManager.Instance.GetCurrentSave(), loaded);
     }
 
+    // 기존 플레이어 생성과 상태 복원만 수행하며 퀘스트 초기화는 Start에서 이어갑니다.
     void SpawnPlayer()
     {
         if (isTestMode || FindAnyObjectByType<AuthManager>() == null)
@@ -213,23 +204,7 @@ public class InGameManager : MonoBehaviourPunCallbacks
                 }
             }
 
-            if (QuestManager.Instance != null)
-            {
-                QuestManager.Instance.RegisterLocalPlayer(player);
 
-                if (SaveManager.Instance.isGameLoadedFromSave)
-                {
-                    Debug.Log("[InGameManager] 저장된 게임 감지 -> 퀘스트 데이터 로드 요청");
-                    // 저장된 데이터를 QuestManager에 주입
-                    SaveManager.Instance.LoadQuestDataToManager();
-                }
-                else
-                {
-                    Debug.Log("[InGameManager] 새 게임 감지 -> 기본 퀘스트 초기화");
-                    // 새 게임용 기본 퀘스트 시작
-                    QuestManager.Instance.InitStartingQuests();
-                }
-            }
         }
         else
         {
@@ -237,6 +212,7 @@ public class InGameManager : MonoBehaviourPunCallbacks
         }
     }
 
+    // 씬 직접 실행도 고유 저장 ID를 가진 신규 세션으로 준비합니다.
     private void EnsureTestSaveData()
     {
         if (SaveManager.Instance == null) return;
@@ -248,7 +224,7 @@ public class InGameManager : MonoBehaviourPunCallbacks
             roomName = "OfflineRoom";
         }
 
-        SaveManager.Instance.SetCurrentSave(new SaveData(roomName), false);
+        SaveManager.Instance.SetCurrentSave(new SaveData(roomName) { saveId = System.Guid.NewGuid().ToString(), saveOwnerId = QuestNetworkBridge.LocalPlayerId }, false);
         Debug.Log("[InGameManager] 테스트 모드용 기본 SaveData를 생성했습니다.");
     }
 

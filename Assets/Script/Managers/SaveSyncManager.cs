@@ -49,6 +49,7 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
     /// <param name="roomName">사용자 입력 방 이름</param>
     /// <param name="userId">현재 사용자 ID</param>
     /// <returns>새로 생성된 SaveData</returns>
+    // 신규 저장의 퀘스트 버전과 소유자를 명시합니다.
     public SaveData CreateNewSave(string roomName, string userId)
     {
         string finalRoomName = string.IsNullOrEmpty(roomName) ? "Room" + UnityEngine.Random.Range(0, 10000) : roomName;
@@ -58,6 +59,8 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
         SaveData newSave = new SaveData(finalRoomName) // SaveData 생성자에 roomName을 전달한다고 가정
         {
             saveId = Guid.NewGuid().ToString(),
+            questSaveVersion = 1,
+            saveOwnerId = userId,
             dayCount = 0,
             players = new List<PlayerData>
             {
@@ -83,13 +86,13 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
     /// </summary>
     /// <param name="data">설정할 SaveData</param>
     /// <param name="isLoaded">저장된 게임에서 불러왔는지 여부</param>
+    // 새 게임 여부를 최초 저장 주입부터 일관되게 전달합니다.
     public void SetCurrentSaveData(SaveData data, bool isLoaded)
     {
         if (SaveManager.Instance == null) return;
 
         // SaveManager에 SaveData를 설정하고 로드 상태를 플래그합니다.
-        SaveManager.Instance.SetCurrentSave(data);
-        SaveManager.Instance.isGameLoadedFromSave = isLoaded;
+        SaveManager.Instance.SetCurrentSave(data, isLoaded);
 
         // RoomManager의 상태 갱신 (선택적)
         RoomMngr.isLoadedFromSave = isLoaded;
@@ -165,9 +168,11 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
         }
     }
 
+    // 늦은 로비 저장 방송이 진행 중 퀘스트와 인벤토리를 덮지 않도록 합니다.
     [PunRPC]
     public void RPC_BroadcastSaveData(string saveJson)
     {
+        if (QuestManager.Instance != null && QuestManager.Instance.IsInitialized) return;
         SaveData data = null;
         try
         {
@@ -181,7 +186,7 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
 
         if (SaveManager.Instance == null) return;
 
-        SaveManager.Instance.SetCurrentSave(data);
+        SaveManager.Instance.HandleBroadcastedSaveData(saveJson);
         //SaveManager.Instance.ApplySaveData(data);
 
         // 직업 데이터 적용을 RoomManager에게 위임
