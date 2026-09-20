@@ -37,7 +37,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
     public override void OnJoinedRoom()
     {
-        OutgameCanvasManager.Instance.ShowRoomPanel();
+        OutgameCanvasManager.Instance.ShowRoomPanel(PhotonNetwork.CurrentRoom.Name);
 
         Debug.Log($"[RoomManager] πÊ ¿‘¿Â øœ∑·. ID(Firebase): {AuthMngr.currentUserId}");
 
@@ -94,6 +94,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
         RefreshJobButtons();
         RefreshPlayerSlots();
+        RefreshReadyGauge();
     }
 
     public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
@@ -118,6 +119,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
             }
         }
         RefreshPlayerSlots();
+        RefreshReadyGauge();
     }
 
     public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
@@ -125,6 +127,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
         RoomRenewal();
         ChatRPC("System", $"<color=yellow>{otherPlayer.NickName}¥‘¿Ã ≈¿Â«œºÃΩ¿¥œ¥Ÿ.</color>");
         RefreshPlayerSlots();
+        RefreshReadyGauge();
     }
 
     public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
@@ -139,6 +142,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
                 SaveMngr.HandleBroadcastedSaveData(json);
                 RefreshJobButtons();
                 RefreshPlayerSlots();
+                RefreshReadyGauge();
             }
         }
     }
@@ -146,6 +150,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
     public override void OnMasterClientSwitched(Photon.Realtime.Player newMasterClient)
     {
         OutgameCanvasManager.Instance.StartBtn.interactable = PhotonNetwork.IsMasterClient;
+        RefreshReadyGauge();
     }
 
     private void RoomRenewal()
@@ -156,6 +161,22 @@ public class RoomManager : MonoBehaviourPunCallbacks
             canvas.ListText.text = string.Join(", ", Array.ConvertAll(PhotonNetwork.PlayerList, p => p.NickName));
         if (canvas.RoomInfoText != null)
             canvas.RoomInfoText.text = $"{PhotonNetwork.CurrentRoom.Name} / {PhotonNetwork.CurrentRoom.PlayerCount}/{PhotonNetwork.CurrentRoom.MaxPlayers}";
+    }
+
+    private void RefreshReadyGauge()
+    {
+        if (OutgameCanvasManager.Instance == null) return;
+
+        var players = PhotonNetwork.PlayerList;
+        int jobSelectedCount = 0;
+
+        foreach (var p in players)
+        {
+            string jobType = SaveMngr?.GetSavedJobType(p.UserId) ?? "";
+            if (!string.IsNullOrEmpty(jobType)) jobSelectedCount++;
+        }
+
+        OutgameCanvasManager.Instance.UpdateReadyGauge(jobSelectedCount, players.Length);
     }
 
     public void TryStartGame()
@@ -234,6 +255,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
         RefreshJobButtons();
         RefreshPlayerSlots();
+        RefreshReadyGauge();
     }
 
     public void SelectJob(int index)
@@ -405,6 +427,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
     {
         RefreshJobButtons();
         RefreshPlayerSlots();
+        RefreshReadyGauge();
     }
     #endregion
 

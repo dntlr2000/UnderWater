@@ -16,7 +16,7 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
         DontDestroyOnLoad(gameObject);
     }
 
-    private AuthManager AuthMngr => AuthManager._instance;
+    private AuthManager AuthMngr => AuthManager.Instance;
     private RoomManager RoomMngr => RoomManager.Instance;
     private LobbyManager LobbyMngr => LobbyManager.Instance;
 
