@@ -176,16 +176,12 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         {
             ProcessJobUpdate(userId, nickname, newJobType);
         }
-        // 2. 게스트면 -> 방장에게 RPC 요청
-        else
+        // 게스트가 자신의 직업을 변경하는 경우만 RPC 전송
+        else if (userId == GetMyCurrentId())
         {
             if (photonView != null)
             {
                 photonView.RPC(nameof(RPC_RequestJobChange), RpcTarget.MasterClient, userId, nickname, newJobType);
-            }
-            else
-            {
-                Debug.LogError("[SaveManager] PhotonView가 컴포넌트에 없습니다! RPC 실패.");
             }
         }
     }
