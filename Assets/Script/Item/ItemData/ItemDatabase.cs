@@ -80,6 +80,10 @@ public class ItemDatabase : MonoBehaviour
         return null;
     }
 
+    // 퀘스트 TSV의 문자열 ID를 실제 숫자 ID를 가진 아이템 정의로 연결합니다.
+    public ItemData GetItemByStringId(string stringId) => string.IsNullOrWhiteSpace(stringId)
+        ? null : itemDatas.FirstOrDefault(item => item.stringID == stringId);
+
     public string getItemName(int itemId)
     {
         return GetItem(itemId).itemName;

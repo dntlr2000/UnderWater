@@ -159,10 +159,11 @@ public class Inventory : InventoryFrame
         return ItemDatabase.Instance.getInteractable(inventoryData.id[index]);
     }
 
+    // 기존 창고/RPC 서명을 유지하고 실제 추가된 수량만 퀘스트에 보고합니다.
     [PunRPC]
     public void PunRPC_AddItem(int id, int quantity, float durability)
     {
-        GetItem(id, quantity, durability); // 기존에 있던 아이템 추가 로직 호출
+        if (!TryAddItem(id, quantity, durability)) return;
         Debug.Log($"네트워크를 통해 아이템 수신: ID {id}, 수량 {quantity}");
 
         var itemData = ItemDatabase.Instance.GetItem(id);
@@ -337,6 +338,25 @@ public class Inventory : InventoryFrame
         int dropAmount = throwScreen.amount;
         DropItem(throwIndex, dropAmount);
         Debug.Log($"아이템 {dropAmount}개를 버렸습니다.");
+    }
+
+    // 보상/창고 이동은 수집 이벤트를 발생시키지 않고 영수증과 전량 지급을 함께 반영합니다.
+    public RewardReceiveResult TryReceiveDelivery(RewardDelivery delivery)
+    {
+        if (inventoryData?.id == null || ItemUI == null || delivery == null) return RewardReceiveResult.NotReady;
+        inventoryData.receivedDeliveryIds ??= new();
+        inventoryData.rejectedDeliveryIds ??= new();
+        if (inventoryData.receivedDeliveryIds.Contains(delivery.deliveryId)) return RewardReceiveResult.Success;
+        if (inventoryData.rejectedDeliveryIds.Contains(delivery.deliveryId)) return RewardReceiveResult.Full;
+        if (!RewardInventory.TryCredit(inventoryData, INVENTORY_SIZE, delivery, out var updated))
+        {
+            // 출고 실패 응답도 유지하여 지연된 동일 출고 요청을 뒤늦게 지급하지 않습니다.
+            if (!string.IsNullOrEmpty(delivery.sourceBoxId)) inventoryData.rejectedDeliveryIds.Add(delivery.deliveryId);
+            return RewardReceiveResult.Full;
+        }
+        ApplyLoadedData(updated);
+        player?.SyncInventory(inventoryData);
+        return RewardReceiveResult.Success;
     }
 
     [PunRPC]

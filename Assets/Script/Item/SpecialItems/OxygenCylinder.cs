@@ -1,27 +1,10 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class OxygenCylinder : FieldItem
 {
-    ///public float remainOxygen; 
-    //durability¿¡¼­ ´ëÃ¼
-
-    public override void Start()
-    {
-        base.Start();
-    }
-
+    // ì¼ë°˜ ì•„ì´í…œ íšë“ ê²½ë¡œë¡œ ì‚°ì†Œí†µ ìˆ˜ì§‘ì„ ë³´ê³ í•˜ê³  ë‚´êµ¬ë„ë¥¼ ë³´ì¡´í•©ë‹ˆë‹¤.
     public override void GetItem()
     {
-        inventory = FindAnyObjectByType<Inventory>();
-        if (inventory == null)
-        {
-            Debug.LogWarning("Inventory¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù.");
-            return;
-        }
-        //if (inventory.HoldingInteractableItem()) return; 
-
-        inventory.GetItem(itemID, amount, durability);
-        //gameObject.SetActive(false);
-        Destroy(gameObject);
+        base.GetItem();
     }
 }

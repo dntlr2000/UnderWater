@@ -1,6 +1,7 @@
 ﻿using Photon.Pun;
 using System;
 using System.Collections;
+using System.Linq;
 using UnityEngine;
 public class OpenableStorageBox : InteractableObject
 {
@@ -10,6 +11,7 @@ public class OpenableStorageBox : InteractableObject
 
     // 이 박스의 데이터를 저장하기 위한 변수 -> StorageBox의 인벤토리 데이터는 임시용으로만 사용하도록 수정
     protected InventoryData storageData;
+    public bool IsStorageReady { get; private set; }
 
     protected override void Awake()
     {
@@ -22,6 +24,7 @@ public class OpenableStorageBox : InteractableObject
         }
     }
 
+    // 저장과 공유 상태를 먼저 복원하여 준비 전 보상이 초기화로 사라지지 않게 합니다.
     private IEnumerator Start()
     {
         if (PhotonNetwork.IsMasterClient)
@@ -67,6 +70,8 @@ public class OpenableStorageBox : InteractableObject
             storageData = new InventoryData();
             storageData.GenerateData();
         }
+        IsStorageReady = true;
+        if (PhotonNetwork.IsMasterClient) SyncDataToAll();
     }
 
     public override void Interact()
@@ -81,6 +86,7 @@ public class OpenableStorageBox : InteractableObject
         }
     }
 
+    // 공용 우편함과 창고를 연결하고 현재 출고 가능한 수량을 표시합니다.
     public void OpenBox()
     {
         UIController uIController = FindAnyObjectByType<UIController>();
@@ -110,7 +116,7 @@ public class OpenableStorageBox : InteractableObject
         // 이미 데이터가 있다면 바로 UI를 업데이트합니다.
         if (storageData != null)
         {
-            box.UpdateBoxUIFromData(storageData);
+            box.UpdateBoxUIFromData(VisibleStorageData());
         }
         else
         {
@@ -126,161 +132,105 @@ public class OpenableStorageBox : InteractableObject
         OpenBox();
     }
 
+    // 기존 상점/창고 입고 RPC 서명을 유지하면서 전량 추가에 성공한 경우만 반영합니다.
     [PunRPC]
     public void PunRPC_RequestStoreItem(int inventorySlot, int itemID, int quantity, float durability, PhotonMessageInfo info)
     {
-        // 마스터 클라이언트가 아니면 이 요청을 무시합니다.
-        if (!PhotonNetwork.IsMasterClient) return;
-
-        // 실제 아이템 보관 로직 (마스터 클라이언트에서만 실행)
-        Debug.Log($"'{info.Sender.NickName}'로부터 아이템 보관 요청 받음: ID {itemID}, 수량 {quantity}");
-
-        // 여기에 유효성 검사 추가 가능 (예: 해당 플레이어가 정말 그 아이템을 가지고 있었는지)
-
-        // 이미 같은 아이템이 있는지 확인
-        for (int i = 0; i < storageData.id.Length; i++)
-        {
-            if (storageData.id[i] == itemID)
-            {
-                if (getSingularity(i)) break;
-                storageData.quantity[i] += quantity;
-                SyncDataToAll();
-                return;
-            }
-        }
-
-        // 빈 슬롯 찾아서 추가
-        for (int i = 0; i < storageData.id.Length; i++)
-        {
-            if (storageData.id[i] == -1)
-            {
-                storageData.id[i] = itemID;
-                storageData.quantity[i] = quantity;
-                storageData.durability[i] = durability;
-                SyncDataToAll();
-                return;
-            }
-        }
-
-        //Debug.LogWarning("창고가 가득 찼습니다.");
+        if (!PhotonNetwork.IsMasterClient || !TryDepositItem(itemID, quantity, durability)) return;
+        SyncDataToAll();
     }
 
+    // UI와 무관하게 창고에 아이템 전량을 추가하며 실패하면 원본을 보존합니다.
+    public bool TryDepositItem(int itemID, int quantity, float durability)
+    {
+        if (!PhotonNetwork.IsMasterClient || !IsStorageReady) return false;
+        var delivery = new RewardDelivery { deliveryId = "deposit/" + Guid.NewGuid().ToString("N"),
+            rewardType = RewardType.Item, itemId = itemID, amount = quantity, durability = durability };
+        if (!RewardInventory.TryCredit(storageData, storageData.id.Length, delivery, out var updated)) return false;
+        // 일반 입고는 기존 호출자의 처리이므로 보상 수령 영수증을 추가하지 않습니다.
+        updated.receivedDeliveryIds.Remove(delivery.deliveryId);
+        storageData = updated;
+        return true;
+    }
+
+    // 금액 범위를 검사한 뒤 창고 잔액에 더합니다.
+    public bool TryDepositMoney(int amount)
+    {
+        if (!PhotonNetwork.IsMasterClient || !IsStorageReady || amount <= 0 ||
+            storageData.money < 0 || (long)storageData.money + amount > int.MaxValue) return false;
+        storageData.money += amount;
+        return true;
+    }
+
+    // 요청자 본인에게만 출고를 예약하며 실제 차감은 수령 성공 응답 이후 수행합니다.
     [PunRPC]
     public void PunRPC_RequestWithdrawItem(int boxSlot, int requesterViewID, int amount, PhotonMessageInfo info)
     {
-        if (!PhotonNetwork.IsMasterClient) return;
-
-        int itemID = storageData.id[boxSlot];
-        int quantity = storageData.quantity[boxSlot];
-        float durability = storageData.durability[boxSlot];
-
-        if (itemID == -1 || quantity < amount) return;
-
-        // 아이템을 꺼낼 수 있는지 유효성 검사
-        // 아직 미구현 상태 (InventoryFrame에 일부 구현이 되어 있긴 한데 보강 필요)
-
-        // 1. 요청한 플레이어의 PhotonView를 찾습니다.
-        PhotonView requesterPhotonView = PhotonView.Find(requesterViewID);
-        if (requesterPhotonView != null)
-        {
-            // 2. 해당 플레이어에게만 아이템을 주도록 RPC를 보냅니다.
-            requesterPhotonView.RPC("PunRPC_AddItem", info.Sender, itemID, amount, durability);
-
-            // 3. 창고에서 아이템을 제거합니다.
-            //storageData.id[boxSlot] = -1;
-            //storageData.quantity[boxSlot] = 0;
-            storageData.RemoveItem(boxSlot, amount);
-
-            // 4. 변경된 창고 데이터를 모든 클라이언트에게 동기화합니다.
-            SyncDataToAll();
-        }
-        else
-        {
-            Debug.LogError($"ID {requesterViewID}를 가진 요청자를 찾을 수 없습니다.");
-
-        }
+        if (!PhotonNetwork.IsMasterClient || info.Sender == null) return;
+        // 로컬 UI의 ViewID 대신 검증된 네트워크 발신자로 수령자를 결정합니다.
+        RewardDeliveryService.Instance?.RequestWithdrawal(this, QuestNetworkBridge.PlayerId(info.Sender), boxSlot, amount, false);
     }
 
-
-    // 데이터를 모든 클라이언트에게 동기화하는 메서드
+    // 보상/출고가 사용하는 공유 상태와 동일한 버전으로 창고 변경을 발행합니다.
     protected void SyncDataToAll()
     {
-        if (!PhotonNetwork.IsMasterClient) return;
-        //storageData.SaveInventory(boxName);
-        //Debug.Log($"SyncDataToAll - 현재 잔액 : {storageData.money}");
-        if (SaveManager.Instance != null)
-        {
-            SaveManager.Instance.UpdateBoxCache(boxName, storageData);
-        }
-
-        string jsonData = JsonUtility.ToJson(storageData);
-        pv.RPC(nameof(PunRPC_SyncBoxData), RpcTarget.AllBuffered, jsonData);
-        Debug.Log("모든 클라이언트에게 창고 데이터 동기화 전송");
-
+        if (!PhotonNetwork.IsMasterClient || storageData == null) return;
+        SaveManager.Instance?.UpdateBoxCache(boxName, storageData);
+        if (RewardDeliveryService.Instance?.PublishBox(boxName, storageData) == true) return;
+        if (pv != null && pv.ViewID != 0)
+            pv.RPC(nameof(PunRPC_SyncBoxData), RpcTarget.AllBuffered, JsonUtility.ToJson(storageData));
     }
 
+    // 초기화 중 기존 RPC는 허용하되 확정된 공유 버전보다 오래된 내용을 덮지 않습니다.
     [PunRPC]
     public void PunRPC_SyncBoxData(string jsonData)
     {
-        //Debug.Log($"PUNRPC_SyncBoxData - 현재 잔액 : {storageData.money}");
-        InventoryData data = JsonUtility.FromJson<InventoryData>(jsonData);
-        //data.InitializeItemDatabase(); // ItemDatabase 초기화
-        this.storageData = data; // 로컬 데이터 업데이트
-        //Debug.Log($"PUNRPC_SyncBoxData2 - 현재 잔액 : {storageData.money}");
-        // 만약 이 박스의 UI가 현재 열려있다면, UI를 즉시 업데이트
+        if (QuestManager.Instance?.IsInitialized == true &&
+            QuestManager.Instance.DeliveryState.boxes.Any(b => b.boxId == boxName)) return;
+        ApplySharedStorage(JsonUtility.FromJson<InventoryData>(jsonData));
+    }
+
+    // 확정된 공유 상태를 적용하고 열려 있는 창고 화면을 즉시 갱신합니다.
+    public void ApplySharedStorage(InventoryData data)
+    {
+        if (data?.id == null) return;
+        storageData = JsonUtility.FromJson<InventoryData>(JsonUtility.ToJson(data));
+        IsStorageReady = true;
+        SaveManager.Instance?.UpdateBoxCache(boxName, storageData);
         if (box != null && box.gameObject.activeInHierarchy && box.linkedViewID == pv.ViewID)
         {
-            box.UpdateBoxUIFromData(storageData);
+            box.UpdateBoxUIFromData(VisibleStorageData());
             box.UpdateInventoryMenu();
         }
-        Debug.Log("창고 데이터 동기화 받음.");
-        //Debug.Log($"PUNRPC_SyncBoxData3 - 현재 잔액 : {storageData.money}");
     }
+
+    // 서비스의 지급 계산이 원본 상자 데이터를 직접 변경하지 않도록 복사합니다.
+    public InventoryData CaptureStorageData() => storageData == null ? null :
+        JsonUtility.FromJson<InventoryData>(JsonUtility.ToJson(storageData));
+
+    // 출고 대기 중인 수량을 제외한 표시용 데이터만 UI에 전달합니다.
+    private InventoryData VisibleStorageData() => RewardDeliveryService.Instance?.GetVisibleBoxData(boxName, storageData) ?? storageData;
+
+    // 기존 상점의 금액 입고 경로를 유지하며 유효한 금액만 추가합니다.
+
 
     [PunRPC]
     public void PunRPC_RequestDepositMoney(int amount, int requesterViewID, PhotonMessageInfo info)
     {
-        if (!PhotonNetwork.IsMasterClient) return;
-
-        // 유효성 검사: 요청한 플레이어의 돈을 실제로 검증하는 로직이 필요하지만,
-        // 일단 클라이언트를 신뢰하고 진행합니다.
-
-        //창고 데이터 돈 추가 로직
-        storageData.money += amount;
-        Debug.Log($"'{info.Sender.NickName}'로부터 {amount}원 입금 요청. 현재 창고 잔액: {storageData.money}");
-        //storageData.SaveInventory();
-        //변경된 창고 데이터를 모든 클라이언트에게 동기화
+        if (!TryDepositMoney(amount)) return;
         SyncDataToAll();
-        //Debug.Log($"싱크 완료, 현재 창고 잔액: {storageData.money}");
     }
+
+    // 돈도 아이템과 동일하게 수령 확인 전까지 예약 상태로 남깁니다.
 
     [PunRPC]
     public void PunRPC_RequestWithdrawMoney(int amount, int requesterViewID, PhotonMessageInfo info)
     {
-        if (!PhotonNetwork.IsMasterClient) return;
-
-        if (storageData.money >= amount)
-        {
-            storageData.money -= amount;
-            Debug.Log($"'{info.Sender.NickName}'에게 {amount}원 출금. 현재 창고 잔액: {storageData.money}");
-
-            // 1. 요청한 플레이어(UI)의 PhotonView를 찾습니다.
-            PhotonView requesterPhotonView = PhotonView.Find(requesterViewID);
-
-            if (requesterPhotonView != null)
-            {
-                // [핵심 수정] 방장이 계산하지 않고, 클라이언트에게 "amount만큼 추가해라!" 라고 명령만 보냅니다.
-                requesterPhotonView.RPC("PunRPC_AddMoney", info.Sender, amount);
-            }
-
-            // 변경된 창고 데이터를 모든 클라이언트에게 동기화.
-            SyncDataToAll();
-        }
-        else
-        {
-            Debug.LogWarning($"'{info.Sender.NickName}'의 출금 요청 실패. 잔액 부족.");
-        }
+        if (!PhotonNetwork.IsMasterClient || info.Sender == null) return;
+        RewardDeliveryService.Instance?.RequestWithdrawal(this, QuestNetworkBridge.PlayerId(info.Sender), -1, amount, true);
     }
+
+    // 창고를 열거나 다시 조회하면 방장의 현재 내용을 공유합니다.
 
     [PunRPC]
     public void PunRPC_RequestLatestData()

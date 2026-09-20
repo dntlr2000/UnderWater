@@ -483,6 +483,9 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     #endregion
 
     #region Save & Sync Methods
+    private long inventorySequence;
+
+    // 전송 순번을 붙여 지연된 인벤토리 패킷이 새 획득 결과를 덮지 않게 합니다.
     public PlayerData ToPlayerData()
     {
         string stableId = GetStablePlayerId(photonView.Owner);
@@ -497,10 +500,29 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             position = new PlayerLocation(transform.position),
             //items = currentItems,
             items = inventory,
+            inventoryActor = photonView.Owner.ActorNumber,
+            inventorySequence = NextInventorySequence(),
             jobType = JobType, // 직업이 없으면 -1 반환
 
             conditionData = condition != null ? condition.ToConditionData() : null
         };
+    }
+
+    // 획득 직후 FixedUpdate를 기다리지 않고 인벤토리 복사본을 포함해 상태를 캡처합니다.
+    public PlayerData CaptureQuestPlayerState(Inventory source)
+    {
+        SyncInventory(source.CaptureInventorySnapshot());
+        var state = ToPlayerData();
+        state.playerId = QuestNetworkBridge.LocalPlayerId;
+        return state;
+    }
+
+    // 저장 복원이나 같은 Actor 번호 재사용 뒤에도 이전 저장보다 큰 전송 순번을 사용합니다.
+    private long NextInventorySequence()
+    {
+        var saved = SaveManager.Instance.GetCurrentSave()?.players?.FirstOrDefault(p => p.playerId == QuestNetworkBridge.LocalPlayerId);
+        if (saved != null) inventorySequence = System.Math.Max(inventorySequence, saved.inventorySequence);
+        return ++inventorySequence;
     }
 
     // SaveManager와 동일한 ID 확인 로직 사용
@@ -542,7 +564,9 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             transform.position,
             JobType,
             inventoryJson,
-            conditionJson
+            conditionJson,
+            PhotonNetwork.LocalPlayer.ActorNumber,
+            NextInventorySequence()
         };
 
         PhotonNetwork.RaiseEvent(
@@ -583,7 +607,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
     }
 
-    // SaveManager가 호출하여 직업을 설정하는 메서드
+    // 직업을 설정하고 진행 중인 로컬 퀘스트 및 HUD의 직업 필터를 갱신합니다.
     public void SetJob(string jobType)
     {
         currentJob = allJobs.FirstOrDefault(j => j.jobType.ToString() == jobType);
@@ -597,6 +621,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
 
         Debug.Log($"[Player] Job set: {currentJob.jobName}");
+        if (photonView.IsMine && QuestManager.Instance != null && QuestManager.Instance.IsInitialized)
+            QuestManager.Instance.RegisterLocalPlayer(this);
     }
 
     // SaveManager가 위치를 로드할 때 호출하는 메서드

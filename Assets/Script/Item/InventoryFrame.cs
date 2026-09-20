@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Collections.Generic;
 using UnityEngine;
 
 
@@ -342,6 +343,9 @@ public class InventoryData
     //public ItemDatabase item; //Serializable이 아니므로 이 값이 json으로 저장되진 않음
 
     public int money;
+    // 잔액/아이템과 같은 스냅샷으로 저장해 응답 유실 뒤에도 다시 지급하지 않습니다.
+    public List<string> receivedDeliveryIds = new();
+    public List<string> rejectedDeliveryIds = new();
 
     public void GenerateData(int slots = 25)
     {
@@ -406,6 +410,7 @@ public class InventoryData
         Debug.Log($"인벤토리 데이터 저장 경로: {path}");
     }
     
+    // 구형 개별 인벤토리 파일에서도 지급 영수증을 아이템/잔액과 함께 복원합니다.
     public void LoadInventory(string dataName)
     {
         string path = Application.persistentDataPath + $"/{dataName}.json";
@@ -416,11 +421,19 @@ public class InventoryData
         }
         string json = File.ReadAllText(path);
         InventoryData data = JsonUtility.FromJson<InventoryData>(json);
+        RestoreData(data);
+    }
 
+    // 불러오기 경로에 관계없이 보유 데이터와 중복 지급 방지 기록을 함께 교체합니다.
+    public void RestoreData(InventoryData data)
+    {
+        if (data == null) return;
         if (data.quantity != null) quantity = data.quantity;
         money = data.money;
         id = data.id;
         if (data.durability != null) durability= data.durability;
+        receivedDeliveryIds = data.receivedDeliveryIds ?? new List<string>();
+        rejectedDeliveryIds = data.rejectedDeliveryIds ?? new List<string>();
     }
 
     public void useItem(int index)

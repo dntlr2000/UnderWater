@@ -33,8 +33,11 @@ public class SellBox : OpenableStorageBox
         }
     }
 
+    // 출고 응답을 기다리는 물건은 판매하지 않고 확정 뒤 다음 판매 주기에 처리합니다.
     public void SellItems()
     {
+        if (!PhotonNetwork.IsMasterClient || storageData?.id == null ||
+            RewardDeliveryService.Instance?.HasReservedWithdrawals(boxName) == true) return;
         int inventoryLength = storageData.id.Length;
 
         for (int i = 0; i < inventoryLength; i++)
