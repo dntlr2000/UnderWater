@@ -13,6 +13,7 @@ TagManager:
   - TrashCan
   - Mailbox
   - MapBoundary
+  - SpawnPoint
   layers:
   - Default
   - TransparentFX

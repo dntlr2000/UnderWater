@@ -45,6 +45,18 @@ public class Condition : MonoBehaviour
 
     private int OxygenCylinderSlotIndex = -1;
     public Coroutine BusyCoroutine;
+
+    [Header("Faint")]
+    [SerializeField, Min(1f)] private float faintDuration = 60f;
+    [SerializeField, Range(0.01f, 1f)] private float reviveHealthRatio = 0.3f; //부활 시 체력
+    [SerializeField, Range(0f, 1f)] private float reviveOxygenRatio = 1f; //부활 시 산소
+    [SerializeField, Min(0.1f)] private float maxReviveDistance = 10f;
+
+    private double faintEndTime = -1d;
+    private bool isFaintRequestPending;
+    private bool isResolvingFaint;
+    private int normalPlayerLayer;
+    private int faintPlayerLayer;
     #endregion
 
     #region UI
@@ -66,6 +78,21 @@ public class Condition : MonoBehaviour
 
     #endregion
 
+    /// <summary>
+    /// 플레이어의 기본 레이어와 빈사 상호작용용 레이어를 저장합니다.
+    /// </summary>
+    private void Awake()
+    {
+        normalPlayerLayer = gameObject.layer;
+        faintPlayerLayer = LayerMask.NameToLayer("Raycast");
+
+        if (faintPlayerLayer < 0)
+        {
+            faintPlayerLayer = normalPlayerLayer;
+            Debug.LogWarning("Raycast 레이어를 찾지 못해 기존 플레이어 레이어를 유지합니다.");
+        }
+    }
+
     public void SetCondition(Player player)
     {
         this.player = player;
@@ -81,9 +108,21 @@ public class Condition : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// MasterClient에서 빈사 제한시간 만료를 확인하고 패널티 부활을 요청합니다.
+    /// </summary>
     void Update()
     {
+        if (!isFainted || isResolvingFaint)
+        {
+            return;
+        }
 
+        bool canResolveTimeout = !PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient;
+        if (canResolveTimeout && GetFaintClockTime() >= faintEndTime)
+        {
+            ResolvePenaltyRespawn();
+        }
     }
 
     #region StateControllers
@@ -133,19 +172,30 @@ public class Condition : MonoBehaviour
         staminaBar.SetBarUI(stamina, MAX_STAMINA);
     }
 
+    /// <summary>
+    /// 생존 중에만 체력을 변경하고 체력이 소진되면 빈사 상태를 요청합니다.
+    /// </summary>
     public void Damaged(float value)
     {
-        health -= value;
-        health = Mathf.Max(health, 0);
+        if (isFainted || isFaintRequestPending)
+        {
+            return;
+        }
+
+        health = Mathf.Clamp(health - value, 0f, MAX_HEALTH);
         //Debug.Log($"남은 체력 : {health}");
         if (health <= 0)
         {
             //사망
             //health = 0;
-            isFainted = true;
-            ResetMove();
+            //isFainted = true;
+            RequestEnterFaint();
         }
-        healthBar.SetBarUI(health, MAX_HEALTH);
+
+        if (healthBar != null)
+        {
+            healthBar.SetBarUI(health, MAX_HEALTH);
+        }
     }
 
     public IEnumerator getHungry()
@@ -276,6 +326,7 @@ public class Condition : MonoBehaviour
     public void restoreBreath(float amount = 1f) //물 밖에 있을 때는 폐활량만큼 산소량 충전
     {
         if (OxygenCylinderSlotIndex != -1) return;
+        if (!CanAct(false, true, false)) return;
 
         if (!GetHeadUnderwaterState() && oxygen <= 100f)
         {
@@ -391,6 +442,7 @@ public class Condition : MonoBehaviour
         //LoadHumanOxygen();
     }
 
+
     public void EquipEffect(int itemId, int slots, float durability= -1f) //장착중인 장비 효과 반영, 
     {
         Debug.Log($"현재 산소량: {oxygen}");
@@ -409,12 +461,21 @@ public class Condition : MonoBehaviour
 
         else if (ItemDatabase.Instance.GetEquipEffectType(itemId) == "oxygen")
         {
+            //내구도가 없는 산소통은 장비 슬롯에 남아 있어도 활성 산소원으로 취급하지 않음
+            if (durability <= 0f)
+            {
+                OxygenCylinderSlotIndex = -1;
+                usingOxgenSpeed = 1f;
+                Debug.Log("내구도가 없는 산소통이므로 활성화하지 않습니다.");
+                return;
+            }
+
             SaveHumanOxygen(oxygen); //장착 전 산소량 저장
             oxygen = durability;
             //Debug.Log($"현재 산소량은 저장됩니다 : {humanOxygen}, 새로운 산소량 : {oxygen}");
             usingOxgenSpeed = 0.5f;
+            OxygenCylinderSlotIndex = slots;
         }
-        OxygenCylinderSlotIndex = slots;
 
 
         if (oxygen > MAX_OXYGEN) { oxygen = MAX_OXYGEN; }
@@ -429,16 +490,20 @@ public class Condition : MonoBehaviour
     public void LoadHumanOxygen()
     {
         OxygenCylinderSlotIndex = -1;
-        oxygen = humanOxygen;
+        //oxygen = humanOxygen;
+        oxygen = Mathf.Clamp(humanOxygen, 0f, MAX_OXYGEN); //범위 초과 방지용
         usingOxgenSpeed = 1f;
         //humanOxygen = 0f;
     }
 
+    /// <summary>
+    /// 요청된 조건에 따라 현재 플레이어가 행동할 수 있는지 반환합니다.
+    /// </summary>
     public bool CanAct(bool CheckBusy, bool CheckFainted, bool CheckOnWork)
     {
         bool value = true;
         if (CheckBusy && this.isBusy) value = false;
-        if (CheckFainted && this.isFainted) value = false;
+        if (CheckFainted && (this.isFainted || isFaintRequestPending)) value = false;
         if (CheckOnWork && this.onWork) value = false;
 
         return value;
@@ -465,6 +530,9 @@ public class Condition : MonoBehaviour
         };
     }
 
+    /// <summary>
+    /// 저장된 상태 수치를 복원하고 체력이 0이면 빈사 진입 흐름을 다시 시작합니다.
+    /// </summary>
     public void ApplyLoadedData(ConditionData data)
     {
         if (data == null) return;
@@ -480,6 +548,11 @@ public class Condition : MonoBehaviour
         SetBarUI();
 
         Debug.Log("저장된 플레이어 상태(Condition) 복구 완료!");
+
+        if (health <= 0f && player != null && player.photonView.IsMine)
+        {
+            RequestEnterFaint();
+        }
     }
 
 
@@ -488,5 +561,414 @@ public class Condition : MonoBehaviour
         return player.visualController.fogController.GetUnderwaterState();
     }
 
+    /// <summary>
+    /// 체력이 소진된 로컬 플레이어가 MasterClient에 빈사 진입을 요청합니다.
+    /// </summary>
+    private void RequestEnterFaint()
+    {
+        if (isFainted || isFaintRequestPending || player == null)
+        {
+            return;
+        }
 
+        if (player.photonView != null && !player.photonView.IsMine)
+        {
+            return;
+        }
+
+        isFaintRequestPending = true;
+
+        if (!PhotonNetwork.InRoom || player.photonView == null)
+        {
+            ApplyFaint(GetFaintClockTime() + faintDuration);
+            return;
+        }
+
+        player.photonView.RPC(nameof(PunRPC_RequestEnterFaint), RpcTarget.MasterClient);
+    }
+
+    /// <summary>
+    /// 빈사 요청의 발신자가 해당 플레이어의 소유자인지 확인합니다.
+    /// </summary>
+    private bool IsRequestFromOwner(PhotonMessageInfo info)
+    {
+        return info.Sender != null
+            && player != null
+            && player.photonView.Owner != null
+            && info.Sender.ActorNumber == player.photonView.Owner.ActorNumber;
+    }
+
+    /// <summary>
+    /// MasterClient가 소유자의 빈사 요청을 검증하고 모든 클라이언트에 반영합니다.
+    /// </summary>
+    [PunRPC]
+    private void PunRPC_RequestEnterFaint(PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient || !IsRequestFromOwner(info) || isFainted)
+        {
+            return;
+        }
+
+        double endTime = PhotonNetwork.Time + faintDuration;
+        player.photonView.RPC(nameof(PunRPC_ApplyFaint), RpcTarget.AllBuffered, endTime);
+    }
+
+    /// <summary>
+    /// 동기화된 종료 시각을 사용해 빈사 상태를 모든 클라이언트에 반영합니다.
+    /// </summary>
+    [PunRPC]
+    private void PunRPC_ApplyFaint(double endTime)
+    {
+        ApplyFaint(endTime);
+    }
+
+    /// <summary>
+    /// 빈사 수치와 표현을 현재 플레이어 복제본에 적용합니다.
+    /// </summary>
+    private void ApplyFaint(double endTime)
+    {
+        health = 0f;
+        faintEndTime = endTime;
+        isFaintRequestPending = false;
+        isResolvingFaint = false;
+        SetFaint(true);
+        RefreshLocalStateUI();
+    }
+
+    /// <summary>
+    /// 다른 플레이어가 빈사 플레이어의 구조를 MasterClient에 요청합니다.
+    /// </summary>
+    public void RequestRevive(Player reviver)
+    {
+        if (!isFainted
+            || isResolvingFaint
+            || reviver == null
+            || reviver == player
+            || reviver.condition == null
+            || reviver.condition.isFainted)
+        {
+            return;
+        }
+
+        if (!PhotonNetwork.InRoom || player == null || player.photonView == null)
+        {
+            if (Vector3.Distance(transform.position, reviver.transform.position) <= maxReviveDistance)
+            {
+                ApplyRevive();
+            }
+            return;
+        }
+
+        player.photonView.RPC(
+            nameof(PunRPC_RequestRevive),
+            RpcTarget.MasterClient,
+            reviver.photonView.ViewID);
+    }
+
+    /// <summary>
+    /// MasterClient가 구조자 소유권과 거리, 양쪽 플레이어 상태를 검증합니다.
+    /// </summary>
+    [PunRPC]
+    private void PunRPC_RequestRevive(int reviverViewId, PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient || !isFainted || isResolvingFaint)
+        {
+            return;
+        }
+
+        PhotonView reviverView = PhotonView.Find(reviverViewId);
+        Player reviver = reviverView != null ? reviverView.GetComponent<Player>() : null;
+
+        bool isValidReviver = reviver != null
+            && reviver != player
+            && reviver.condition != null
+            && !reviver.condition.isFainted
+            && reviverView.Owner != null
+            && info.Sender != null
+            && reviverView.Owner.ActorNumber == info.Sender.ActorNumber
+            && Vector3.Distance(transform.position, reviver.transform.position) <= maxReviveDistance;
+
+        if (!isValidReviver)
+        {
+            return;
+        }
+
+        isResolvingFaint = true;
+        player.photonView.RPC(nameof(PunRPC_ApplyRevive), RpcTarget.AllBuffered);
+    }
+
+    /// <summary>
+    /// 검증된 구조 결과를 모든 클라이언트의 플레이어 복제본에 적용합니다.
+    /// </summary>
+    [PunRPC]
+    private void PunRPC_ApplyRevive()
+    {
+        ApplyRevive();
+    }
+
+    /// <summary>
+    /// 빈사 플레이어를 현 위치에서 적은 체력과 최소 산소량으로 회복시킵니다.
+    /// </summary>
+    private void ApplyRevive()
+    {
+        if (!isFainted)
+        {
+            isResolvingFaint = false;
+            return;
+        }
+
+        health = Mathf.Min(MAX_HEALTH, Mathf.Max(1f, MAX_HEALTH * reviveHealthRatio));
+        oxygen = Mathf.Clamp(
+            Mathf.Max(oxygen, MAX_OXYGEN * reviveOxygenRatio),
+            0f,
+            MAX_OXYGEN);
+
+        faintEndTime = -1d;
+        isFaintRequestPending = false;
+        isResolvingFaint = false;
+        SetFaint(false);
+        RefreshLocalStateUI();
+
+        if (player != null && player.photonView.IsMine)
+        {
+            SyncOxygenDurability();
+            player.ForceSyncState();
+        }
+    }
+
+    /// <summary>
+    /// 빈사 상태의 로컬 플레이어가 즉시 패널티 부활을 선택합니다.
+    /// </summary>
+    public void GiveUpAndRespawn()
+    {
+        if (!isFainted || isResolvingFaint || player == null || !player.photonView.IsMine)
+        {
+            return;
+        }
+
+        RequestPenaltyRespawn();
+    }
+
+    /// <summary>
+    /// 빈사 포기 요청을 MasterClient에 전달하거나 오프라인에서 즉시 처리합니다.
+    /// </summary>
+    private void RequestPenaltyRespawn()
+    {
+        if (!isFainted || isResolvingFaint)
+        {
+            return;
+        }
+
+        if (!PhotonNetwork.InRoom || player == null || player.photonView == null)
+        {
+            ResolvePenaltyRespawn();
+            return;
+        }
+
+        player.photonView.RPC(nameof(PunRPC_RequestPenaltyRespawn), RpcTarget.MasterClient);
+    }
+
+    /// <summary>
+    /// MasterClient가 플레이어 소유자의 패널티 부활 요청을 검증합니다.
+    /// </summary>
+    [PunRPC]
+    private void PunRPC_RequestPenaltyRespawn(PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.IsMasterClient
+            || !IsRequestFromOwner(info)
+            || !isFainted
+            || isResolvingFaint)
+        {
+            return;
+        }
+
+        ResolvePenaltyRespawn();
+    }
+
+    /// <summary>
+    /// 시간 만료 또는 포기를 하나의 패널티 부활 처리로 확정합니다.
+    /// </summary>
+    private void ResolvePenaltyRespawn()
+    {
+        if (!isFainted || isResolvingFaint)
+        {
+            return;
+        }
+
+        isResolvingFaint = true;
+        Vector3 respawnPosition = FindRespawnPosition();
+
+        if (PhotonNetwork.InRoom && player != null && player.photonView != null)
+        {
+            player.photonView.RPC(
+                nameof(PunRPC_ApplyPenaltyRespawn),
+                RpcTarget.AllBuffered,
+                respawnPosition);
+            return;
+        }
+
+        ApplyPenaltyRespawn(respawnPosition);
+    }
+
+    /// <summary>
+    /// 확정된 패널티 부활 위치와 결과를 모든 클라이언트에 적용합니다.
+    /// </summary>
+    [PunRPC]
+    private void PunRPC_ApplyPenaltyRespawn(Vector3 respawnPosition)
+    {
+        ApplyPenaltyRespawn(respawnPosition);
+    }
+
+    /// <summary>
+    /// 소유자의 아이템을 제거하고 상태를 초기화한 뒤 부활 지점으로 이동합니다.
+    /// </summary>
+    private void ApplyPenaltyRespawn(Vector3 respawnPosition)
+    {
+        if (!isFainted)
+        {
+            isResolvingFaint = false;
+            return;
+        }
+
+        bool isLocalOwner = player != null && player.photonView.IsMine;
+
+        if (isLocalOwner)
+        {
+            if (inventory == null)
+            {
+                inventory = FindAnyObjectByType<Inventory>();
+            }
+
+            if (inventory != null)
+            {
+                inventory.LoseAllItemsOnDeath();
+            }
+            else
+            {
+                Debug.LogWarning("패널티 부활 중 로컬 인벤토리를 찾지 못했습니다.");
+            }
+        }
+
+        ResetConditionForRespawn();
+
+        if (isLocalOwner)
+        {
+            player.TeleportTo(respawnPosition);
+        }
+
+        faintEndTime = -1d;
+        isFaintRequestPending = false;
+        SetFaint(false);
+        isResolvingFaint = false;
+        RefreshLocalStateUI();
+
+        if (isLocalOwner)
+        {
+            player.ForceSyncState();
+        }
+    }
+
+    /// <summary>
+    /// 패널티 부활에 필요한 상태값과 진행 중 행동을 초기화합니다.
+    /// </summary>
+    private void ResetConditionForRespawn()
+    {
+        if (BusyCoroutine != null && player != null)
+        {
+            player.StopCoroutine(BusyCoroutine);
+            BusyCoroutine = null;
+        }
+
+        ResetCondition();
+        humanOxygen = Mathf.Min(100f, MAX_OXYGEN);
+        usingOxgenSpeed = 1f;
+        OxygenCylinderSlotIndex = -1;
+        oxygenTickTimer = 0f;
+        isBusy = false;
+        onWork = false;
+        isRunning = false;
+
+        if (player != null)
+        {
+            player.isRunning = false;
+            ResetMove();
+        }
+    }
+
+    /// <summary>
+    /// InGameManager에 설정된 패널티 부활 위치를 조회합니다.
+    /// </summary>
+    private Vector3 FindRespawnPosition()
+    {
+        InGameManager inGameManager = FindAnyObjectByType<InGameManager>();
+        if (inGameManager != null)
+        {
+            return inGameManager.GetRespawnPosition();
+        }
+
+        Debug.LogWarning("InGameManager를 찾지 못해 기본 좌표에서 부활합니다.");
+        return new Vector3(0f, 7f, 0f);
+    }
+
+    /// <summary>
+    /// 로컬 플레이어에게 연결된 상태 UI만 안전하게 갱신합니다.
+    /// </summary>
+    private void RefreshLocalStateUI()
+    {
+        if (player == null || !player.photonView.IsMine || healthBar == null)
+        {
+            return;
+        }
+
+        SetBarUI();
+    }
+
+    /// <summary>
+    /// 네트워크 방에서는 공유 시간을, 그 외에는 로컬 시간을 반환합니다.
+    /// </summary>
+    private double GetFaintClockTime()
+    {
+        return PhotonNetwork.InRoom ? PhotonNetwork.Time : Time.timeAsDouble;
+    }
+
+    /// <summary>
+    /// 빈사 UI가 표시할 남은 제한시간을 초 단위로 반환합니다.
+    /// </summary>
+    public float GetRemainingFaintTime()
+    {
+        if (!isFainted)
+        {
+            return 0f;
+        }
+
+        return Mathf.Max(0f, (float)(faintEndTime - GetFaintClockTime()));
+    }
+
+    /// <summary>
+    /// 빈사 상태 여부를 상호작용 및 UI 코드에 제공합니다.
+    /// </summary>
+    public bool GetIsFainted()
+    {
+        return isFainted;
+    }
+
+    /// <summary>
+    /// 빈사 상태의 이동, 레이어, 다운 애니메이션 표현을 함께 적용합니다.
+    /// </summary>
+    public void SetFaint(bool value)
+    {
+        isFainted = value;
+        if (isFainted)
+        {
+            ResetMove();
+            //추후 기절 시 행동 불가 상태로 전환하는 로직 추가 가능
+        }
+
+        gameObject.layer = isFainted ? faintPlayerLayer : normalPlayerLayer; //상호작용을 위해 임시로 Raycast 레이어로 변경
+
+        if (player != null && player.thirdViewAnimator != null)
+        {
+            player.thirdViewAnimator.SetDown(isFainted);
+        }
+    }
 }

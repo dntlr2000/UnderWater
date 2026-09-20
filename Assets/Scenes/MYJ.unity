@@ -404,6 +404,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0eb28ae3f485904eb5f87447aa50baa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerPrefabName: Playerable
+  testJobIndex: 0
 --- !u!4 &469038371
 Transform:
   m_ObjectHideFlags: 0
@@ -687,6 +689,7 @@ MonoBehaviour:
   objectName: Item Box
   player: {fileID: 0}
   usePhoton: 1
+  usingPlayerID: 0
   itemID: 1
   amount: 1
   durability: -1
@@ -970,7 +973,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 614e597ce750ec04ba86293396d55fab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isTestMode: 0
   jobPrefabs: []
+  defaultSpawnPoint: {fileID: 0}
+  respawnPoint: {fileID: 0}
 --- !u!4 &1213704022
 Transform:
   m_ObjectHideFlags: 0
@@ -1330,6 +1336,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 5942516226840452689, guid: 6dc600d6c5d4de6429824dc11b19fb7f, type: 3}
+      propertyPath: sceneViewId
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 7100950334259486710, guid: 6dc600d6c5d4de6429824dc11b19fb7f, type: 3}
       propertyPath: m_LocalPosition.x
       value: -6.9045296

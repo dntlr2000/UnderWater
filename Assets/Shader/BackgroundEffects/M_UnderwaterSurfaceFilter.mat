@@ -34,7 +34,7 @@ Material:
     - _Brightness: 1.05
     - _CausticsAlphaBoost: 0.12
     - _CausticsIntensity: 1.2
-    - _CausticsTiling: 2.5
+    - _CausticsTiling: 0.01
     - _CullMode: 1
     - _DistortionStrength: 0.018
     - _FresnelPower: 2.2

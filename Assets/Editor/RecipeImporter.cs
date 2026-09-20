@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -10,12 +10,12 @@ public static class RecipeImporter
     private const string INGREDIENT_TSV_PATH = "Assets/Resources/Data/TSV/12_RecipeIngredients.txt";
     private const string OUTPUT_FOLDER = "Assets/Resources/Data/CreateBenchData";
 
-    [MenuItem("SunkenCity/Import Recipes From TSV")]
+    [MenuItem("Overflown/Import Recipes From TSV")]
     public static void ImportRecipes()
     {
         if (!File.Exists(RECIPE_TSV_PATH))
         {
-            Debug.LogError($"[RecipeImporter] TSV ¾øÀ½: {RECIPE_TSV_PATH}");
+            Debug.LogError($"[RecipeImporter] TSV ì—†ìŒ: {RECIPE_TSV_PATH}");
             return;
         }
 
@@ -25,14 +25,14 @@ public static class RecipeImporter
             AssetDatabase.Refresh();
         }
 
-        // Àç·á ½ÃÆ®¸¦ recipeID ±âÁØÀ¸·Î ±×·ìÇÎ
+        // ì¬ë£Œ ì‹œíŠ¸ë¥¼ recipeID ê¸°ì¤€ìœ¼ë¡œ ê·¸ë£¹í•‘
         var ingredientRows = ParseTSV(INGREDIENT_TSV_PATH);
         var ingredientMap = ingredientRows
             .GroupBy(r => TSVParser.Get(r, "recipeID"))
             .ToDictionary(g => g.Key, g => g.OrderBy(r => TSVParser.GetInt(r, "seq")).ToList());
 
         var recipeRows = ParseTSV(RECIPE_TSV_PATH);
-        Debug.Log($"[RecipeImporter] ÆÄ½ÌµÈ ·¹½ÃÇÇ Çà ¼ö: {recipeRows.Count}");
+        Debug.Log($"[RecipeImporter] íŒŒì‹±ëœ ë ˆì‹œí”¼ í–‰ ìˆ˜: {recipeRows.Count}");
 
         int created = 0, updated = 0, skipped = 0;
 
@@ -47,17 +47,17 @@ public static class RecipeImporter
             int resultAmount = TSVParser.GetInt(row, "resultAmount", 1);
             float craftTimeSec = TSVParser.GetFloat(row, "craftTimeSec");
 
-            // °á°ú ¾ÆÀÌÅÛ itemId(int) Ã£±â
+            // ê²°ê³¼ ì•„ì´í…œ itemId(int) ì°¾ê¸°
             int resultItemIntID = FindItemIntID(resultItemID);
 
-            // ±âÁ¸ ¿¡¼Â Ã£±â
+            // ê¸°ì¡´ ì—ì…‹ ì°¾ê¸°
             string assetPath = $"{OUTPUT_FOLDER}/{recipeID}.asset";
             CookingRecipe recipe = AssetDatabase.LoadAssetAtPath<CookingRecipe>(assetPath);
 
             bool isNew = recipe == null;
             if (isNew) recipe = ScriptableObject.CreateInstance<CookingRecipe>();
 
-            // ±âº» Á¤º¸
+            // ê¸°ë³¸ ì •ë³´
             recipe.id = recipeID;
             recipe.displayName = TSVParser.Get(row, "displayName");
             recipe.recipeDescription = TSVParser.Get(row, "description");
@@ -66,7 +66,7 @@ public static class RecipeImporter
             recipe.resultAmount = resultAmount;
             recipe.isBasic = string.IsNullOrEmpty(TSVParser.Get(row, "requiredJob"));
 
-            // Àç·á ¸ñ·Ï »ı¼º
+            // ì¬ë£Œ ëª©ë¡ ìƒì„±
             recipe.ingredients = new List<RecipeIngredient>();
             if (ingredientMap.TryGetValue(recipeID, out var ingRows))
             {
@@ -100,7 +100,7 @@ public static class RecipeImporter
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[RecipeImporter] ¿Ï·á »ı¼º:{created}, °»½Å:{updated}, ½ºÅµ:{skipped}");
+        Debug.Log($"[RecipeImporter] ì™„ë£Œ ìƒì„±:{created}, ê°±ì‹ :{updated}, ìŠ¤í‚µ:{skipped}");
     }
 
     private static int FindItemIntID(string stringID)
