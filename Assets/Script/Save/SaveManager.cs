@@ -431,7 +431,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             string myId = AuthMngr.currentUserId;
 
             string loadedJobType = GetSavedJobType(AuthMngr.currentUserId);
-            if (RoomManager.Instance != null)
+            if (!string.IsNullOrEmpty(loadedJobType) && RoomManager.Instance != null)
             {
                 RoomManager.Instance.ApplyLoadedJobToPhoton(loadedJobType);
             }

@@ -239,6 +239,14 @@ public class RoomManager : MonoBehaviourPunCallbacks
     {
         if (targetPlayer == null) return;
 
+        if (targetPlayer == PhotonNetwork.LocalPlayer)
+        {
+            RefreshJobButtons();
+            RefreshPlayerSlots();
+            RefreshReadyGauge();
+            return;
+        }
+
         string safeUserId = targetPlayer.UserId;
         if (string.IsNullOrEmpty(safeUserId))
         {
