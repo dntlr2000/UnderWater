@@ -233,6 +233,8 @@ public class LobbyManager : MonoBehaviourPunCallbacks
                 { RoomKeys.SaveOwner, AuthMngr.currentUserId },
                 { RoomKeys.CreatedAt, DateTime.Now.ToString(RoomConfig.DateFormat) },
                 { RoomKeys.IsLoadedGame, isLoaded },
+                // 입장자는 선택 이력 RPC 대신 생성 시점부터 제공되는 최신 저장을 읽습니다.
+                { "SaveData", JsonUtility.ToJson(data) },
                 { RoomKeys.HasPassword, hasPassword  },
                 { RoomKeys.PasswordHash, hash }
             },

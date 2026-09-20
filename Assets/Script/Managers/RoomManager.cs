@@ -23,6 +23,11 @@ public class RoomManager : MonoBehaviourPunCallbacks
     [HideInInspector] public bool isLoadedFromSave = false;
     public JobData[] jobDatas;
 
+    private const string JobSelectionRevisionKey = "JobSelectionRevision";
+    private int localJobSelectionRevision;
+    private bool hasPendingJobSelection;
+    private string pendingJobType = "";
+
     private bool CheckIsLoadedGameRoom()
     {
         if (PhotonNetwork.CurrentRoom != null &&
@@ -35,11 +40,13 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
     #region Room Join / Leave / Start
 
+    // 입장 시 최신 저장을 한 번 읽고, 초기 직업만 Photon 속성에 반영합니다.
     public override void OnJoinedRoom()
     {
+        ResetPendingJobSelection();
         OutgameCanvasManager.Instance.ShowRoomPanel(PhotonNetwork.CurrentRoom.Name);
 
-        Debug.Log($"[RoomManager] 방 입장 완료. ID(Firebase): {AuthMngr.currentUserId}");
+        Debug.Log($"[RoomManager] 방 입장 완료. ID(Firebase): {GetPlayerId(PhotonNetwork.LocalPlayer)}");
 
         // 1. 방 속성(Room Properties)에 저장 데이터가 있는지 확인
         bool hasSaveData = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("SaveData");
@@ -49,20 +56,13 @@ public class RoomManager : MonoBehaviourPunCallbacks
         if (hasSaveData && SaveMngr != null)
         {
             string json = (string)PhotonNetwork.CurrentRoom.CustomProperties["SaveData"];
-            SaveMngr.HandleBroadcastedSaveData(json); // 여기서 isGameLoadedFromSave가 true가 됨
+            SaveMngr.HandleBroadcastedSaveData(json); // 방의 새 게임/불러오기 구분도 함께 복원합니다.
             Debug.Log("[RoomManager] 입장 즉시 방 데이터를 로컬에 로드했습니다.");
         }
 
-        // 3. 방장이라면 로컬 데이터를 다시 한 번 확실하게 방에 뿌림 (동기화 보장)
-        if (PhotonNetwork.IsMasterClient && SaveMngr != null)
-        {
-            string masterJobType = SaveMngr.GetSavedJobType(AuthMngr.currentUserId);
-            SaveMngr.UpdateLocalPlayerJob(AuthMngr.currentUserId, PhotonNetwork.NickName, masterJobType);
-        }
-
         // 4. 내 직업 확인 및 적용
-        string mySavedJobType = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
-        Debug.Log($"[RoomManager] 로드된 데이터에서 내 직업 확인: {mySavedJobType} (ID: {AuthMngr.currentUserId})");
+        string mySavedJobType = SaveMngr?.GetSavedJobType(GetPlayerId(PhotonNetwork.LocalPlayer)) ?? "";
+        Debug.Log($"[RoomManager] 로드된 데이터에서 내 직업 확인: {mySavedJobType} (ID: {GetPlayerId(PhotonNetwork.LocalPlayer)})");
 
         // 5. 직업 설정 분기
         if (isLoadedGameRoom)
@@ -88,6 +88,14 @@ public class RoomManager : MonoBehaviourPunCallbacks
             SetLocalPlayerJobProperty("");
         }
 
+        // 속성이 이미 같아 알림이 없어도 최초 참가자 정보와 최신 스냅샷은 등록합니다.
+        if (PhotonNetwork.IsMasterClient && SaveMngr != null)
+        {
+            SaveMngr.UpdateLocalPlayerJob(GetPlayerId(PhotonNetwork.LocalPlayer), PhotonNetwork.NickName,
+                isLoadedGameRoom ? mySavedJobType : "");
+            SaveSyncManager.Instance?.PublishCurrentSave();
+        }
+
         RoomRenewal();
         OutgameCanvasManager.Instance.StartBtn.interactable = PhotonNetwork.IsMasterClient;
         OutgameCanvasManager.Instance.JobSelectPanel.SetActive(true);
@@ -97,29 +105,19 @@ public class RoomManager : MonoBehaviourPunCallbacks
         RefreshReadyGauge();
     }
 
+    // 새 참가자는 자신의 입장 처리에서 직업을 복원하고, 방장은 현재 속성만 저장합니다.
     public override void OnPlayerEnteredRoom(Photon.Realtime.Player newPlayer)
     {
         RoomRenewal();
         ChatRPC("System", $"<color=yellow>{newPlayer.NickName}님이 참가하셨습니다.</color>");
-
-        if (PhotonNetwork.IsMasterClient && SaveMngr != null && SaveMngr.isGameLoadedFromSave)
+        if (PhotonNetwork.IsMasterClient && SaveMngr != null)
         {
-            // 방장이 가진 최신 SaveData에서 새로 들어온 플레이어의 ID 검색
-            string savedJobType = SaveMngr.GetSavedJobType(newPlayer.UserId);
-
-            if (!string.IsNullOrEmpty(savedJobType))
-            {
-                Debug.Log($"[RoomManager] (Master) 입장한 {newPlayer.NickName}의 저장된 직업({savedJobType})을 찾아 강제 설정합니다.");
-                ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobType", savedJobType } };
-                newPlayer.SetCustomProperties(props);
-            }
-            else
-            {
-                Debug.Log($"[RoomManager] (Master) {newPlayer.NickName}은 신규 참가자입니다. 직업 선택 허용.");
-            }
+            string job = SaveMngr.isGameLoadedFromSave
+                ? SaveMngr.GetSavedJobType(GetPlayerId(newPlayer))
+                : newPlayer.CustomProperties["JobType"] as string ?? "";
+            SaveMngr.UpdateLocalPlayerJob(GetPlayerId(newPlayer), newPlayer.NickName, job);
         }
-        RefreshPlayerSlots();
-        RefreshReadyGauge();
+        ApplySavedJobs();
     }
 
     public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
@@ -130,27 +128,49 @@ public class RoomManager : MonoBehaviourPunCallbacks
         RefreshReadyGauge();
     }
 
+    // 저장 수신은 로컬 복원과 화면 갱신만 수행하고, 방장은 자신의 오래된 응답을 적용하지 않습니다.
     public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
     {
-        if (propertiesThatChanged.ContainsKey("SaveData"))
-        {
-            string json = (string)propertiesThatChanged["SaveData"];
-            Debug.Log("[RoomManager] 실시간 데이터 업데이트 수신.");
-
-            if (SaveMngr != null)
-            {
-                SaveMngr.HandleBroadcastedSaveData(json);
-                RefreshJobButtons();
-                RefreshPlayerSlots();
-                RefreshReadyGauge();
-            }
-        }
+        if (!PhotonNetwork.InRoom || !propertiesThatChanged.ContainsKey("SaveData")) return;
+        if (!PhotonNetwork.IsMasterClient && SaveMngr != null &&
+            PhotonNetwork.CurrentRoom.CustomProperties["SaveData"] is string json)
+            SaveMngr.HandleBroadcastedSaveData(json);
+        ApplySavedJobs();
     }
 
+    // 새 방장은 각 참가자의 현재 직업 속성으로 저장을 맞춘 뒤 최신 상태를 게시합니다.
     public override void OnMasterClientSwitched(Photon.Realtime.Player newMasterClient)
     {
-        OutgameCanvasManager.Instance.StartBtn.interactable = PhotonNetwork.IsMasterClient;
-        RefreshReadyGauge();
+        if (PhotonNetwork.IsMasterClient && SaveMngr != null)
+        {
+            foreach (var player in PhotonNetwork.PlayerList)
+            {
+                if (player.CustomProperties["JobType"] is string job)
+                    SaveMngr.UpdateLocalPlayerJob(GetPlayerId(player), player.NickName, job);
+            }
+            SaveSyncManager.Instance?.PublishCurrentSave();
+        }
+        if (OutgameCanvasManager.Instance?.StartBtn != null)
+            OutgameCanvasManager.Instance.StartBtn.interactable = PhotonNetwork.IsMasterClient;
+        ApplySavedJobs();
+    }
+
+    // 퇴장하면 이전 방에서 기다리던 선택을 버리고 직업 입력을 비활성화합니다.
+    public override void OnLeftRoom()
+    {
+        ResetPendingJobSelection();
+        ApplySavedJobs();
+        if (OutgameCanvasManager.Instance?.StartBtn != null)
+            OutgameCanvasManager.Instance.StartBtn.interactable = false;
+    }
+
+    // 연결 종료 후 직업 선택과 게임 시작으로 새 네트워크 요청을 보내지 못하게 합니다.
+    public override void OnDisconnected(DisconnectCause cause)
+    {
+        ResetPendingJobSelection();
+        ApplySavedJobs();
+        if (OutgameCanvasManager.Instance?.StartBtn != null)
+            OutgameCanvasManager.Instance.StartBtn.interactable = false;
     }
 
     private void RoomRenewal()
@@ -163,6 +183,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
             canvas.RoomInfoText.text = $"{PhotonNetwork.CurrentRoom.Name} / {PhotonNetwork.CurrentRoom.PlayerCount}/{PhotonNetwork.CurrentRoom.MaxPlayers}";
     }
 
+    // 저장 동기화에 사용한 참가자 ID를 기준으로 준비된 인원을 계산합니다.
     private void RefreshReadyGauge()
     {
         if (OutgameCanvasManager.Instance == null) return;
@@ -172,15 +193,22 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
         foreach (var p in players)
         {
-            string jobType = SaveMngr?.GetSavedJobType(p.UserId) ?? "";
+            string jobType = SaveMngr?.GetSavedJobType(GetPlayerId(p)) ?? "";
             if (!string.IsNullOrEmpty(jobType)) jobSelectedCount++;
         }
 
         OutgameCanvasManager.Instance.UpdateReadyGauge(jobSelectedCount, players.Length);
     }
 
+    // 연결과 마지막 선택의 확정을 확인한 뒤 모든 참가자의 직업이 준비되면 시작합니다.
     public void TryStartGame()
     {
+        if (!CanSendJobSelection()) return;
+        if (hasPendingJobSelection)
+        {
+            OutgameCanvasManager.Instance?.SetStatus("캐릭터 선택을 확인하고 있습니다. 잠시 기다려주세요.");
+            return;
+        }
         if (!PhotonNetwork.IsMasterClient)
         {
             OutgameCanvasManager.Instance.SetStatus("게임 시작은 마스터 클라이언트만 가능합니다.");
@@ -189,7 +217,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
         foreach (var player in PhotonNetwork.PlayerList)
         {
-            string jobType = SaveMngr?.GetSavedJobType(player.UserId) ?? "";
+            string jobType = SaveMngr?.GetSavedJobType(GetPlayerId(player)) ?? "";
             if (string.IsNullOrEmpty(jobType))
             {
                 OutgameCanvasManager.Instance.SetStatus($"{player.NickName}이 직업을 선택하지 않았습니다.");
@@ -229,46 +257,97 @@ public class RoomManager : MonoBehaviourPunCallbacks
 
     #region Job Management
 
-    private void SetLocalPlayerJobProperty(string jobType)
+    // 현재 방에서 직업 속성을 전송할 수 있는 상태인지 확인합니다.
+    private static bool CanSendJobSelection()
     {
-        ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable { { "JobType", jobType } };
-        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+        return PhotonNetwork.InRoom && (PhotonNetwork.OfflineMode || PhotonNetwork.IsConnectedAndReady);
     }
 
+    // Photon 인증 ID를 우선하여 저장과 화면에서 동일한 참가자를 조회합니다.
+    private static string GetPlayerId(Photon.Realtime.Player player)
+    {
+        if (player == null) return "";
+        if (!string.IsNullOrEmpty(player.UserId)) return player.UserId;
+        if (player.IsLocal && AuthManager.Instance != null && !string.IsNullOrEmpty(AuthManager.Instance.currentUserId))
+            return AuthManager.Instance.currentUserId;
+        return !string.IsNullOrEmpty(player.NickName) ? player.NickName : "UnknownUser_" + player.ActorNumber;
+    }
+
+    // 마지막 클릭이 확인되기 전에는 과거 응답 대신 사용자의 최신 선택을 표시합니다.
+    private string GetDisplayedJobType(Photon.Realtime.Player player)
+    {
+        if (player == null) return "";
+        if (player.IsLocal && hasPendingJobSelection) return pendingJobType;
+        if (player.CustomProperties["JobType"] is string job) return job;
+        return SaveMngr?.GetSavedJobType(GetPlayerId(player)) ?? "";
+    }
+
+    // 새 방이나 연결 종료 시 이전 방의 선택 대기 상태를 초기화합니다.
+    private void ResetPendingJobSelection()
+    {
+        hasPendingJobSelection = false;
+        pendingJobType = "";
+        localJobSelectionRevision = 0;
+    }
+
+    // 직업과 요청 순번을 한 번에 보내며 같은 값의 재전송을 생략합니다.
+    private bool SetLocalPlayerJobProperty(string jobType)
+    {
+        if (!CanSendJobSelection()) return false;
+        jobType ??= "";
+        var local = PhotonNetwork.LocalPlayer;
+        if ((hasPendingJobSelection && pendingJobType == jobType) ||
+            (!hasPendingJobSelection && local.CustomProperties["JobType"] is string current && current == jobType))
+            return true;
+
+        bool previousPending = hasPendingJobSelection;
+        string previousJob = pendingJobType;
+        int previousRevision = localJobSelectionRevision;
+        int confirmedRevision = local.CustomProperties[JobSelectionRevisionKey] is int revision ? revision : 0;
+        localJobSelectionRevision = Math.Max(localJobSelectionRevision, confirmedRevision) + 1;
+        hasPendingJobSelection = true;
+        pendingJobType = jobType;
+        var props = new ExitGames.Client.Photon.Hashtable
+        {
+            { "JobType", jobType }, { JobSelectionRevisionKey, localJobSelectionRevision }
+        };
+        if (local.SetCustomProperties(props)) return true;
+
+        // 전송 자체가 실패했다면 이전에 대기하던 선택 상태로 돌아갑니다.
+        hasPendingJobSelection = previousPending;
+        pendingJobType = previousJob;
+        localJobSelectionRevision = previousRevision;
+        return false;
+    }
+
+    // 직업 속성 알림은 방장만 저장에 반영하며 수신자가 다시 변경 요청을 보내지 않습니다.
     public override void OnPlayerPropertiesUpdate(Photon.Realtime.Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
     {
-        if (targetPlayer == null) return;
-
-        if (targetPlayer == PhotonNetwork.LocalPlayer)
-        {
-            RefreshJobButtons();
-            RefreshPlayerSlots();
-            RefreshReadyGauge();
-            return;
-        }
-
-        string safeUserId = targetPlayer.UserId;
-        if (string.IsNullOrEmpty(safeUserId))
-        {
-            safeUserId = targetPlayer.NickName;
-            if (string.IsNullOrEmpty(safeUserId)) safeUserId = "UnknownUser_" + targetPlayer.ActorNumber;
-        }
-
+        if (!PhotonNetwork.InRoom || targetPlayer == null) return;
         if (changedProps.ContainsKey("JobType"))
         {
-            string newJobType = (string)changedProps["JobType"];
-            if (SaveManager.Instance != null)
-                SaveManager.Instance.UpdateLocalPlayerJob(safeUserId, targetPlayer.NickName, newJobType);
-        }
+            if (targetPlayer.IsLocal && hasPendingJobSelection &&
+                changedProps[JobSelectionRevisionKey] is int revision && revision == localJobSelectionRevision &&
+                changedProps["JobType"] as string == pendingJobType)
+                hasPendingJobSelection = false;
 
-        RefreshJobButtons();
-        RefreshPlayerSlots();
-        RefreshReadyGauge();
+            if (PhotonNetwork.IsMasterClient && SaveMngr != null &&
+                targetPlayer.CustomProperties["JobType"] is string job)
+                SaveMngr.UpdateLocalPlayerJob(GetPlayerId(targetPlayer), targetPlayer.NickName, job);
+        }
+        ApplySavedJobs();
     }
+
+    // 마지막 클릭을 기준으로 선택/취소하며 저장용 RPC를 별도로 중복 전송하지 않습니다.
 
     public void SelectJob(int index)
     {
-        if (jobDatas == null || index < 0 || index >= jobDatas.Length) return;
+        if (!CanSendJobSelection())
+        {
+            OutgameCanvasManager.Instance?.SetStatus("방에 연결된 후 캐릭터를 선택해주세요.");
+            return;
+        }
+        if (jobDatas == null || index < 0 || index >= jobDatas.Length || jobDatas[index] == null) return;
 
         string selectedJobType = jobDatas[index].jobType.ToString();
         bool isRoomLoaded = CheckIsLoadedGameRoom();
@@ -276,7 +355,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
         // 1. 로드된 게임이고, 내 직업이 데이터에 존재한다면 -> 절대 변경 불가
         if (isRoomLoaded)
         {
-            string savedJob = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
+            string savedJob = SaveMngr?.GetSavedJobType(GetPlayerId(PhotonNetwork.LocalPlayer)) ?? "";
             if (!string.IsNullOrEmpty(savedJob))
             {
                 if (selectedJobType != savedJob)
@@ -290,7 +369,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
         {
             foreach (var pData in SaveMngr.GetCurrentSave().players)
             {
-                if (pData.playerId != AuthMngr.currentUserId && pData.jobType == selectedJobType)
+                if (pData.playerId != GetPlayerId(PhotonNetwork.LocalPlayer) && pData.jobType == selectedJobType)
                 {
                     isTakenByOther = true;
                     break;
@@ -305,31 +384,32 @@ public class RoomManager : MonoBehaviourPunCallbacks
             return;
         }
 
-        // 3. [토글 로직] 현재 내가 선택한 상태인지 확인 (Photon Property 기준)
-        string myCurrentJobType = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
+        // 확인 대기 중에도 마지막 클릭을 기준으로 같은 캐릭터의 선택을 취소합니다.
+        string myCurrentJobType = GetDisplayedJobType(PhotonNetwork.LocalPlayer);
 
         if (myCurrentJobType == selectedJobType)
         {
-            SetLocalPlayerJobProperty("");
-            SaveMngr?.UpdateLocalPlayerJob(AuthMngr.currentUserId, PhotonNetwork.NickName, "");
-            OutgameCanvasManager.Instance.SetStatus("직업 선택을 취소했습니다.");
+            if (!SetLocalPlayerJobProperty("")) return;
+            OutgameCanvasManager.Instance?.SetStatus("직업 선택을 취소했습니다.");
         }
         else
         {
-            SetLocalPlayerJobProperty(selectedJobType);
-            SaveMngr?.UpdateLocalPlayerJob(AuthMngr.currentUserId, PhotonNetwork.NickName, selectedJobType);
-            OutgameCanvasManager.Instance.SetStatus($"{jobDatas[index].jobName}을(를) 선택했습니다.");
+            if (!SetLocalPlayerJobProperty(selectedJobType)) return;
+            OutgameCanvasManager.Instance?.SetStatus($"{jobDatas[index].jobName}을(를) 선택했습니다.");
         }
+        ApplySavedJobs();
     }
 
+    // 저장된 로컬 직업에 대응하는 데이터 인덱스를 찾습니다.
     private int GetMyJobIndex()
     {
-        string myJobType = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
+        string myJobType = SaveMngr?.GetSavedJobType(GetPlayerId(PhotonNetwork.LocalPlayer)) ?? "";
         for (int i = 0; i < jobDatas.Length; i++)
             if (jobDatas[i].jobType.ToString() == myJobType) return i;
         return -1;
     }
 
+    // 마지막 로컬 선택을 강조하고 방 밖 또는 고정 직업에서는 선택 버튼을 잠급니다.
     public void RefreshJobButtons()
     {
         if (OutgameCanvasManager.Instance == null || OutgameCanvasManager.Instance.JobBtns == null) return;
@@ -338,16 +418,19 @@ public class RoomManager : MonoBehaviourPunCallbacks
         // 내가 고정되어야 하는 상태인지 확인
         bool isRoomLoaded = CheckIsLoadedGameRoom();
 
-        string myJobType = SaveMngr?.GetSavedJobType(AuthMngr.currentUserId) ?? "";
+        string myJobType = SaveMngr?.GetSavedJobType(GetPlayerId(PhotonNetwork.LocalPlayer)) ?? "";
         bool isMyJobFixed = isRoomLoaded && !string.IsNullOrEmpty(myJobType);
 
-        string myCurrentPropJobType = "";
-        if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("JobType", out object val))
-            myCurrentPropJobType = (string)val ?? "";
+        string myCurrentPropJobType = GetDisplayedJobType(PhotonNetwork.LocalPlayer);
 
         for (int i = 0; i < canvas.JobBtns.Length; i++)
         {
             if (canvas.JobBtns[i] == null) continue;
+            if (jobDatas == null || i >= jobDatas.Length || jobDatas[i] == null)
+            {
+                canvas.JobBtns[i].interactable = false;
+                continue;
+            }
 
             string thisJobType = jobDatas[i].jobType.ToString();
 
@@ -356,7 +439,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
             {
                 foreach (var pData in SaveMngr.GetCurrentSave().players)
                 {
-                    if (pData.playerId != AuthMngr.currentUserId && pData.jobType == thisJobType)
+                    if (pData.playerId != GetPlayerId(PhotonNetwork.LocalPlayer) && pData.jobType == thisJobType)
                     {
                         isTakenByOther = true;
                         break;
@@ -369,7 +452,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
                 ? myJobType == thisJobType
                 : myCurrentPropJobType == thisJobType;
 
-            canvas.JobBtns[i].interactable = isMyJobFixed ? false : !isTakenByOther;
+            canvas.JobBtns[i].interactable = CanSendJobSelection() && !isMyJobFixed && !isTakenByOther;
 
             // 색상 처리 (고정 상태라도 내 직업은 초록색으로 표시)
             var img = canvas.JobBtns[i].GetComponent<Image>();
@@ -391,6 +474,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
         }
     }
 
+    // 캐릭터 슬롯도 버튼과 같은 최신 직업을 표시하여 저장 응답 지연으로 되돌아가지 않게 합니다.
     public void RefreshPlayerSlots()
     {
         if (OutgameCanvasManager.Instance == null) return;
@@ -401,7 +485,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
         for (int i = 0; i < players.Length; i++)
         {
             var p = players[i];
-            string jobType = SaveMngr?.GetSavedJobType(p.UserId) ?? "";
+            string jobType = GetDisplayedJobType(p);
 
             PlayerInfo info = new PlayerInfo
             {
@@ -439,6 +523,7 @@ public class RoomManager : MonoBehaviourPunCallbacks
     }
     #endregion
 
+    // 명시적인 직업 복원 시에만 사용하며 동일한 속성은 다시 전송하지 않습니다.
     public void ApplyLoadedJobToPhoton(string loadedJobType)
     {
         SetLocalPlayerJobProperty(loadedJobType ?? ""); // ★ 변경

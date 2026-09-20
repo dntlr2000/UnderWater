@@ -161,8 +161,10 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         }
     }
 
+    // 방 안에서만 직업을 갱신하며, 로비의 속성 알림은 방장이 한 번 처리합니다.
     public void UpdateLocalPlayerJob(string userId, string nickname, string newJobType)
     {
+        if (!PhotonNetwork.InRoom || (!PhotonNetwork.OfflineMode && !PhotonNetwork.IsConnectedAndReady)) return;
         if (string.IsNullOrEmpty(userId)) userId = GetMyCurrentId();
 
         if (string.IsNullOrEmpty(userId))
@@ -410,28 +412,17 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
     #endregion
 
-    // 진행 전 저장 방송만 수락하며 새 게임/불러오기 구분을 유지합니다.
+    // 받은 저장 데이터는 로컬 캐시에만 적용하여 직업 속성 재전송과 동기화 순환을 막습니다.
     public void HandleBroadcastedSaveData(string json)
     {
-        SaveData loadedData = JsonUtility.FromJson<SaveData>(json);
-
-        // 진행 중에는 로비에서 늦게 도착한 저장 방송으로 최신 캐시를 교체하지 않습니다.
+        if (string.IsNullOrEmpty(json)) return;
         if (QuestManager.Instance != null && QuestManager.Instance.IsInitialized) return;
+        SaveData loadedData = JsonUtility.FromJson<SaveData>(json);
+        if (loadedData == null) return;
         bool loadedSession = isGameLoadedFromSave;
         if (PhotonNetwork.InRoom && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("IsLoadedGame", out var loadedFlag) && loadedFlag is bool value)
             loadedSession = value;
         SetCurrentSave(loadedData, loadedSession);
-
-        if (AuthMngr != null && !string.IsNullOrEmpty(AuthMngr.currentUserId))
-        {
-            string myId = AuthMngr.currentUserId;
-
-            string loadedJobType = GetSavedJobType(AuthMngr.currentUserId);
-            if (!string.IsNullOrEmpty(loadedJobType) && RoomManager.Instance != null)
-            {
-                RoomManager.Instance.ApplyLoadedJobToPhoton(loadedJobType);
-            }
-        }
     }
 
     public void LoadQuestDataToManager()
@@ -459,17 +450,20 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         }
     }
 
-    // RPC 함수 (방장만 수신)
+    // 기존 RPC 진입점도 방장과 현재 방을 확인한 뒤 동일한 중복 방지 로직을 사용합니다.
     [PunRPC]
     private void RPC_RequestJobChange(string userId, string nickname, string newJobType)
     {
+        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient) return;
         Debug.Log($"[SaveManager] RPC 수신: {nickname}님이 직업 {newJobType} 선택");
         ProcessJobUpdate(userId, nickname, newJobType);
     }
 
-    // 내부 처리 함수
+    // 실제 참가자/직업 변경만 저장하고, 같은 알림을 다시 받아도 재방송하지 않습니다.
     private void ProcessJobUpdate(string userId, string nickname, string newJobType)
     {
+        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient || string.IsNullOrEmpty(userId)) return;
+        newJobType ??= "";
         if (currentSave == null)
         {
             currentSave = new SaveData(PhotonNetwork.CurrentRoom?.Name ?? "Room");
@@ -480,13 +474,15 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         if (currentSave.players == null) currentSave.players = new List<PlayerData>();
         if (currentSave.jobAssignments == null) currentSave.jobAssignments = new Dictionary<string, string>();
 
-        PlayerData pd = currentSave.players.FirstOrDefault(p => p.playerId == userId);
+        PlayerData pd = currentSave.players.FirstOrDefault(p => p != null && p.playerId == userId);
+        bool changed = pd == null || (pd.jobType ?? "") != newJobType || pd.playerName != nickname;
         if (pd == null)
         {
             pd = new PlayerData { playerId = userId, playerName = nickname, position = new PlayerLocation(Vector3.zero) };
             currentSave.players.Add(pd);
         }
         pd.jobType = newJobType;
+        pd.playerName = nickname;
         runtimePlayerCache[userId] = pd;
 
         if (!string.IsNullOrEmpty(newJobType))
@@ -501,7 +497,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             currentSave.jobAssignments.Remove(userId);
         }
 
-        // 방장이 변경 사항을 모두에게 알림
-        BroadcastSaveData();
+        // JSON에 포함되지 않는 직업 사전은 복구하되 실제 저장 내용이 같으면 전송하지 않습니다.
+        if (changed) BroadcastSaveData();
     }
 }

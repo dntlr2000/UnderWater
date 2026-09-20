@@ -151,48 +151,35 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
 
     #region SaveData Synchronization
 
-    public void OnSaveDataChangedHandler(string saveJson)
+    // 입장 또는 방장 교체 시 현재 저장의 최신 스냅샷을 방 속성에 게시합니다.
+    public void PublishCurrentSave()
     {
-        if (!PhotonNetwork.IsMasterClient) return;
-
-        var pv = NetworkBootstrap.Instance.PV;
-        if (pv == null) return;
-
-        try
-        {
-            pv.RPC("RPC_BroadcastSaveData", RpcTarget.AllBuffered, saveJson);
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError("[SaveSynManager] SaveData 브로드캐스트 실패: " + ex);
-        }
+        if (SaveManager.Instance?.GetCurrentSave() is SaveData data)
+            OnSaveDataChangedHandler(JsonUtility.ToJson(data));
     }
 
-    // 늦은 로비 저장 방송이 진행 중 퀘스트와 인벤토리를 덮지 않도록 합니다.
+    // 변경 이력을 RPC에 누적하지 않고 신규 참가자도 읽을 수 있는 최신 저장 하나만 유지합니다.
+    public void OnSaveDataChangedHandler(string saveJson)
+    {
+        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient || string.IsNullOrEmpty(saveJson)) return;
+        if (QuestManager.Instance != null && QuestManager.Instance.IsInitialized) return;
+        var room = PhotonNetwork.CurrentRoom;
+        if (room.CustomProperties["SaveData"] as string == saveJson) return;
+        room.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "SaveData", saveJson } });
+    }
+
+    // 구형 버퍼 RPC가 남아 있어도 그 과거 내용 대신 방의 최신 저장만 적용합니다.
     [PunRPC]
     public void RPC_BroadcastSaveData(string saveJson)
     {
+        if (!PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient) return;
         if (QuestManager.Instance != null && QuestManager.Instance.IsInitialized) return;
-        SaveData data = null;
-        try
+        if (PhotonNetwork.CurrentRoom.CustomProperties["SaveData"] is string latestJson)
         {
-            data = JsonUtility.FromJson<SaveData>(saveJson);
+            SaveManager.Instance?.HandleBroadcastedSaveData(latestJson);
+            RoomMngr?.ApplySavedJobs();
         }
-        catch (Exception ex)
-        {
-            Debug.LogError("[SaveSynManager] SaveData 역직렬화 실패: " + ex);
-            return;
-        }
-
-        if (SaveManager.Instance == null) return;
-
-        SaveManager.Instance.HandleBroadcastedSaveData(saveJson);
-        //SaveManager.Instance.ApplySaveData(data);
-
-        // 직업 데이터 적용을 RoomManager에게 위임
-        RoomMngr.ApplySavedJobs();
-
-        Debug.Log("[SaveSynManager] 수신된 SaveData를 로컬에 적용 완료");
     }
+
     #endregion
 }
