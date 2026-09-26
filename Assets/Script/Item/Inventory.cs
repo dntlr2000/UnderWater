@@ -1,11 +1,27 @@
 ﻿using Photon.Pun;
 using System;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class Inventory : InventoryFrame
 {
+    // 로컬 소유자를 기준으로 찾아 원격 플레이어 인벤토리를 잘못 사용하지 않습니다.
+    public static Inventory Local => Player.localPlayer == null ? null :
+        Player.localPlayer.GetComponent<Inventory>() ?? FindObjectsByType<Inventory>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .FirstOrDefault(i => i.player == Player.localPlayer);
+
+    // 확정 거래의 비용만 반영하여 대기 중 들어온 다른 아이템이나 돈은 보존합니다.
+    public void ApplyConfirmedPurchases(IEnumerable<ShopPurchaseRecord> purchases)
+    {
+        if (inventoryData?.id == null || ItemUI == null) return;
+        if (!ShopTransactions.ApplyPurchases(inventoryData, QuestNetworkBridge.LocalPlayerId, purchases)) return;
+        ItemUI.UpdateMoney(inventoryData.money);
+        player?.SyncInventory(inventoryData);
+    }
+
     public int index; //현재 들고 있는 아이템
     public Transform IndexLine;
     public Player player; //플레이어가 포톤을 통해 자신의 인벤토리를 할당하는 기능 필요
@@ -46,8 +62,7 @@ public class Inventory : InventoryFrame
         Debug.Log("Inventory data generated");
     }
 
-    // Update is called once per frame
-
+    // 버리기·슬롯 변경·사용 입력을 처리하고 소비 효과는 인벤토리 소유자에게 적용합니다.
     void Update()
     {
 
@@ -107,7 +122,7 @@ public class Inventory : InventoryFrame
             if (inventoryData.id[index] < 0) return;
             if (!canUseItem) return;
             //if (!HoldingInteractableItem()) return; //들고 있는 아이템이 상호작용을 거부하는 아이템인 경우 false가 리턴됨
-            inventoryData.useItem(index);
+            inventoryData.useItem(index, player);
             ItemUI.SetQuantity(index, inventoryData.quantity[index],GetSingularity(index));
             if (inventoryData.quantity[index] <= 0)
             {
@@ -351,7 +366,8 @@ public class Inventory : InventoryFrame
         if (!RewardInventory.TryCredit(inventoryData, INVENTORY_SIZE, delivery, out var updated))
         {
             // 출고 실패 응답도 유지하여 지연된 동일 출고 요청을 뒤늦게 지급하지 않습니다.
-            if (!string.IsNullOrEmpty(delivery.sourceBoxId)) inventoryData.rejectedDeliveryIds.Add(delivery.deliveryId);
+            if (!string.IsNullOrEmpty(delivery.sourceBoxId) || !string.IsNullOrEmpty(delivery.sourceFieldId))
+                inventoryData.rejectedDeliveryIds.Add(delivery.deliveryId);
             return RewardReceiveResult.Full;
         }
         ApplyLoadedData(updated);

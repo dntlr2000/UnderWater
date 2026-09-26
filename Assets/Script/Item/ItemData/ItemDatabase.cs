@@ -62,16 +62,14 @@ public class ItemDatabase : MonoBehaviour
         Debug.Log($"[ItemDatabase] {itemDictionary.Count}개의 아이템 데이터 로드 완료.");
     }
 
-    //protected abstract void useItem(); //아이템 기능을 이렇게 구현할까 싶기도
-    public int UseItem(int itemId, int quantity)
+    // 기존 공개 호출은 현재 로컬 플레이어의 소비로 처리합니다.
+    public int UseItem(int itemId, int quantity) => UseItem(itemId, quantity, Player.localPlayer);
+
+    // 실제 인벤토리 소유자를 받아 소비 효과와 수량 감소를 적용합니다.
+    public int UseItem(int itemId, int quantity, Player owner)
     {
         ItemData data = GetItem(itemId);
-        if (data == null) return quantity;
-
-        if (player == null) player = FindAnyObjectByType<Inventory>().player;
-        quantity = data.Use(player, quantity); // 각 아이템 클래스에 정의된 기능이 실행됨
-
-        return quantity;
+        return data == null || owner == null || quantity <= 0 ? quantity : data.Use(owner, quantity);
     }
 
     public ItemData GetItem(int id)
@@ -89,12 +87,13 @@ public class ItemDatabase : MonoBehaviour
         return GetItem(itemId).itemName;
     }
 
+    // 목록 위치가 아닌 저장에 사용하는 실제 아이템 ID를 반환합니다.
     public int getItemId(string itemName)
     {
         for (int i = 0; i < itemDatas.Count; i++)
         {
             if (itemName == itemDatas[i].itemName)
-                return i;
+                return itemDatas[i].itemId;
         }
         Debug.LogWarning("아이템이 데이터에 존재하지 않습니다.");
         return -1;

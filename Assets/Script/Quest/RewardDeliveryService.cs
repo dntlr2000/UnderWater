@@ -55,6 +55,7 @@ public class RewardDeliveryService : MonoBehaviour
         {
             var delivery = FindDelivery(id);
             if (delivery == null || delivery.status != RewardDeliveryStatus.Pending) continue;
+            if (!string.IsNullOrEmpty(delivery.sourceFieldId) && FieldItem.FindPickup(delivery.sourceFieldId) == null) continue;
             if (delivery.destination == RewardDestination.Mailbox) TryMailboxDelivery(delivery);
             else
             {
@@ -190,12 +191,18 @@ public class RewardDeliveryService : MonoBehaviour
         var inventory = FindObjectsByType<Inventory>(FindObjectsInactive.Include, FindObjectsSortMode.None)
             .FirstOrDefault(i => i.player == Player.localPlayer);
         if (inventory == null || Player.localPlayer == null) return;
+        bool alreadyReceived = inventory.CaptureInventorySnapshot()?.receivedDeliveryIds?.Contains(deliveryId) == true;
         var result = inventory.TryReceiveDelivery(delivery);
         if (result == RewardReceiveResult.NotReady) return;
         if (result == RewardReceiveResult.Full)
-            NoticeOnce(deliveryId, string.IsNullOrEmpty(delivery.sourceBoxId)
+            NoticeOnce(deliveryId, string.IsNullOrEmpty(delivery.sourceBoxId) && string.IsNullOrEmpty(delivery.sourceFieldId)
                 ? "인벤토리 공간이 부족해 보상을 기다리고 있습니다." : "인벤토리 공간이 부족해 꺼내지 못했습니다.");
         bridge.SendDeliveryResult(deliveryId, result, Player.localPlayer.CaptureQuestPlayerState(inventory));
+        if (result == RewardReceiveResult.Success && !alreadyReceived && !string.IsNullOrEmpty(delivery.sourceFieldId))
+        {
+            var item = ItemDatabase.Instance.GetItem(delivery.itemId);
+            if (item != null) manager.ReportLocalJobProgress(ObjectiveType.CollectItem, delivery.amount, item.stringID);
+        }
     }
 
     // 수령자와 영수증을 확인한 응답만 반영하며 지연된 중복 응답은 무시합니다.
@@ -212,13 +219,39 @@ public class RewardDeliveryService : MonoBehaviour
             if (!string.IsNullOrEmpty(delivery.sourceBoxId) && !CommitWithdrawal(delivery)) return;
             delivery.status = RewardDeliveryStatus.Delivered;
         }
-        else if (result == RewardReceiveResult.Full && rejected && !string.IsNullOrEmpty(delivery.sourceBoxId))
+        else if (result == RewardReceiveResult.Full && rejected &&
+            (!string.IsNullOrEmpty(delivery.sourceBoxId) || !string.IsNullOrEmpty(delivery.sourceFieldId)))
             delivery.status = RewardDeliveryStatus.Cancelled;
         else return;
         player.playerId = senderId;
         SaveManager.Instance.UpdatePlayerCache(player);
         PutRecipient(player);
+        if (delivery.status == RewardDeliveryStatus.Delivered && !string.IsNullOrEmpty(delivery.sourceFieldId))
+        {
+            FieldItem.FindPickup(delivery.sourceFieldId)?.CompletePickup();
+            var item = ItemDatabase.Instance.GetItem(delivery.itemId);
+            if (item != null) manager.ApplyMainProgress("pickup/" + delivery.deliveryId, ObjectiveType.CollectItem,
+                delivery.amount, item.stringID, player, senderId);
+        }
         manager.CommitDeliveryChanges();
+    }
+
+    // 공유 상태보다 필드 식별자가 늦게 도착해도 이미 수령한 대상을 다시 숨깁니다.
+    public bool IsFieldPickupCompleted(string pickupId) => IsReady && !string.IsNullOrEmpty(pickupId) &&
+        State.deliveries.Any(d => d.sourceFieldId == pickupId && d.status == RewardDeliveryStatus.Delivered);
+
+    // 필드 대상을 한 명에게 예약하고 실제 수령 영수증이 올 때까지 원본을 보존합니다.
+    public bool RequestFieldPickup(FieldItem field, string recipientId)
+    {
+        if (!IsReady || !manager.CanWriteMain || bridge.IsRecoveringPlayerStates || field == null ||
+            !field.gameObject.activeSelf || string.IsNullOrEmpty(field.PickupId) || string.IsNullOrEmpty(recipientId) ||
+            field.amount <= 0 || ItemDatabase.Instance.GetItem(field.itemID) == null) return false;
+        if (State.deliveries.Any(d => d.sourceFieldId == field.PickupId && d.status != RewardDeliveryStatus.Cancelled)) return false;
+        State.deliveries.Add(new RewardDelivery { deliveryId = SaveId + "/pickup/" + Guid.NewGuid().ToString("N"),
+            sourceFieldId = field.PickupId, recipientPlayerId = recipientId, destination = RewardDestination.PlayerInventory,
+            rewardType = RewardType.Item, itemId = field.itemID, amount = field.amount, durability = field.durability });
+        manager.CommitDeliveryChanges();
+        return true;
     }
 
     // 출고 수량을 예약하고 동일 플레이어의 중복 클릭을 진행 중 한 건으로 제한합니다.
@@ -306,7 +339,7 @@ public class RewardDeliveryService : MonoBehaviour
     public void ApplySharedState()
     {
         if (!IsReady) return;
-        State.deliveries ??= new(); State.boxes ??= new(); State.recipients ??= new();
+        State.deliveries ??= new(); State.boxes ??= new(); State.recipients ??= new(); State.purchases ??= new();
         bool initial = observedSaveId != SaveId;
         if (initial) { observedSaveId = SaveId; announced.Clear(); blockedNotices.Clear(); }
         foreach (var entry in State.boxes)
@@ -323,6 +356,11 @@ public class RewardDeliveryService : MonoBehaviour
         }
         foreach (var delivery in State.deliveries.Where(d => d.status == RewardDeliveryStatus.Delivered))
         {
+            if (!string.IsNullOrEmpty(delivery.sourceFieldId))
+            {
+                FieldItem.FindPickup(delivery.sourceFieldId)?.CompletePickup();
+                continue;
+            }
             if (!announced.Add(delivery.deliveryId) || initial || !string.IsNullOrEmpty(delivery.sourceBoxId)) continue;
             if (delivery.destination == RewardDestination.PlayerInventory && delivery.recipientPlayerId != QuestNetworkBridge.LocalPlayerId) continue;
             string content = delivery.rewardType == RewardType.Money ? $"{delivery.amount}G" :

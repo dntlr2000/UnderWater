@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,8 +10,12 @@ public static class ItemDataImporter
     private const string TSV_PATH = "Assets/Resources/Data/TSV/03_Items.txt";
     private const string OUTPUT_FOLDER = "Assets/Resources/Data/ItemData";
 
+    // 기존 전체 가져오기 메뉴는 같은 검증 경로를 사용합니다.
     [MenuItem("Overflown/Import Items From TSV")]
-    public static void ImportItems()
+    public static void ImportItems() => ImportSelected(null);
+
+    // 지정된 ID만 가져올 수 있어 관련 없는 수동 설정을 일괄 변경하지 않습니다.
+    public static void ImportSelected(ICollection<int> itemIds)
     {
         if (!File.Exists(TSV_PATH))
         {
@@ -45,6 +50,8 @@ public static class ItemDataImporter
                 skipped++;
                 continue;
             }
+
+            if (itemIds != null && !itemIds.Contains(legacyItemId)) continue;
 
             string itemType = TSVParser.Get(row, "itemType");
             string assetPath = FindExistingAssetPath(legacyItemId);
@@ -84,9 +91,10 @@ public static class ItemDataImporter
         Debug.Log($"[ItemDataImporter] 완료 생성: {created}, 갱신: {updated}, 스킵: {skipped}");
     }
 
+    // 기존 GUID와 파생 ScriptableObject 타입을 유지할 대상을 실제 ID로 찾습니다.
     private static string FindExistingAssetPath(int legacyItemId)
     {
-        string[] guids = AssetDatabase.FindAssets("t:ItemData");
+        string[] guids = AssetDatabase.FindAssets("t:ItemData", new[] { OUTPUT_FOLDER });
         foreach (var guid in guids)
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
@@ -97,6 +105,7 @@ public static class ItemDataImporter
         return null;
     }
 
+    // 새 항목만 TSV의 분류에 맞는 기본 데이터 타입을 생성합니다.
     private static ItemData CreateItemInstance(string itemType)
     {
         switch (itemType)
@@ -110,6 +119,7 @@ public static class ItemDataImporter
         }
     }
 
+    // 이미지 경로를 Sprite 참조로 연결하고 기존 공통 속성을 가져옵니다.
     private static void ApplyCommonFields(ItemData target, Dictionary<string, string> row, int legacyItemId)
     {
         target.itemName = TSVParser.Get(row, "displayName");
@@ -117,6 +127,13 @@ public static class ItemDataImporter
         target.stringID = TSVParser.Get(row, "itemID");
         target.description = TSVParser.Get(row, "description");
         target.modelPath = TSVParser.Get(row, "modelPath");
+        string iconPath = TSVParser.Get(row, "iconPath");
+        if (!string.IsNullOrEmpty(iconPath))
+        {
+            var icon = Resources.Load<Sprite>(iconPath);
+            if (icon != null) target.itemIcon = icon;
+            else Debug.LogWarning($"[ItemDataImporter] 아이콘 경로를 확인하세요. 기존 참조는 유지합니다: {iconPath}");
+        }
         target.equipEffectType = TSVParser.Get(row, "equipEffectType");
         target.price = TSVParser.GetInt(row, "price");
         target.weight = TSVParser.GetFloat(row, "weight");
@@ -126,12 +143,27 @@ public static class ItemDataImporter
         target.type = equipFlag == "Equipment" ? "equipable" : "item";
     }
 
+    // 정의된 즉시 회복 효과만 가져오며 별도 버프 시스템의 효과는 임의로 구현하지 않습니다.
     private static void ApplyTypeSpecificFields(ItemData target, Dictionary<string, string> row)
     {
-        if (target is FoodItem food)
+        if (!(target is FoodItem food)) return;
+        const string path = "Assets/Resources/Data/TSV/04_ItemEffects.txt";
+        if (!File.Exists(path)) return;
+        var effects = TSVParser.Parse(File.ReadAllText(path))
+            .Where(e => TSVParser.Get(e, "itemID") == target.stringID &&
+                new[] { "HealHP", "RestoreHunger", "RestoreThirst" }.Contains(TSVParser.Get(e, "effectType"))).ToList();
+        if (effects.Count == 0) return;
+        food.health = food.hunger = food.thirst = 0;
+        foreach (var effect in effects)
         {
-            // 04_ItemEffects는 별도 시트이므로 1차 검증에서는 기본값만 유지
-            // 추후 단계에서 ItemEffects 연동 추가 예정
+            float value = TSVParser.GetFloat(effect, "value");
+            switch (TSVParser.Get(effect, "effectType"))
+            {
+                case "HealHP": food.health += value; break;
+                case "RestoreHunger": food.hunger += value; break;
+                case "RestoreThirst": food.thirst += value; break;
+            }
+            food.discountAmount = Math.Max(1, TSVParser.GetInt(effect, "discountAmount", 1));
         }
     }
 }

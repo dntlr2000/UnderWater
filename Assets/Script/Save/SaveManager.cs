@@ -202,7 +202,11 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         }
         if (pd.items != null && (pd.inventoryActor != existing.inventoryActor || pd.inventorySequence >= existing.inventorySequence))
         {
-            existing.items = pd.items;
+            existing.items = JsonUtility.FromJson<InventoryData>(JsonUtility.ToJson(pd.items));
+            // 비용 반영 전 전송된 더 최신 패킷도 확정 거래를 취소하지 못하게 합니다.
+            var purchases = QuestManager.Instance?.IsInitialized == true ? QuestManager.Instance.DeliveryState.purchases
+                : currentSave.worldProgress?.mainQuests?.rewards?.purchases;
+            ShopTransactions.ApplyPurchases(existing.items, pd.playerId, purchases);
             existing.inventoryActor = pd.inventoryActor;
             existing.inventorySequence = pd.inventorySequence;
         }
