@@ -108,6 +108,7 @@ MonoBehaviour:
   - PunRPC_RequestEnterFaint
   - PunRPC_RequestPenaltyRespawn
   - PunRPC_RequestRevive
+  - RPC_SetPickupId
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

@@ -12,6 +12,8 @@ public class ComfirmScreen : MonoBehaviour
 
     public int amount;
     public int price;
+    private Func<int, int> totalPrice;
+    private int maximumAmount = 10;
     public Button ComfirmButtonA;
     public Button ComfirmButtonB;
     public Scrollbar amountBar;
@@ -22,28 +24,31 @@ public class ComfirmScreen : MonoBehaviour
     public Action onConfirmAction;
     public Action onConfirmAction2;
 
+    // 기존 창고·버리기 호출의 단가 기반 확인창을 유지합니다.
     public void ConstructComfirmScreen(int itemId, int itemPrice = 0)
     {
-        itemNameText.text = ItemDatabase.Instance.getItemName(itemId);
-        amount = 1;
-        amountBar.value = 0;
-        amountText.text = "1 / 10";
         price = itemPrice;
-        if (itemPrice == 0)
-            priceText.text = "";
-        else
-            priceText.text = "G " + price;
+        ConstructComfirmScreen(itemId, itemPrice == 0 ? null : n => itemPrice * n, 10);
     }
 
+    // 구매·판매가 실제로 사용하는 수량별 계산기로 확인 금액을 표시합니다.
+    public void ConstructComfirmScreen(int itemId, Func<int, int> quote, int maxAmount)
+    {
+        itemNameText.text = ItemDatabase.Instance.getItemName(itemId);
+        maximumAmount = Math.Max(1, maxAmount);
+        totalPrice = quote;
+        amount = 1;
+        amountBar.numberOfSteps = Math.Max(2, maximumAmount);
+        amountBar.SetValueWithoutNotify(0);
+        onScrollAmountChanged();
+    }
+
+    // 슬라이더 수량과 최종 합계는 같은 시점에 계산합니다.
     public void onScrollAmountChanged()
     {
-        amount = Mathf.RoundToInt(amountBar.value * (amountBar.numberOfSteps - 1)) + 1;
-        amountText.text = $"{amount} / 10";
-        //priceText.text = "\\ " + (shopPrice[selectedID] * amount);
-        if (price == 0)
-            priceText.text = "";
-        else
-            priceText.text = "G " + price * amount;
+        amount = Mathf.RoundToInt(amountBar.value * (maximumAmount - 1)) + 1;
+        amountText.text = $"{amount} / {maximumAmount}";
+        priceText.text = totalPrice == null ? "" : "G " + totalPrice(amount);
     }
 
     public void onClickExit()

@@ -14,7 +14,7 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
     private const string RevisionKey = "uw.quest.revision.v1";
     private const string JobKey = "uw.quest.job.v1";
     // 삭제한 전용 획득 메시지의 번호(3~5)는 재사용하지 않습니다.
-    private const int Progress = 1, Complete = 2, Rejected = 6, PlayerStateRequest = 7, PlayerStateResponse = 8, DeliveryOffer = 9, DeliveryResult = 10;
+    private const int Progress = 1, Complete = 2, Rejected = 6, PlayerStateRequest = 7, PlayerStateResponse = 8, DeliveryOffer = 9, DeliveryResult = 10, ShopPurchase = 11;
     private QuestManager manager;
     private SharedQuestState pendingPublish;
     private string sentJson;
@@ -111,7 +111,7 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
         var message = new QuestWireMessage { kind = Progress, type = (int)type, amount = amount, itemId = itemId };
         if (type == ObjectiveType.CollectItem && Player.localPlayer != null)
         {
-            var inventory = FindAnyObjectByType<Inventory>();
+            var inventory = Inventory.Local;
             if (inventory != null && inventory.CaptureInventorySnapshot() != null)
                 message.playerState = Player.localPlayer.CaptureQuestPlayerState(inventory);
         }
@@ -129,6 +129,10 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
     public void SendDeliveryResult(string deliveryId, RewardReceiveResult result, PlayerData player) =>
         SendToMaster(new QuestWireMessage { kind = DeliveryResult, requestId = deliveryId, result = (int)result, playerState = player });
 
+    // 구매는 동일한 요청 ID와 최초 스냅샷을 확인될 때까지 다시 보냅니다.
+    public void RequestShopPurchase(string requestId, int itemId, int amount, PlayerData buyer) =>
+        QueueRequest(new QuestWireMessage { kind = ShopPurchase, requestId = requestId, type = itemId, amount = amount, playerState = buyer });
+
     // 메인 수동 완료 요청을 전달하며 실제 조건은 방장이 재검사합니다.
     public void RequestMainCompletion(string questId)
     {
@@ -139,7 +143,7 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
     private void QueueRequest(QuestWireMessage message)
     {
         if (!PhotonNetwork.InRoom) return;
-        message.requestId = Guid.NewGuid().ToString("N");
+        if (string.IsNullOrEmpty(message.requestId)) message.requestId = Guid.NewGuid().ToString("N");
         message.saveId = CurrentSaveId();
         requests[message.requestId] = message;
         SendToMaster(message);
@@ -193,6 +197,14 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
         if (!PhotonNetwork.IsMasterClient) return;
         switch (message.kind)
         {
+            case ShopPurchase:
+                if (message.playerState?.items == null) break;
+                // 원본 재시도 패킷을 수정하지 않고 검증된 송신자만 구매자로 사용합니다.
+                var buyer = JsonUtility.FromJson<PlayerData>(JsonUtility.ToJson(message.playerState));
+                buyer.playerId = PlayerId(PhotonNetwork.CurrentRoom.GetPlayer(sender));
+                buyer.inventoryActor = sender;
+                GetComponent<ShopPurchaseService>().AcceptPurchase(message.requestId, message.type, message.amount, buyer);
+                break;
             case Progress:
                 if (!Enum.IsDefined(typeof(ObjectiveType), message.type)) break;
                 if (message.playerState != null)
@@ -226,7 +238,7 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
     // 새 방장에게 획득 당시 스냅샷이 아닌 현재 인벤토리와 상태를 전달합니다.
     private void ReplyCurrentPlayerState(string requestId)
     {
-        var inventory = FindAnyObjectByType<Inventory>();
+        var inventory = Inventory.Local;
         if (inventory == null || Player.localPlayer == null || inventory.CaptureInventorySnapshot() == null) return;
         SendToMaster(new QuestWireMessage { kind = PlayerStateResponse, requestId = requestId,
             playerState = Player.localPlayer.CaptureQuestPlayerState(inventory) });
@@ -238,7 +250,8 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
         foreach (var request in requests.Values.ToList())
         {
             bool done = request.kind == Progress && state.processedEvents.Contains(request.requestId) ||
-                request.kind == Complete && state.completedQuestIds.Contains(request.questId);
+                request.kind == Complete && state.completedQuestIds.Contains(request.questId) ||
+                request.kind == ShopPurchase && state.rewards?.purchases?.Any(p => p.requestId == request.requestId && p.buyerId == LocalPlayerId) == true;
             if (done) requests.Remove(request.requestId);
         }
     }
@@ -294,6 +307,8 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
         awaitingPlayerStates.Clear();
         if (PhotonNetwork.IsMasterClient)
         {
+            foreach (var field in FindObjectsByType<FieldItem>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                field.PublishPickupIdentity();
             foreach (var player in PhotonNetwork.PlayerList) CachePlayerJob(player);
             recoveryId = Guid.NewGuid().ToString("N");
             awaitingPlayerStates.UnionWith(PhotonNetwork.PlayerList.Where(p => !p.IsInactive).Select(p => p.ActorNumber));

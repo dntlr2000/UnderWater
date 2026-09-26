@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 832ac8b6ffef1a34790891e9f6ee475b, type: 3}
   m_Name: item_energy_bar
   m_EditorClassIdentifier: 
-  itemName: "\uC5D0\uB108\uC9C0\uBC14"
+  itemName: "\uc5d0\ub108\uc9c0\ubc14"
   itemId: 16
   stringID: item_energy_bar
   type: item
-  itemIcon: {fileID: 0}
+  itemIcon: {fileID: 21300000, guid: 88ed8245cfb64258a4effca90873a3a8, type: 3}
   description: "\uACE0\uC5F4\uB7C9 \uD734\uB300\uC2DD."
-  modelPath: 
+  modelPath: FBX/Items/EnergyBar_BAG
   equipEffectType: 
   price: 40
   weight: 0.3
-  durability: 0
+  durability: -1
   interactable: 0
   damage: 0
   sigularity: 0
   discountAmount: 1
   health: 0
-  hunger: 0
+  hunger: 30
   thirst: 0

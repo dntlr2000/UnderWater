@@ -222,8 +222,10 @@ public class StorageBox : InventoryFrame
 
 
 
+    // 처리 중인 상점 구매가 같은 잔액을 사용하지 못하도록 입금을 잠시 막습니다.
     public void StorageMoney()
     {
+        if (ShopPurchaseService.Instance?.IsBusy == true) return;
         OpenableStorageBox linkedBox = linkedPhotonView.GetComponent<OpenableStorageBox>();
         if (linkedBox.tag == "Mailbox")
         {

@@ -28,6 +28,7 @@ public class RewardDelivery
     public RewardDeliveryStatus status;
     // 출고 중에는 원본 수량을 남겨 두고 이 기록으로 다른 출고/판매를 막습니다.
     public string sourceBoxId;
+    public string sourceFieldId;
     public int sourceSlot = -1;
 }
 
@@ -38,6 +39,7 @@ public class RewardDeliveryState
     public List<BoxSaveData> boxes = new();
     // 지급 완료와 수령 직후 인벤토리를 같은 방 스냅샷에 포함합니다.
     public List<PlayerData> recipients = new();
+    public List<ShopPurchaseRecord> purchases = new();
 }
 
 public static class RewardInventory

@@ -12,6 +12,9 @@ public class InventoryFrame : MonoBehaviour
     protected string inventoryName;
     protected int INVENTORY_SIZE = 25;
 
+    public int NormalSlotCount => inventoryData?.id == null ? 0 : Math.Min(INVENTORY_SIZE, inventoryData.id.Length);
+    public bool IsInventoryReady => inventoryData?.id != null;
+
     public virtual void GenerateData(int slots = 25, int equipSlots = 0)
     {
         inventoryData = new InventoryData();
@@ -190,8 +193,10 @@ public class InventoryFrame : MonoBehaviour
 
     }
 
+    // 구매 확인 중에는 같은 개인 잔액의 중복 지출을 막습니다.
     public void GetMoney(int value)
     {
+        if (value < 0 && this is Inventory && ShopPurchaseService.Instance?.IsBusy == true) return;
         if (inventoryData.money < 0 && value <= 0) return;
         inventoryData.money += value;
         if (inventoryData.money < 0) inventoryData.money = 0;
@@ -346,6 +351,7 @@ public class InventoryData
     // 잔액/아이템과 같은 스냅샷으로 저장해 응답 유실 뒤에도 다시 지급하지 않습니다.
     public List<string> receivedDeliveryIds = new();
     public List<string> rejectedDeliveryIds = new();
+    public List<string> appliedPurchaseIds = new();
 
     public void GenerateData(int slots = 25)
     {
@@ -434,11 +440,17 @@ public class InventoryData
         if (data.durability != null) durability= data.durability;
         receivedDeliveryIds = data.receivedDeliveryIds ?? new List<string>();
         rejectedDeliveryIds = data.rejectedDeliveryIds ?? new List<string>();
+        appliedPurchaseIds = data.appliedPurchaseIds ?? new List<string>();
     }
 
-    public void useItem(int index)
+    // 기존 호출은 로컬 소유자에게 전달하며 새 호출은 인벤토리 소유자를 명시합니다.
+    public void useItem(int index) => useItem(index, Player.localPlayer);
+
+    // 소비 효과가 임의의 플레이어에게 적용되지 않도록 소유자를 전달합니다.
+    public void useItem(int index, Player owner)
     {
-        quantity[index] = ItemDatabase.Instance.UseItem(id[index], quantity[index]);
+        if (id == null || index < 0 || index >= id.Length || quantity[index] <= 0) return;
+        quantity[index] = ItemDatabase.Instance.UseItem(id[index], quantity[index], owner);
     }
 
 

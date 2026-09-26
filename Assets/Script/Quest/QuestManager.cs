@@ -36,6 +36,7 @@ public class QuestManager : MonoBehaviour
         rewards = GetComponent<RewardDeliveryService>();
         if (rewards == null) rewards = gameObject.AddComponent<RewardDeliveryService>();
         rewards.Configure(this, bridge);
+        if (GetComponent<ShopPurchaseService>() == null) gameObject.AddComponent<ShopPurchaseService>();
     }
 
     // 씬 종료 후 정적 참조를 정리합니다.

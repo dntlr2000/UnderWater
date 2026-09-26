@@ -22,9 +22,9 @@ public class ItemData : ScriptableObject
     public float damage = 10f;
     public bool sigularity;
 
+    // 별도 사용 효과가 없는 재료와 수집품은 입력만으로 소비하지 않습니다.
     public virtual int Use(Player player, int quantity)
     {
-        quantity--;
         return quantity;
     }
 }

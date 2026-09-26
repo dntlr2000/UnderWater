@@ -18,6 +18,7 @@ public class StoryMessageUI : MonoBehaviour
     {
         if (messageText != null) { messageText.enabled = false; messageText.raycastTarget = false; }
         RewardDeliveryService.OnNotice += EnqueueMessage;
+        ShopPurchaseService.OnNotice += EnqueueMessage;
         binding = StartCoroutine(BindWhenReady());
     }
 
@@ -25,6 +26,7 @@ public class StoryMessageUI : MonoBehaviour
     private void OnDisable()
     {
         RewardDeliveryService.OnNotice -= EnqueueMessage;
+        ShopPurchaseService.OnNotice -= EnqueueMessage;
         messages.Clear();
         if (binding != null) StopCoroutine(binding);
         if (hiding != null) StopCoroutine(hiding);
