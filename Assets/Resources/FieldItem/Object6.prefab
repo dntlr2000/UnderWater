@@ -175,11 +175,10 @@ MonoBehaviour:
   player: {fileID: 0}
   usePhoton: 1
   usingPlayerID: 0
-  itemID: 5
+  itemID: 6
   amount: 1
-  durability: -1
+  durability: 100
   ifPool: 1
-  MAX_OXYGEN: 100
 --- !u!114 &9151992487043186103
 MonoBehaviour:
   m_ObjectHideFlags: 0

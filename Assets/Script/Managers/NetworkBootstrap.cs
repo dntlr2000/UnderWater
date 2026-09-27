@@ -3,6 +3,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using System;
 using UnityEngine.UI;
+using TMPro;
 using System.Collections.Generic; // List<RoomInfo>를 위해 추가
 
 public class NetworkBootstrap : MonoBehaviourPunCallbacks
@@ -20,7 +21,7 @@ public class NetworkBootstrap : MonoBehaviourPunCallbacks
     private OutgameCanvasManager CanvasMngr => OutgameCanvasManager.Instance; // 편의를 위한 접근자 추가
 
     [Header("ETC")]
-    public Text StatusText;
+    public TMP_Text StatusText;
     public PhotonView PV;
 
     private void Awake()
@@ -39,10 +40,14 @@ public class NetworkBootstrap : MonoBehaviourPunCallbacks
     private void InitializeManagers()
     {
         // 1. AuthManager 초기화
-        AuthMngr.InitializeFirebase();
+        if (AuthMngr == null) AuthMngr = AuthManager.Instance;
+        if (AuthMngr != null) AuthMngr.InitializeFirebase();
+        else Debug.LogError("[Bootstrap] AuthManager 참조가 없습니다.");
 
-        // 2. SaveManager가 씬에 없다면 생성 (가장 중요)
         if (SaveManager.Instance == null)
+
+            // 2. SaveManager가 씬에 없다면 생성 (가장 중요)
+            if (SaveManager.Instance == null)
         {
             GameObject go = new GameObject("SaveManager");
             go.AddComponent<SaveManager>();
@@ -98,11 +103,9 @@ public class NetworkBootstrap : MonoBehaviourPunCallbacks
     public override void OnJoinedLobby()
     {
         Debug.Log("[Bootstrap] 로비 참가됨.");
-        AuthMngr.GoToLobby(); // 인증 상태에 따라 로비 또는 닉네임 패널로 이동
-        LobbyMngr.myList.Clear(); // 방 목록 초기화
 
-        // 로비 UI 초기화 (필요하다면 CanvasMngr를 통해 호출)
-        CanvasMngr?.ShowLobbyPanel(PhotonNetwork.NickName);
+        if (LobbyMngr != null) LobbyMngr.myList.Clear();
+        CanvasMngr?.ShowLobbyPanel(AuthMngr != null ? AuthMngr.currentNickname : PhotonNetwork.NickName);
     }
 
     public override void OnRoomListUpdate(List<RoomInfo> roomList)
@@ -117,13 +120,6 @@ public class NetworkBootstrap : MonoBehaviourPunCallbacks
         // 상태 텍스트 업데이트
         if (StatusText != null)
             StatusText.text = PhotonNetwork.NetworkClientState.ToString();
-
-        // 로비 정보 텍스트 업데이트 (LobbyMngr 대신 OutgameCanvasManager 참조)
-        if (CanvasMngr != null && CanvasMngr.LobbyInfoText != null)
-        {
-            CanvasMngr.LobbyInfoText.text =
-                $"{PhotonNetwork.CountOfPlayers - PhotonNetwork.CountOfPlayersInRooms}로비 / {PhotonNetwork.CountOfPlayers}접속";
-        }
     }
     #endregion
 }

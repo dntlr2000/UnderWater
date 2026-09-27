@@ -1,4 +1,5 @@
-//using TMPro;
+ï»¿//using TMPro;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,7 +16,26 @@ public class StateUIManager : MonoBehaviour
 
     public GuageTypes guageType = GuageTypes.Bar_Horizontal;
 
-    public enum GuageTypes //´Ü¼øÇÑ ÇüÅÂ´Â ÇÊ¿ä°¡ ¾øÀ¸³ª, ÀÌÈÄ ÀÏ··ÀÌ´Â È¿°ú¸¦ Ãß°¡ÇÏ±â À§ÇØ¼­´Â ÇÊ¿äÇÏ±â ¶§¹®¿¡ ¹Ì¸® Ãß°¡ÇÔ
+    [Header("BlinkingWarning")]
+    public Color blinkColor = Color.red;
+    [SerializeField, Min(0.01f)]
+    private float normalColorDuration = 0.3f; // ì›ë˜ìƒ‰ ìœ ì§€ ì‹œê°„
+
+    [SerializeField, Min(0.01f)]
+    private float warningColorDuration = 0.1f; // ê²½ê³ ìƒ‰ ìœ ì§€ ì‹œê°„
+    private bool isBlinking = false;
+    private Color originColor;
+    [SerializeField, Range(0f, 1f)] private float blinkRatio = 0.25f; //ê¹œë¹¡ì„ ì‹œì‘ ë¹„ìœ¨
+    private float blinkElapsed = 0f; //ê¹œë¹¡ì„ ë¹ˆë„ ê³„ì‚°ìš©
+    //private float blinkDuration = 0.1f;
+    private bool isShowingBlinkColor;
+    [SerializeField] private bool useBlinkingWarning;
+    [SerializeField] private GaugeWarningFrame warningFrame;
+
+
+
+
+    public enum GuageTypes //ë‹¨ìˆœí•œ í˜•íƒœëŠ” í•„ìš”ê°€ ì—†ìœ¼ë‚˜, ì´í›„ ì¼ë ì´ëŠ” íš¨ê³¼ë¥¼ ì¶”ê°€í•˜ê¸° ìœ„í•´ì„œëŠ” í•„ìš”í•˜ê¸° ë•Œë¬¸ì— ë¯¸ë¦¬ ì¶”ê°€í•¨
     {
         Bar_Vertical,
         Bar_Horizontal,
@@ -27,11 +47,44 @@ public class StateUIManager : MonoBehaviour
     {
         currentValue = maxValue;
         originTransform = FilledBar.rectTransform;
+        originColor = FilledBar.color;
 
-        //ÀÏ··ÀÌ´Â È¿°úÀÇ ÀÌ¹ÌÁö°¡ Ãß°¡µÇ¸é, Fill·Î Á¶ÀıÇÏ´Â°Ô ¾Æ´Ï¶ó, ¸¶½ºÅ©¸¦ ¾º¿ì°í, ±æÀÌ¸¸Å­ Ã¼·Â¹ÙÀÇ À§Ä¡¸¦ ³»¸®´Â ¹æ½ÄÀ¸·Î ±¸ÇöÇÒ ¿¹Á¤
+        //ì¼ë ì´ëŠ” íš¨ê³¼ì˜ ì´ë¯¸ì§€ê°€ ì¶”ê°€ë˜ë©´, Fillë¡œ ì¡°ì ˆí•˜ëŠ”ê²Œ ì•„ë‹ˆë¼, ë§ˆìŠ¤í¬ë¥¼ ì”Œìš°ê³ , ê¸¸ì´ë§Œí¼ ì²´ë ¥ë°”ì˜ ìœ„ì¹˜ë¥¼ ë‚´ë¦¬ëŠ” ë°©ì‹ìœ¼ë¡œ êµ¬í˜„í•  ì˜ˆì •
         if (guageType == GuageTypes.Bar_Horizontal) originLength = originTransform.rect.width;
         else if (guageType == GuageTypes.Bar_Vertical) originLength = originTransform.rect.height;
     }
+
+    private void Update()
+    {
+        if (!isBlinking || FilledBar == null)
+        {
+            return;
+        }
+
+        blinkElapsed += Time.deltaTime;
+        while (true)
+        {
+            float phaseDuration = isShowingBlinkColor
+                ? warningColorDuration
+                : normalColorDuration;
+
+            phaseDuration = Mathf.Max(phaseDuration, 0.01f);
+
+            if (blinkElapsed < phaseDuration)
+            {
+                break;
+            }
+
+            blinkElapsed -= phaseDuration;
+            isShowingBlinkColor = !isShowingBlinkColor;
+
+            FilledBar.color = isShowingBlinkColor
+                ? blinkColor
+                : originColor;
+        }
+
+    }
+
 
     public void TakeDamage(float damage, bool ifHeal = false)
     {
@@ -48,13 +101,15 @@ public class StateUIManager : MonoBehaviour
     private void UpdateBarUI()
     {
         float newAmount = currentValue / maxValue;
-        //±¸¹öÀü
+        //êµ¬ë²„ì „
         //if (guageType == GuageTypes.Bar_Horizontal) FilledBar.rectTransform.localScale = new Vector3(newAmount, 1f, 1f);
         //else if (guageType == GuageTypes.Bar_Vertical) FilledBar.rectTransform.localScale = new Vector3(1f, newAmount, 1f);
         //else FilledBar.rectTransform.localScale = new Vector3()
 
-        //½Å¹öÀü (ÃßÈÄ ¼öÁ¤ ¿¹Á¤)
+        //ì‹ ë²„ì „ (ì¶”í›„ ìˆ˜ì • ì˜ˆì •)
         FilledBar.fillAmount = newAmount;
+        CheckUnderWarningRatio();
+
     }
 
     public void SetBarUI(float value, float maxValue = 100f)
@@ -62,6 +117,66 @@ public class StateUIManager : MonoBehaviour
         this.maxValue = maxValue;
         currentValue = value;
         UpdateBarUI();
+    }
+
+    public void CheckUnderWarningRatio()
+    {
+        bool isUnderWarning;
+        //isUnderWarning = (currentValue <= 0) ? false : currentValue / maxValue <= blinkRatio;
+        isUnderWarning = currentValue / maxValue <= blinkRatio;
+
+        SetBlinkingWarning(isUnderWarning);
+
+
+    }
+
+    public void SetBlinkingWarning(bool shouldBlink)
+    {
+        if (isBlinking == shouldBlink)
+        {
+            return;
+        }
+
+        isBlinking = shouldBlink;
+        blinkElapsed = 0f;
+
+        isShowingBlinkColor = false;
+
+        if (FilledBar != null)
+        {
+            FilledBar.color = originColor;
+        }
+
+        // í…Œë‘ë¦¬ëŠ” ìˆ˜ì¹˜ê°€ ê²½ê³  ë²”ìœ„ì¸ ë™ì•ˆ ë¶‰ì€ ì´ë¯¸ì§€ë¡œ ìœ ì§€í•©ë‹ˆë‹¤.
+        if (warningFrame != null)
+        {
+            warningFrame.SetWarning(this, shouldBlink);
+        }
+    }
+
+    private void OnEnable()
+    {
+        if (isBlinking && warningFrame != null)
+        {
+            warningFrame.SetWarning(this, true);
+        }
+    }
+
+    private void OnDisable()
+    {
+        blinkElapsed = 0f;
+        isShowingBlinkColor = false;
+
+        if (FilledBar != null)
+        {
+            FilledBar.color = originColor;
+        }
+
+
+        if (warningFrame != null)
+        {
+            warningFrame.SetWarning(this, false);
+        }
     }
 
 }

@@ -1,15 +1,16 @@
 using UnityEngine;
-using UnityEngine.UI;
+using System.Collections.Generic;
+using Firebase;
 using Firebase.Auth;
 using Firebase.Database;
 using Firebase.Extensions;
 using Photon.Pun;
 using Photon.Realtime;
-using Firebase;
 
 public class AuthManager : MonoBehaviour
 {
-    public static AuthManager _instance;
+    #region Singleton
+    private static AuthManager _instance;
     public static AuthManager Instance
     {
         get
@@ -26,30 +27,44 @@ public class AuthManager : MonoBehaviour
             return _instance;
         }
     }
+    #endregion
+
+    #region Fields
+    [Header("Firebase")]
+    [SerializeField] private string _databaseUrl = "https://theoverflown-5908d-default-rtdb.firebaseio.com/";
+
+    private FirebaseAuth _auth;
+    private DatabaseReference _dbRef;
+
+    private bool _isFirebaseReady;
+    private bool _lobbyEntered;
     private string _currentUserId;
+
+    public bool IsFirebaseReady => _isFirebaseReady;
+    public bool isLoginProcessing = false;
+    public string currentNickname;
+
     public string currentUserId
     {
         get
         {
-            // 1. 변수에 값이 있으면 그거 씀
             if (!string.IsNullOrEmpty(_currentUserId))
                 return _currentUserId;
 
-            // 2. 변수가 비어있는데 Firebase에는 로그인 되어 있다면? -> 다시 가져옴
-            if (FirebaseAuth.DefaultInstance.CurrentUser != null)
-            {
-                _currentUserId = FirebaseAuth.DefaultInstance.CurrentUser.UserId;
-                return _currentUserId;
-            }
+            if (!_isFirebaseReady || _auth == null) 
+                return null;
 
-            // 3. 진짜 아무것도 없음 (로그인 안 한 상태)
-            return null;
+            if (_auth.CurrentUser != null)
+                _currentUserId = _auth.CurrentUser.UserId;
+
+            return _currentUserId;
         }
         set => _currentUserId = value;
     }
+    private static OutgameCanvasManager UI => OutgameCanvasManager.Instance;
+    #endregion
 
-    public bool isLoginProcessing = false;
-
+    #region Unity Lifecycle
     private void Awake()
     {
         if (_instance != null && _instance != this)
@@ -58,79 +73,130 @@ public class AuthManager : MonoBehaviour
             return;
         }
         _instance = this;
+        DontDestroyOnLoad(gameObject);
 
         InitializeFirebase();
-
-        DontDestroyOnLoad(gameObject);
-        Debug.Log($"[AuthManager] DDOL 설정 완료.");
-
-        if (FirebaseAuth.DefaultInstance.CurrentUser != null)
-        {
-            Debug.Log($"[AuthManager] 캐시된 세션 정리: {FirebaseAuth.DefaultInstance.CurrentUser.UserId}");
-            FirebaseAuth.DefaultInstance.SignOut(); // 확실하게 연결 끊기
-            _currentUserId = null;
-        }
     }
 
     private void OnApplicationQuit()
     {
-        if (!string.IsNullOrEmpty(currentUserId) && dbRef != null)
-        {
-            // 동기적으로 처리하기 위해 SetUserOnlineStatus 대신 직접 호출하거나, 
-            // 앱 종료 시점이라 비동기가 보장되지 않으므로 최선을 다해 요청 전송
-            dbRef.Child("users").Child(currentUserId).Child("isLoggedIn").SetValueAsync(false);
-        }
+        if (!_isFirebaseReady || _dbRef == null) return;
+        if (string.IsNullOrEmpty(_currentUserId)) return;
+
+        _dbRef.Child("users").Child(_currentUserId).Child("isLoggedIn").SetValueAsync(false);
     }
+    #endregion
 
-    private DatabaseReference dbRef;
-    private FirebaseAuth auth;
-    public string currentNickname;
-
+    #region Initialization
     // Firebase 초기화는 Bootstrap에서 호출됩니다.
     public void InitializeFirebase()
     {
-        auth = FirebaseAuth.DefaultInstance;
-        dbRef = FirebaseDatabase.GetInstance(FirebaseApp.DefaultInstance,
-            "https://theoverflown-5908d-default-rtdb.firebaseio.com/").RootReference;
+        if (_isFirebaseReady) return;
+
+        FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task =>
+        {
+            if (task.IsFaulted || task.IsCanceled || task.Result != DependencyStatus.Available)
+            {
+                Debug.LogError($"[AuthManager] Firebase 의존성 확인 실패: {task.Result}");
+                if (UI != null) UI.SetLoginStatus(OutgameMessages.AuthNotReady, true);
+                return;
+            }
+
+            _auth = FirebaseAuth.DefaultInstance;
+            _dbRef = FirebaseDatabase
+                .GetInstance(FirebaseApp.DefaultInstance, _databaseUrl)
+                .RootReference;
+
+            if (_auth.CurrentUser != null)
+            {
+                _auth.SignOut();
+                _currentUserId = null;
+            }
+
+            _isFirebaseReady = true;
+            Debug.Log("[AuthManager] Firebase 초기화 완료.");
+        });
     }
+    private bool EnsureReady(bool isRegisterContext = false)
+    {
+        if (_isFirebaseReady && _auth != null && _dbRef != null) return true;
 
-    #region Login / Register
+        if (UI != null)
+        {
+            if (isRegisterContext) UI.SetRegisterStatus(OutgameMessages.AuthNotReady);
+            else UI.SetLoginStatus(OutgameMessages.AuthNotReady, true);
+        }
+        return false;
+    }
+    #endregion
 
-    public void OpenRegisterPanel() => OutgameCanvasManager.Instance.ShowRegisterPanel();
-    public void OpenLoginPanel() => OutgameCanvasManager.Instance.ShowLoginPanel();
+    #region Panel Shortcut
+    public void OpenRegisterPanel() => UI?.ShowRegisterPanel();
+    public void OpenLoginPanel() => UI?.ShowLoginPanel();
+    #endregion
 
-    public void TryRegister(string email, string password)
+    #region Register
+    public void TryRegister(string email, string password, string nickname)
     {
         if (isLoginProcessing) return; // 중복 방지
+        if (!EnsureReady(true)) return;
+
+        email = email != null ? email.Trim() : string.Empty;
+        nickname = nickname != null ? nickname.Trim() : string.Empty;
+
         if (!ValidateRegister(email, password)) return;
 
-        isLoginProcessing = true;
-        OutgameCanvasManager.Instance.SetRegisterStatus("회원가입 처리 중...");
+        if (!OutgameMessages.IsValidNickname(nickname))
+        {
+            UI?.SetRegisterStatus(OutgameMessages.InvalidNickname, true);
+            return;
+        }
 
-        auth.CreateUserWithEmailAndPasswordAsync(email, password)
+        isLoginProcessing = true;
+        UI?.SetRegisterStatus("회원가입 처리 중...");
+
+        CreateAccount(email, password, nickname);
+    }
+    private void CreateAccount(string email, string password, string nickname)
+    {
+        _auth.CreateUserWithEmailAndPasswordAsync(email, password)
             .ContinueWithOnMainThread(task =>
             {
                 if (task.IsFaulted || task.IsCanceled)
                 {
-                    OutgameCanvasManager.Instance.SetRegisterStatus(
-                        "회원가입 실패: " + task.Exception?.GetBaseException().Message);
                     isLoginProcessing = false;
+                    UI?.SetRegisterStatus(OutgameMessages.ToRegisterMessage(GetAuthError(task.Exception)));
+                    return;
                 }
-                else
+
+                string newUserId = task.Result.User.UserId;
+                _currentUserId = newUserId;
+
+                var payload = new Dictionary<string, object>
                 {
-                    currentUserId = task.Result.User.UserId;
-                    string json = "{\"email\":\"" + email + "\", \"isLoggedIn\":false}";
-                    dbRef.Child("users").Child(currentUserId).SetRawJsonValueAsync(json)
-                        .ContinueWithOnMainThread(dbTask =>
+                    { "email", email },
+                    { "nickname", nickname },
+                    { "isLoggedIn", false }
+                };
+
+                _dbRef.Child("users").Child(newUserId).UpdateChildrenAsync(payload)
+                    .ContinueWithOnMainThread(dbTask =>
+                    {
+                        isLoginProcessing = false;
+
+                        if (dbTask.IsFaulted || dbTask.IsCanceled)
                         {
-                            isLoginProcessing = false;
-                            if (dbTask.IsCompleted)
-                            {
-                                OutgameCanvasManager.Instance.SetRegisterStatus("회원가입 성공!");
-                                OutgameCanvasManager.Instance.ShowLoginPanel();
-                            }
-                        });
-                }
+                            Debug.LogError($"[AuthManager] 유저 레코드 생성 실패: {dbTask.Exception}");
+                            UI?.SetRegisterStatus("계정 정보 저장에 실패했습니다.", true);
+                            return;
+                        }
+
+                        _auth.SignOut();
+                        _currentUserId = null;
+
+                        UI?.SetRegisterStatus("회원가입이 완료되었습니다.");
+                        UI?.ShowLoginPanel();
+                    });
             });
     }
 
@@ -138,201 +204,243 @@ public class AuthManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
         {
-            OutgameCanvasManager.Instance.SetRegisterStatus("이메일과 비밀번호를 입력하세요.");
+            UI?.SetRegisterStatus(OutgameMessages.EmptyField, true);
             return false;
         }
-        if (!email.Contains("@") || !email.Contains("."))
+        if (!OutgameMessages.IsValidEmail(email))
         {
-            OutgameCanvasManager.Instance.SetRegisterStatus("유효한 이메일을 입력하세요.");
+            UI?.SetRegisterStatus(OutgameMessages.InvalidEmail, true);
             return false;
         }
-        if (password.Length < 6)
+        if (!OutgameMessages.IsValidPassword(password))
         {
-            OutgameCanvasManager.Instance.SetRegisterStatus("비밀번호는 6자리 이상이어야 합니다.");
+            UI?.SetRegisterStatus(OutgameMessages.InvalidPassword, true);
             return false;
         }
         return true;
     }
+    #endregion
 
+    #region Login
     public void TryLogin(string email, string password)
     {
         if (isLoginProcessing) return;
+        if (!EnsureReady()) return;
+
+        email = email != null ? email.Trim() : string.Empty;
 
         if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
         {
-            OutgameCanvasManager.Instance.SetLoginStatus("이메일과 비밀번호를 입력하세요.");
+            UI?.SetLoginStatus(OutgameMessages.EmptyField, true);
+            return;
+        }
+        if (!OutgameMessages.IsValidEmail(email))
+        {
+            UI?.SetLoginStatus(OutgameMessages.InvalidEmail, true);
+            return;
+        }
+        if (!OutgameMessages.IsValidPassword(password))
+        {
+            UI?.SetLoginStatus(OutgameMessages.InvalidPassword, true);
             return;
         }
 
         isLoginProcessing = true;
-        OutgameCanvasManager.Instance.SetLoginStatus("로그인 중...");
+        UI?.SetLoginStatus(OutgameMessages.LoginProcessing);
 
-        auth.SignInWithEmailAndPasswordAsync(email, password)
+        _auth.SignInWithEmailAndPasswordAsync(email, password)
             .ContinueWithOnMainThread(task =>
             {
                 if (task.IsFaulted || task.IsCanceled)
                 {
-                    OutgameCanvasManager.Instance.SetLoginStatus(
-                        $"로그인 실패: {task.Exception?.GetBaseException().Message}");
                     isLoginProcessing = false;
+                    UI?.SetLoginStatus(OutgameMessages.ToLoginMessage(GetAuthError(task.Exception)), true);
+                    return;
                 }
-                else
-                {
-                    string tempUserId = task.Result.User.UserId;
 
-                    dbRef.Child("users").Child(tempUserId).Child("isLoggedIn").GetValueAsync()
-                        .ContinueWithOnMainThread(checkTask =>
-                        {
-                            if (checkTask.IsFaulted)
-                            {
-                                OutgameCanvasManager.Instance.SetLoginStatus("접속 상태 확인 실패");
-                                auth.SignOut();
-                                isLoginProcessing = false;
-                                return;
-                            }
-
-                            // DB에 값이 있고, true라면 이미 접속 중
-                            if (checkTask.Result.Exists &&
-                                checkTask.Result.Value != null &&
-                                (bool)checkTask.Result.Value == true)
-                            {
-                                Debug.LogWarning($"[AuthManager] 중복 로그인 감지: {tempUserId}");
-                                auth.SignOut(); // 즉시 로그아웃 시킴
-                                OutgameCanvasManager.Instance.SetLoginStatus("다른 기기에서 사용중인 아이디입니다. 다시 시도해주세요. ");
-                                isLoginProcessing = false;
-                            }
-                            else
-                            {
-                                // 접속 허용
-                                currentUserId = tempUserId;
-                                PhotonNetwork.AuthValues = new AuthenticationValues { UserId = currentUserId };
-
-                                // 온라인 상태로 변경 및 OnDisconnect 설정
-                                SetUserOnlineStatus(currentUserId, true);
-
-                                LoadNickname();
-                            }
-                        });
-                }
+                CheckDuplicateSession(task.Result.User.UserId);
             });
     }
 
-    private void SetUserOnlineStatus(string userId, bool isOnline)
+    private void CheckDuplicateSession(string userId)
     {
-        if (string.IsNullOrEmpty(userId)) return;
+        _dbRef.Child("users").Child(userId).Child("isLoggedIn").GetValueAsync()
+            .ContinueWithOnMainThread(task =>
+            {
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    Debug.LogError($"[AuthManager] 접속 상태 확인 실패: {task.Exception}");
+                    AbortLogin("접속 상태 확인에 실패했습니다.");
+                    return;
+                }
 
-        // 1. 현재 상태 즉시 기록
-        dbRef.Child("users").Child(userId).Child("isLoggedIn").SetValueAsync(isOnline);
+                if (ToBool(task.Result))
+                {
+                    Debug.LogWarning($"[AuthManager] 중복 로그인 차단: {userId}");
+                    AbortLogin(OutgameMessages.DuplicateLogin);
+                    return;
+                }
 
-        // 2. 앱 강제 종료/인터넷 끊김 시 서버가 자동으로 false로 바꾸도록 예약
-        if (isOnline)
-        {
-            dbRef.Child("users").Child(userId).Child("isLoggedIn").OnDisconnect().SetValue(false);
-        }
-        else
-        {
-            // 로그아웃 시에는 OnDisconnect 예약 취소 (선택 사항이지만 안전하게)
-            dbRef.Child("users").Child(userId).Child("isLoggedIn").OnDisconnect().Cancel();
-        }
+                _currentUserId = userId;
+                PhotonNetwork.AuthValues = new AuthenticationValues(userId);
+
+                SetUserOnlineStatus(userId, true);
+                LoadNickname();
+            });
+    }
+
+    private void AbortLogin(string message)
+    {
+        if (_auth != null) _auth.SignOut();
+        _currentUserId = null;
+        isLoginProcessing = false;
+        UI?.SetLoginStatus(message, true);
     }
 
     private void LoadNickname()
     {
-        dbRef.Child("users").Child(currentUserId).Child("nickname")
-            .GetValueAsync().ContinueWithOnMainThread(task =>
+        _dbRef.Child("users").Child(_currentUserId).Child("nickname").GetValueAsync()
+            .ContinueWithOnMainThread(task =>
             {
                 isLoginProcessing = false;
 
-                if (task.IsCompleted && task.Result.Exists)
+                if (task.IsFaulted || task.IsCanceled)
                 {
-                    currentNickname = task.Result.Value.ToString();
-                    PhotonNetwork.LocalPlayer.NickName = currentNickname;
-                    OutgameCanvasManager.Instance.SetStatus($"환영합니다, {currentNickname}");
+                    Debug.LogError($"[AuthManager] 닉네임 조회 실패: {task.Exception}");
+                    SetUserOnlineStatus(_currentUserId, false);
+                    AbortLogin("사용자 정보를 불러오지 못했습니다.");
+                    return;
+                }
+
+                DataSnapshot snapshot = task.Result;
+                if (snapshot != null && snapshot.Exists && snapshot.Value != null)
+                {
+                    currentNickname = snapshot.Value.ToString();
+                    PhotonNetwork.NickName = currentNickname;
+                    UI?.SetStatus($"환영합니다, {currentNickname}");
                     GoToLobby();
                 }
                 else
                 {
-                    OutgameCanvasManager.Instance.ShowNicknamePanel();
+                    Debug.LogWarning($"[AuthManager] 닉네임 없는 계정: {_currentUserId}");
+                    SetUserOnlineStatus(_currentUserId, false);
+                    AbortLogin("계정 정보가 올바르지 않습니다. 다시 가입해주세요.");
                 }
             });
+    }
+    #endregion
+
+    #region Online Status
+    private void SetUserOnlineStatus(string userId, bool isOnline)
+    {
+        if (!_isFirebaseReady || _dbRef == null) return;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        DatabaseReference flagRef = _dbRef.Child("users").Child(userId).Child("isLoggedIn");
+        flagRef.SetValueAsync(isOnline);
+
+        if (isOnline) flagRef.OnDisconnect().SetValue(false);
+        else flagRef.OnDisconnect().Cancel();
     }
     #endregion
 
     #region Nickname
     public void TrySetNickname(string nickname)
     {
-        if (string.IsNullOrEmpty(nickname))
+        if (!EnsureReady()) return;
+
+        nickname = nickname != null ? nickname.Trim() : string.Empty;
+
+        if (!OutgameMessages.IsValidNickname(nickname))
         {
-            OutgameCanvasManager.Instance.SetNicknameStatus("닉네임을 입력하세요.");
+            UI?.SetProfileStatus(OutgameMessages.InvalidNickname, true);
+            return;
+        }
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            UI?.SetProfileStatus("로그인 정보가 없습니다. 다시 로그인해주세요.", true);
             return;
         }
 
-        dbRef.Child("nicknames").Child(nickname).GetValueAsync().ContinueWithOnMainThread(task =>
-        {
-            if (task.IsCompleted)
+        _dbRef.Child("users").Child(_currentUserId).Child("nickname").SetValueAsync(nickname)
+            .ContinueWithOnMainThread(task =>
             {
-                if (task.Result.Exists)
+                if (task.IsFaulted || task.IsCanceled)
                 {
-                    OutgameCanvasManager.Instance.SetNicknameStatus("이미 사용 중인 닉네임입니다.");
+                    Debug.LogError($"[AuthManager] 닉네임 저장 실패: {task.Exception}");
+                    UI?.SetProfileStatus("닉네임 저장에 실패했습니다.");
+                    return;
                 }
-                else
-                {
-                    // 기존 닉네임 삭제 로직 (선택 사항)
-                    if (!string.IsNullOrEmpty(currentNickname))
-                        dbRef.Child("nicknames").Child(currentNickname).RemoveValueAsync();
 
-                    dbRef.Child("users").Child(currentUserId).Child("nickname").SetValueAsync(nickname);
-                    dbRef.Child("nicknames").Child(nickname).SetValueAsync(currentUserId);
+                currentNickname = nickname;
+                PhotonNetwork.NickName = nickname;
 
-                    currentNickname = nickname;
-                    PhotonNetwork.LocalPlayer.NickName = currentNickname;
-
-                    OutgameCanvasManager.Instance.SetNicknameStatus("닉네임 설정 완료!");
-                    OutgameCanvasManager.Instance.UpdateNicknameUI(currentNickname);
-
-                    if (OutgameCanvasManager.Instance.ProfilePanel.activeSelf)
-                    {
-                        OutgameCanvasManager.Instance.ProfilePanel.SetActive(false);
-                    }
-                    else
-                    {
-                        GoToLobby();
-                    }
-                }
-            }
-            else
-            {
-                Debug.LogError("닉네임 체크 실패: " + task.Exception);
-            }
-        });
+                UI?.SetProfileStatus("닉네임이 변경되었습니다.");
+                UI?.UpdateNicknameUI(nickname);
+                UI?.HideProfilePanel();
+            });
     }
+
+    /*private void ApplyNickname(string nickname)
+    {
+        string previous = currentNickname;
+
+        _dbRef.Child("nicknames").Child(nickname).SetValueAsync(_currentUserId)
+            .ContinueWithOnMainThread(task =>
+            {
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    Debug.LogError($"[AuthManager] 닉네임 등록 실패: {task.Exception}");
+                    UI?.SetNicknameStatus("닉네임 저장에 실패했습니다.");
+                    return;
+                }
+
+                _dbRef.Child("users").Child(_currentUserId).Child("nickname").SetValueAsync(nickname);
+
+                if (!string.IsNullOrEmpty(previous) && previous != nickname)
+                    _dbRef.Child("nicknames").Child(previous).RemoveValueAsync();
+
+                currentNickname = nickname;
+                PhotonNetwork.NickName = nickname;
+
+                UI?.SetNicknameStatus("닉네임 설정이 완료되었습니다.");
+                UI?.UpdateNicknameUI(nickname);
+
+                bool fromProfile = UI != null
+                    && UI.ProfilePanel != null
+                    && UI.ProfilePanel.activeSelf;
+
+                if (fromProfile) UI.ProfilePanel.SetActive(false);
+                else GoToLobby();
+            });
+    }*/
     #endregion
 
-    #region Logout & GoToLobby
+    #region Lobby & Logout
     public void GoToLobby()
     {
-        OutgameCanvasManager.Instance.ShowLobbyPanel(currentNickname);
+        if (_lobbyEntered) return;
+        _lobbyEntered = true;
 
-        if (string.IsNullOrEmpty(currentUserId))
+        if (string.IsNullOrEmpty(_currentUserId))
         {
-            Debug.LogWarning("[AuthManager] UserId가 없어 임시 ID를 생성합니다.");
-            currentUserId = System.Guid.NewGuid().ToString();
+            Debug.LogWarning("[AuthManager] UserId가 없어 로비 진입을 중단합니다.");
+            _lobbyEntered = false;
+            UI?.ShowLoginPanel();
+            return;
         }
-        // 포톤에 "내 ID는 이것이다"라고 알려주는 핵심 코드
-        PhotonNetwork.AuthValues = new AuthenticationValues(currentUserId);
-        Debug.Log($"[AuthManager] 포톤 인증 ID 설정 완료: {PhotonNetwork.AuthValues.UserId}");
 
-        // 그 다음 연결을 시도합니다.
+        UI?.ShowLobbyPanel(currentNickname);
+        PhotonNetwork.AuthValues = new AuthenticationValues(_currentUserId);
+
         if (!PhotonNetwork.IsConnected)
         {
-            NetworkBootstrap.Instance.Connect();
+            if (NetworkBootstrap.Instance != null) NetworkBootstrap.Instance.Connect();
+            else Debug.LogError("[AuthManager] NetworkBootstrap 인스턴스가 없습니다.");
         }
 
-        // LobbyManager 대신 SaveSynManager를 통해 갱신
         if (SaveSyncManager.Instance != null)
-        {
             SaveSyncManager.Instance.RefreshSaveList();
-        }
     }
 
     public void Logout()
@@ -342,15 +450,42 @@ public class AuthManager : MonoBehaviour
             SetUserOnlineStatus(currentUserId, false);
         }
 
-        auth.SignOut();
-        currentUserId = null;
+        if (_auth != null) _auth.SignOut();
+
+        _currentUserId = null;
         currentNickname = null;
         isLoginProcessing = false;
-        OutgameCanvasManager.Instance.SetStatus("로그아웃 완료");
+        _lobbyEntered = false;
 
         if (PhotonNetwork.IsConnected) PhotonNetwork.Disconnect();
 
-        OutgameCanvasManager.Instance.ShowLoginPanel();
+        UI?.SetStatus("로그아웃 완료");
+        UI?.ShowLoginPanel();
+    }
+    #endregion
+
+    #region Helpers
+    private static bool ToBool(DataSnapshot snapshot)
+    {
+        if (snapshot == null || !snapshot.Exists || snapshot.Value == null) return false;
+
+        switch (snapshot.Value)
+        {
+            case bool b: return b;
+            case long l: return l != 0;
+            case string s: return bool.TryParse(s, out bool parsed) && parsed;
+            default: return false;
+        }
+    }
+
+    private static AuthError GetAuthError(System.AggregateException exception)
+    {
+        if (exception == null) return AuthError.Failure;
+
+        FirebaseException firebaseEx = exception.GetBaseException() as FirebaseException;
+        if (firebaseEx == null) return AuthError.Failure;
+
+        return (AuthError)firebaseEx.ErrorCode;
     }
     #endregion
 }

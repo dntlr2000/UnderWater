@@ -16,7 +16,7 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
         DontDestroyOnLoad(gameObject);
     }
 
-    private AuthManager AuthMngr => AuthManager._instance;
+    private AuthManager AuthMngr => AuthManager.Instance;
     private RoomManager RoomMngr => RoomManager.Instance;
     private LobbyManager LobbyMngr => LobbyManager.Instance;
 
@@ -49,6 +49,7 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
     /// <param name="roomName">사용자 입력 방 이름</param>
     /// <param name="userId">현재 사용자 ID</param>
     /// <returns>새로 생성된 SaveData</returns>
+    // 신규 저장의 퀘스트 버전과 소유자를 명시합니다.
     public SaveData CreateNewSave(string roomName, string userId)
     {
         string finalRoomName = string.IsNullOrEmpty(roomName) ? "Room" + UnityEngine.Random.Range(0, 10000) : roomName;
@@ -58,6 +59,8 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
         SaveData newSave = new SaveData(finalRoomName) // SaveData 생성자에 roomName을 전달한다고 가정
         {
             saveId = Guid.NewGuid().ToString(),
+            questSaveVersion = 1,
+            saveOwnerId = userId,
             dayCount = 0,
             players = new List<PlayerData>
             {
@@ -83,13 +86,13 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
     /// </summary>
     /// <param name="data">설정할 SaveData</param>
     /// <param name="isLoaded">저장된 게임에서 불러왔는지 여부</param>
+    // 새 게임 여부를 최초 저장 주입부터 일관되게 전달합니다.
     public void SetCurrentSaveData(SaveData data, bool isLoaded)
     {
         if (SaveManager.Instance == null) return;
 
         // SaveManager에 SaveData를 설정하고 로드 상태를 플래그합니다.
-        SaveManager.Instance.SetCurrentSave(data);
-        SaveManager.Instance.isGameLoadedFromSave = isLoaded;
+        SaveManager.Instance.SetCurrentSave(data, isLoaded);
 
         // RoomManager의 상태 갱신 (선택적)
         RoomMngr.isLoadedFromSave = isLoaded;
@@ -148,46 +151,35 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
 
     #region SaveData Synchronization
 
-    public void OnSaveDataChangedHandler(string saveJson)
+    // 입장 또는 방장 교체 시 현재 저장의 최신 스냅샷을 방 속성에 게시합니다.
+    public void PublishCurrentSave()
     {
-        if (!PhotonNetwork.IsMasterClient) return;
-
-        var pv = NetworkBootstrap.Instance.PV;
-        if (pv == null) return;
-
-        try
-        {
-            pv.RPC("RPC_BroadcastSaveData", RpcTarget.AllBuffered, saveJson);
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError("[SaveSynManager] SaveData 브로드캐스트 실패: " + ex);
-        }
+        if (SaveManager.Instance?.GetCurrentSave() is SaveData data)
+            OnSaveDataChangedHandler(JsonUtility.ToJson(data));
     }
 
+    // 변경 이력을 RPC에 누적하지 않고 신규 참가자도 읽을 수 있는 최신 저장 하나만 유지합니다.
+    public void OnSaveDataChangedHandler(string saveJson)
+    {
+        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient || string.IsNullOrEmpty(saveJson)) return;
+        if (QuestManager.Instance != null && QuestManager.Instance.IsInitialized) return;
+        var room = PhotonNetwork.CurrentRoom;
+        if (room.CustomProperties["SaveData"] as string == saveJson) return;
+        room.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "SaveData", saveJson } });
+    }
+
+    // 구형 버퍼 RPC가 남아 있어도 그 과거 내용 대신 방의 최신 저장만 적용합니다.
     [PunRPC]
     public void RPC_BroadcastSaveData(string saveJson)
     {
-        SaveData data = null;
-        try
+        if (!PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient) return;
+        if (QuestManager.Instance != null && QuestManager.Instance.IsInitialized) return;
+        if (PhotonNetwork.CurrentRoom.CustomProperties["SaveData"] is string latestJson)
         {
-            data = JsonUtility.FromJson<SaveData>(saveJson);
+            SaveManager.Instance?.HandleBroadcastedSaveData(latestJson);
+            RoomMngr?.ApplySavedJobs();
         }
-        catch (Exception ex)
-        {
-            Debug.LogError("[SaveSynManager] SaveData 역직렬화 실패: " + ex);
-            return;
-        }
-
-        if (SaveManager.Instance == null) return;
-
-        SaveManager.Instance.SetCurrentSave(data);
-        //SaveManager.Instance.ApplySaveData(data);
-
-        // 직업 데이터 적용을 RoomManager에게 위임
-        RoomMngr.ApplySavedJobs();
-
-        Debug.Log("[SaveSynManager] 수신된 SaveData를 로컬에 적용 완료");
     }
+
     #endregion
 }

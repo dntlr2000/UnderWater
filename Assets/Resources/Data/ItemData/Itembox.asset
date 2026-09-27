@@ -22,7 +22,7 @@ MonoBehaviour:
   equipEffectType: 
   price: 100
   weight: 0
-  durability: 99
+  durability: -1
   interactable: 0
   damage: 0
   sigularity: 0

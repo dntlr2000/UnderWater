@@ -1,4 +1,5 @@
 ﻿objectiveID	questID	seq	description	objectiveType	targetAmount	collectItemID	areaID	notes
+obj_tutorial_001	quest_main_tutorial_001	1	튜토리얼 산소통 수집	CollectItem	1	item_oxygen_tank		인벤토리 획득 성공 시에만 인정
 obj_m001_001	quest_main_001	1	돌 3개 수집	CollectItem	3	item_stone		
 obj_m001_002	quest_main_001	2	나무 3개 수집	CollectItem	3	item_wood		
 obj_m001_003	quest_main_001	3	해초 3개 수집	CollectItem	3	item_seaweed		

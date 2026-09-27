@@ -11,6 +11,8 @@ public class QuestRuntimeData
     public bool isUnlockedManually;
     public string iconPath;
     public int sortOrder;
+    public string storyMessage;
+    public bool autoComplete;
     public List<QuestObjective> objectives = new();
     public List<QuestReward> rewards = new();
 }

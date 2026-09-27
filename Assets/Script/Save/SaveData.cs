@@ -6,6 +6,8 @@ using UnityEngine;
 public class SaveData
 {
     public string saveId; // 고유 ID
+    public int questSaveVersion;
+    public string saveOwnerId;
     public string roomName;
     public string createdDate;    // 저장일자 (yyyy-MM-dd HH:mm:ss)
 
@@ -19,8 +21,10 @@ public class SaveData
 
     public List<EntitySaveData> worldEntities = new List<EntitySaveData>();
 
+    // 새 저장 파일을 현재 퀘스트 저장 형식으로 생성합니다.
     public SaveData(string roomName)
     {
+        questSaveVersion = 1;
         this.roomName = roomName;
         // 날짜 형식은 파일 이름으로 사용될 경우를 대비해 슬래시를 하이픈으로 변경했습니다.
         this.createdDate = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
@@ -39,7 +43,10 @@ public class PlayerData
     public InventoryData items;
     public string jobType = "";
     public ConditionData conditionData;
+    public int inventoryActor;
+    public long inventorySequence;
 
+    public List<QuestRewardClaim> rewardClaims = new(); // 신규 완료 시에만 생성하는 개인 보상 요청
     public List<string> completedQuestIds = new List<string>(); // 완료된 퀘스트 ID 목록
     public List<QuestProgressData> activeQuests = new List<QuestProgressData>(); // 현재 진행중인 퀘스트 정보
 }
@@ -68,14 +75,40 @@ public class QuestProgressData
 {
     public string questId;
     public int[] objectiveCounts; // 각 목표별 현재 달성 수
+    public string[] objectiveIds;
 }
 
 [Serializable]
 public class WorldProgress
 {
+    public SharedQuestState mainQuests = new();
     public string QuestID;
     public int Difficulty;
     public int SubmarinePowerLevel;
+}
+
+// 방 전체가 공유하는 메인 퀘스트와 중복 진행 방지 기록입니다.
+[Serializable]
+public class SharedQuestState
+{
+    public string saveId;
+    public bool initialized;
+    public int revision;
+    public List<string> completedQuestIds = new();
+    public List<QuestProgressData> activeQuests = new();
+    public List<string> processedEvents = new();
+    public RewardDeliveryState rewards = new();
+}
+
+// 개인 직업 퀘스트를 위치/인벤토리 갱신과 구분하여 전달합니다.
+[Serializable]
+public class PlayerQuestState
+{
+    public string saveId;
+    public string playerId;
+    public List<QuestRewardClaim> rewardClaims = new();
+    public List<string> completed = new();
+    public List<QuestProgressData> active = new();
 }
 
 

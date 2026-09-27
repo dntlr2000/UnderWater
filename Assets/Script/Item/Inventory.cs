@@ -53,6 +53,7 @@ public class Inventory : InventoryFrame
 
         if (Input.GetKeyDown(KeyCode.Q))
         {
+            if (!player.condition.CanAct(false, true, false)) return;
             //RemoveAllItem(index);
             //RemoveItem(index, 1);
             DropItem(index, 1);
@@ -102,11 +103,12 @@ public class Inventory : InventoryFrame
         //아이템 사용하기
         if (Input.GetMouseButtonDown(1))
         {
+            if (!player.condition.CanAct(false, true, false)) return;
             if (inventoryData.id[index] < 0) return;
             if (!canUseItem) return;
             //if (!HoldingInteractableItem()) return; //들고 있는 아이템이 상호작용을 거부하는 아이템인 경우 false가 리턴됨
             inventoryData.useItem(index);
-            ItemUI.SetQuantity(index, inventoryData.quantity[index]);
+            ItemUI.SetQuantity(index, inventoryData.quantity[index],GetSingularity(index));
             if (inventoryData.quantity[index] <= 0)
             {
                 inventoryData.id[index] = -1;
@@ -157,10 +159,11 @@ public class Inventory : InventoryFrame
         return ItemDatabase.Instance.getInteractable(inventoryData.id[index]);
     }
 
+    // 기존 창고/RPC 서명을 유지하고 실제 추가된 수량만 퀘스트에 보고합니다.
     [PunRPC]
     public void PunRPC_AddItem(int id, int quantity, float durability)
     {
-        GetItem(id, quantity, durability); // 기존에 있던 아이템 추가 로직 호출
+        if (!TryAddItem(id, quantity, durability)) return;
         Debug.Log($"네트워크를 통해 아이템 수신: ID {id}, 수량 {quantity}");
 
         var itemData = ItemDatabase.Instance.GetItem(id);
@@ -253,11 +256,45 @@ public class Inventory : InventoryFrame
             {
                 Sprite itemSprite = ItemDatabase.Instance.GetIcons(inventoryData.id[i]);
                 ItemUI.LoadIcons(i, itemSprite);
-                ItemUI.SetQuantity(i, inventoryData.quantity[i]);
+                ItemUI.SetQuantity(i, inventoryData.quantity[i], GetSingularity(i));
+                SetDurability(i, inventoryData.durability[i]);
             }
         }
         RefreshEquipments();
         Debug.Log("저장된 인벤토리 데이터 복구 완료!");
+    }
+
+    /// <summary>
+    /// 패널티 부활 시 일반 슬롯과 장비 슬롯의 모든 아이템을 제거합니다.
+    /// </summary>
+    public void LoseAllItemsOnDeath()
+    {
+        if (inventoryData == null || inventoryData.id == null)
+        {
+            Debug.LogWarning("사망 패널티를 적용할 인벤토리 데이터가 없습니다.");
+            return;
+        }
+
+        for (int slot = 0; slot < inventoryData.id.Length; slot++)
+        {
+            RemoveAllItem(slot);
+        }
+
+        index = 0;
+        if (IndexLine != null)
+        {
+            IndexSetter();
+        }
+
+        if (player != null && player.condition != null)
+        {
+            player.condition.LoadHumanOxygen(); //사망 시 산소 게이지 초기화
+        }
+
+        if (player != null)
+        {
+            player.SyncInventory(inventoryData);
+        }
     }
 
     public void RefreshEquipments()
@@ -301,6 +338,25 @@ public class Inventory : InventoryFrame
         int dropAmount = throwScreen.amount;
         DropItem(throwIndex, dropAmount);
         Debug.Log($"아이템 {dropAmount}개를 버렸습니다.");
+    }
+
+    // 보상/창고 이동은 수집 이벤트를 발생시키지 않고 영수증과 전량 지급을 함께 반영합니다.
+    public RewardReceiveResult TryReceiveDelivery(RewardDelivery delivery)
+    {
+        if (inventoryData?.id == null || ItemUI == null || delivery == null) return RewardReceiveResult.NotReady;
+        inventoryData.receivedDeliveryIds ??= new();
+        inventoryData.rejectedDeliveryIds ??= new();
+        if (inventoryData.receivedDeliveryIds.Contains(delivery.deliveryId)) return RewardReceiveResult.Success;
+        if (inventoryData.rejectedDeliveryIds.Contains(delivery.deliveryId)) return RewardReceiveResult.Full;
+        if (!RewardInventory.TryCredit(inventoryData, INVENTORY_SIZE, delivery, out var updated))
+        {
+            // 출고 실패 응답도 유지하여 지연된 동일 출고 요청을 뒤늦게 지급하지 않습니다.
+            if (!string.IsNullOrEmpty(delivery.sourceBoxId)) inventoryData.rejectedDeliveryIds.Add(delivery.deliveryId);
+            return RewardReceiveResult.Full;
+        }
+        ApplyLoadedData(updated);
+        player?.SyncInventory(inventoryData);
+        return RewardReceiveResult.Success;
     }
 
     [PunRPC]

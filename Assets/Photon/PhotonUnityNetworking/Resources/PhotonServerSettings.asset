@@ -102,6 +102,12 @@ MonoBehaviour:
   - PunRPC_AddMoney
   - PunRPC_SetSpawnerState
   - PunRPC_Master_InstantiateStructure
+  - PunRPC_ApplyFaint
+  - PunRPC_ApplyPenaltyRespawn
+  - PunRPC_ApplyRevive
+  - PunRPC_RequestEnterFaint
+  - PunRPC_RequestPenaltyRespawn
+  - PunRPC_RequestRevive
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

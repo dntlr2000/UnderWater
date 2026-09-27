@@ -7,6 +7,8 @@ public class UIController : MonoBehaviour
     private OptionManager optionManager;
     public PauseScreen pauseScreen;
     bool pauseState = false;
+    [SerializeField] private FaintUIController faintUIManager;
+    private bool faintUIOpen;
 
     private Player playerScript;
 
@@ -28,6 +30,7 @@ public class UIController : MonoBehaviour
 
     void Update()
     {
+
         // 1. [ESC] 일시정지 및 UI 닫기
         if (Input.GetKeyDown(KeyCode.Escape))
         {
@@ -127,12 +130,12 @@ public class UIController : MonoBehaviour
         // 인벤토리 상태에 따라 커서 및 카메라 제어
         if (itemUIManager.showInventory)
         {
-            //LockCursor(false);
+            LockCursor(false);
             SetPlayerControl(false);
         }
         else
         {
-            //LockCursor(true);
+            LockCursor(true);
             SetPlayerControl(true);
         }
     }
@@ -215,6 +218,23 @@ public class UIController : MonoBehaviour
         }
     }
 
+    public void SetFaintUIState(bool isOpen) //빈사 UI 상태 설정
+    {
+        faintUIOpen = isOpen;
+        faintUIManager.gameObject.SetActive(isOpen);
+
+        if (isOpen)
+        {
+            LockCursor(false);
+            //SetPlayerControl(false);
+        }
+        else if (IsAllUIClosed())
+        {
+            LockCursor(true);
+            //SetPlayerControl(true);
+        }
+    }
+
     //워치 UI를 위한
     public bool IsAllUIClosed()
     {
@@ -232,7 +252,7 @@ public class UIController : MonoBehaviour
 
     public void LockCursor(bool isLocked)
     {
-        if (isLocked)
+        if (isLocked && !faintUIOpen)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;

@@ -651,6 +651,7 @@ GameObject:
   - component: {fileID: 1819224067686749904}
   - component: {fileID: 1856746806914636969}
   - component: {fileID: 8785678508657033785}
+  - component: {fileID: 9081265351408237461}
   - component: {fileID: 5877144059748263247}
   - component: {fileID: 6796774076438302937}
   m_Layer: 8
@@ -918,7 +919,30 @@ MonoBehaviour:
   isUnderwater: 0
   onGround: 0
   onWork: 0
+  faintDuration: 60
+  reviveHealthRatio: 0.2
+  reviveOxygenRatio: 0.2
+  maxReviveDistance: 10
   stateUICollection: {fileID: 0}
+--- !u!114 &9081265351408237461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5368671032790062748}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2bf5299d13941f9a49778e94abfbf68, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cursorType: Item
+  objectName: Revive
+  player: {fileID: 0}
+  usePhoton: 0
+  usingPlayerID: 0
+  targetCondition: {fileID: 8785678508657033785}
+  reviveHoldDuration: 3
 --- !u!114 &5877144059748263247
 MonoBehaviour:
   m_ObjectHideFlags: 0

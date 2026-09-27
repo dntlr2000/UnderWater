@@ -161,8 +161,10 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         }
     }
 
+    // 방 안에서만 직업을 갱신하며, 로비의 속성 알림은 방장이 한 번 처리합니다.
     public void UpdateLocalPlayerJob(string userId, string nickname, string newJobType)
     {
+        if (!PhotonNetwork.InRoom || (!PhotonNetwork.OfflineMode && !PhotonNetwork.IsConnectedAndReady)) return;
         if (string.IsNullOrEmpty(userId)) userId = GetMyCurrentId();
 
         if (string.IsNullOrEmpty(userId))
@@ -176,52 +178,59 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         {
             ProcessJobUpdate(userId, nickname, newJobType);
         }
-        // 2. 게스트면 -> 방장에게 RPC 요청
-        else
+        // 게스트가 자신의 직업을 변경하는 경우만 RPC 전송
+        else if (userId == GetMyCurrentId())
         {
             if (photonView != null)
             {
                 photonView.RPC(nameof(RPC_RequestJobChange), RpcTarget.MasterClient, userId, nickname, newJobType);
             }
-            else
-            {
-                Debug.LogError("[SaveManager] PhotonView가 컴포넌트에 없습니다! RPC 실패.");
-            }
         }
     }
 
+    // 기본 플레이어 상태를 병합하고 오래된 인벤토리 패킷과 퀘스트 덮어쓰기를 차단합니다.
     public void UpdatePlayerCache(PlayerData pd)
     {
         if (pd == null || string.IsNullOrEmpty(pd.playerId)) return;
-
-        if (currentSave == null)
-            currentSave = new SaveData(PhotonNetwork.CurrentRoom?.Name ?? "Room");
-
+        currentSave ??= new SaveData(PhotonNetwork.CurrentRoom?.Name ?? "Room");
+        currentSave.players ??= new List<PlayerData>();
         var existing = currentSave.players.FirstOrDefault(p => p.playerId == pd.playerId);
-
-        if (existing != null)
+        if (existing == null)
         {
-            if (pd.items != null) existing.items = pd.items;
-            else Debug.LogWarning("pd.items가 존재하지 않습니다!");
-            if (pd.conditionData != null) existing.conditionData = pd.conditionData;
-            else Debug.LogWarning("pd.conditionData가 존재하지 않습니다!");
-            if (!string.IsNullOrEmpty(pd.jobType))
-            {
-                existing.position = pd.position;
-                existing.jobType = pd.jobType;
-
-                if (pd.completedQuestIds != null && pd.completedQuestIds.Count > 0)
-                    existing.completedQuestIds = pd.completedQuestIds;
-                if (pd.activeQuests != null && pd.activeQuests.Count > 0)
-                    existing.activeQuests = pd.activeQuests;
-            }
-            else
-            {
-                currentSave.players.Add(pd);
-                existing = pd;
-            }
-            runtimePlayerCache[pd.playerId] = existing;
+            existing = new PlayerData { playerId = pd.playerId };
+            currentSave.players.Add(existing);
         }
+        if (pd.items != null && (pd.inventoryActor != existing.inventoryActor || pd.inventorySequence >= existing.inventorySequence))
+        {
+            existing.items = pd.items;
+            existing.inventoryActor = pd.inventoryActor;
+            existing.inventorySequence = pd.inventorySequence;
+        }
+        if (pd.position != null) existing.position = pd.position;
+        if (pd.conditionData != null) existing.conditionData = pd.conditionData;
+        if (!string.IsNullOrEmpty(pd.playerName)) existing.playerName = pd.playerName;
+        if (!string.IsNullOrEmpty(pd.jobType)) existing.jobType = pd.jobType;
+        runtimePlayerCache[pd.playerId] = existing;
+    }
+
+    // 개인 퀘스트는 전용 호출로 저장하여 빈 완료/활성 목록도 정확히 반영합니다.
+    public void UpdatePlayerQuestCache(PlayerQuestState state)
+    {
+        if (state == null || currentSave == null || state.saveId != currentSave.saveId || string.IsNullOrEmpty(state.playerId)) return;
+        UpdatePlayerCache(new PlayerData { playerId = state.playerId });
+        var data = runtimePlayerCache[state.playerId];
+        data.completedQuestIds = state.completed ?? new List<string>();
+        data.activeQuests = state.active ?? new List<QuestProgressData>();
+        data.rewardClaims = state.rewardClaims ?? new List<QuestRewardClaim>();
+    }
+
+    // 공유 메인 상태를 개인 데이터와 분리하여 저장 캐시에 보관합니다.
+    public void StoreSharedQuestState(SharedQuestState state)
+    {
+        if (currentSave == null || state == null || !state.initialized) return;
+        currentSave.worldProgress ??= new WorldProgress();
+        currentSave.worldProgress.mainQuests = JsonUtility.FromJson<SharedQuestState>(JsonUtility.ToJson(state));
+        currentSave.questSaveVersion = 1;
     }
 
     private void BroadcastSaveData()
@@ -241,6 +250,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
     #region Game Save Logic
 
+    // 방장만 최신 공용/개인 진행과 월드 상태를 함께 저장합니다.
     public void SaveGame()
     {
         if (SceneManager.GetActiveScene().name != inGameSceneName)
@@ -250,20 +260,18 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         }
 
         if (!PhotonNetwork.IsMasterClient) return;
-        if (AuthMngr == null || string.IsNullOrEmpty(AuthMngr.currentUserId)) return;
+        var saveAuth = FindAnyObjectByType<AuthManager>();
+        if (saveAuth == null || string.IsNullOrEmpty(saveAuth.currentUserId)) return;
+        // 방장 교체 중에는 참가자의 최신 인벤토리를 받은 뒤 저장합니다.
+        if (QuestManager.Instance != null && QuestManager.Instance.GetComponent<QuestNetworkBridge>().IsRecoveringPlayerStates) return;
 
-        if (QuestManager.Instance != null)
+        if (QuestManager.Instance != null && QuestManager.Instance.IsInitialized)
         {
-            var questData = QuestManager.Instance.GetQuestSaveData();
-
-            PlayerData myData = runtimePlayerCache.ContainsKey(AuthMngr.currentUserId)
-                ? runtimePlayerCache[AuthMngr.currentUserId]
-                : new PlayerData { playerId = AuthMngr.currentUserId };
-
-            myData.completedQuestIds = questData.completed;
-            myData.activeQuests = questData.active;
-
-            UpdatePlayerCache(myData);
+            StoreSharedQuestState(QuestManager.Instance.CaptureSharedState());
+            var quests = QuestManager.Instance.GetQuestSaveData();
+            UpdatePlayerQuestCache(new PlayerQuestState { saveId = currentSave.saveId,
+                playerId = QuestNetworkBridge.LocalPlayerId, completed = quests.completed, active = quests.active,
+                rewardClaims = QuestManager.Instance.GetJobRewardClaims() });
         }
 
         SaveData data = CollectSaveData();
@@ -273,6 +281,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         }
     }
 
+    // 활성 필드 아이템을 포함한 월드 오브젝트와 최신 플레이어 상태를 저장합니다.
     private SaveData CollectSaveData()
     {
         if (currentSave == null) return null;
@@ -352,6 +361,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
     #region Photon Event Callback
 
+    // 기존 플레이어 패킷을 수신하며 새 인벤토리 순번도 함께 병합합니다.
     public void OnEvent(EventData photonEvent)
     {
         if (photonEvent.Code != 101) return;
@@ -389,6 +399,8 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             position = new PlayerLocation(pos),
             jobType = jobType,
             items = receivedInventory,
+            inventoryActor = photonEvent.Sender,
+            inventorySequence = data.Length > 6 ? Convert.ToInt64(data[6]) : 0,
             conditionData = receivedCondition
         };
 
@@ -400,23 +412,17 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
 
     #endregion
 
+    // 받은 저장 데이터는 로컬 캐시에만 적용하여 직업 속성 재전송과 동기화 순환을 막습니다.
     public void HandleBroadcastedSaveData(string json)
     {
+        if (string.IsNullOrEmpty(json)) return;
+        if (QuestManager.Instance != null && QuestManager.Instance.IsInitialized) return;
         SaveData loadedData = JsonUtility.FromJson<SaveData>(json);
-
-        SetCurrentSave(loadedData,  true);
-        isGameLoadedFromSave = true;
-
-        if (AuthMngr != null && !string.IsNullOrEmpty(AuthMngr.currentUserId))
-        {
-            string myId = AuthMngr.currentUserId;
-
-            string loadedJobType = GetSavedJobType(AuthMngr.currentUserId);
-            if (RoomManager.Instance != null)
-            {
-                RoomManager.Instance.ApplyLoadedJobToPhoton(loadedJobType);
-            }
-        }
+        if (loadedData == null) return;
+        bool loadedSession = isGameLoadedFromSave;
+        if (PhotonNetwork.InRoom && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("IsLoadedGame", out var loadedFlag) && loadedFlag is bool value)
+            loadedSession = value;
+        SetCurrentSave(loadedData, loadedSession);
     }
 
     public void LoadQuestDataToManager()
@@ -444,17 +450,20 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         }
     }
 
-    // RPC 함수 (방장만 수신)
+    // 기존 RPC 진입점도 방장과 현재 방을 확인한 뒤 동일한 중복 방지 로직을 사용합니다.
     [PunRPC]
     private void RPC_RequestJobChange(string userId, string nickname, string newJobType)
     {
+        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient) return;
         Debug.Log($"[SaveManager] RPC 수신: {nickname}님이 직업 {newJobType} 선택");
         ProcessJobUpdate(userId, nickname, newJobType);
     }
 
-    // 내부 처리 함수
+    // 실제 참가자/직업 변경만 저장하고, 같은 알림을 다시 받아도 재방송하지 않습니다.
     private void ProcessJobUpdate(string userId, string nickname, string newJobType)
     {
+        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient || string.IsNullOrEmpty(userId)) return;
+        newJobType ??= "";
         if (currentSave == null)
         {
             currentSave = new SaveData(PhotonNetwork.CurrentRoom?.Name ?? "Room");
@@ -465,13 +474,15 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
         if (currentSave.players == null) currentSave.players = new List<PlayerData>();
         if (currentSave.jobAssignments == null) currentSave.jobAssignments = new Dictionary<string, string>();
 
-        PlayerData pd = currentSave.players.FirstOrDefault(p => p.playerId == userId);
+        PlayerData pd = currentSave.players.FirstOrDefault(p => p != null && p.playerId == userId);
+        bool changed = pd == null || (pd.jobType ?? "") != newJobType || pd.playerName != nickname;
         if (pd == null)
         {
             pd = new PlayerData { playerId = userId, playerName = nickname, position = new PlayerLocation(Vector3.zero) };
             currentSave.players.Add(pd);
         }
         pd.jobType = newJobType;
+        pd.playerName = nickname;
         runtimePlayerCache[userId] = pd;
 
         if (!string.IsNullOrEmpty(newJobType))
@@ -486,7 +497,7 @@ public class SaveManager : MonoBehaviourPun, IOnEventCallback
             currentSave.jobAssignments.Remove(userId);
         }
 
-        // 방장이 변경 사항을 모두에게 알림
-        BroadcastSaveData();
+        // JSON에 포함되지 않는 직업 사전은 복구하되 실제 저장 내용이 같으면 전송하지 않습니다.
+        if (changed) BroadcastSaveData();
     }
 }
