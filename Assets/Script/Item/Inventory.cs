@@ -8,6 +8,7 @@ using UnityEngine.UI;
 
 public class Inventory : InventoryFrame
 {
+    public event Action<Inventory> ContentsChanged;
     // 로컬 소유자를 기준으로 찾아 원격 플레이어 인벤토리를 잘못 사용하지 않습니다.
     public static Inventory Local => Player.localPlayer == null ? null :
         Player.localPlayer.GetComponent<Inventory>() ?? FindObjectsByType<Inventory>(FindObjectsInactive.Include, FindObjectsSortMode.None)
@@ -20,6 +21,7 @@ public class Inventory : InventoryFrame
         if (!ShopTransactions.ApplyPurchases(inventoryData, QuestNetworkBridge.LocalPlayerId, purchases)) return;
         ItemUI.UpdateMoney(inventoryData.money);
         player?.SyncInventory(inventoryData);
+        ContentsChanged?.Invoke(this);
     }
 
     public int index; //현재 들고 있는 아이템
@@ -245,6 +247,7 @@ public class Inventory : InventoryFrame
     }
 
 
+    // 확정된 내용을 장비와 인벤토리에 적용하고 열린 창고의 플레이어 패널에도 알립니다.
     public void ApplyLoadedData(InventoryData loadedData)
     {
         if (loadedData == null || loadedData.id == null || loadedData.id.Length < INVENTORY_SIZE)
@@ -276,6 +279,7 @@ public class Inventory : InventoryFrame
             }
         }
         RefreshEquipments();
+        ContentsChanged?.Invoke(this);
         Debug.Log("저장된 인벤토리 데이터 복구 완료!");
     }
 

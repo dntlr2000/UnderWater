@@ -69,21 +69,24 @@ public class ShopPurchaseService : MonoBehaviour
         state.purchases ??= new();
         if (state.purchases.Any(p => p.requestId == requestId)) return;
         var record = new ShopPurchaseRecord { requestId = requestId, buyerId = buyer.playerId, itemId = itemId, amount = amount };
-        var mailbox = FindObjectsByType<OpenableStorageBox>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-            .FirstOrDefault(b => b.CompareTag("Mailbox") && b.IsStorageReady);
-        if (mailbox == null) record.message = "우편함이 준비되지 않아 구매하지 못했습니다.";
+        var delivery = RewardDeliveryService.Instance;
+        var mailbox = RewardDeliveryService.FindBox("Mailbox");
+        if (mailbox == null || !mailbox.CompareTag("Mailbox") || delivery == null ||
+            !delivery.TryGetBoxSnapshot(mailbox, out var currentBox, out int revision)) record.message = "우편함이 준비되지 않아 구매하지 못했습니다.";
         else
         {
             ShopTransactions.ApplyPurchases(buyer.items, buyer.playerId, state.purchases);
-            record.success = ShopTransactions.TryPurchase(buyer.items, mailbox.CaptureStorageData(), catalog?.Find(itemId),
+            record.success = ShopTransactions.TryPurchase(buyer.items, currentBox, catalog?.Find(itemId),
                 amount, requestId, out var paid, out var stocked, out record.message);
+            if (record.success && !delivery.TryStageBoxChange(mailbox, revision, stocked))
+            {
+                record.success = false;
+                record.message = "우편함 상태가 변경되어 구매하지 못했습니다. 다시 시도해 주세요.";
+            }
             if (record.success)
             {
                 record.cost = ShopTransactions.BuyPrice(catalog.Find(itemId).item, amount);
                 buyer.items = paid;
-                var box = state.boxes.FirstOrDefault(b => b.boxId == mailbox.boxName);
-                if (box == null) { box = new BoxSaveData { boxId = mailbox.boxName }; state.boxes.Add(box); }
-                box.items = stocked;
                 state.recipients.RemoveAll(p => p.playerId == buyer.playerId);
                 state.recipients.Add(JsonUtility.FromJson<PlayerData>(JsonUtility.ToJson(buyer)));
             }

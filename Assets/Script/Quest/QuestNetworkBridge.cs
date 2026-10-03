@@ -86,6 +86,7 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
             {
                 if (pendingPublish != null && JsonUtility.ToJson(pendingPublish) == sentJson) pendingPublish = null;
                 sentJson = null;
+                GetComponent<RewardDeliveryService>()?.RequestProcessing();
             }
             else if (Time.unscaledTime - sentAt < 3f) return;
             else sentJson = null;
@@ -230,7 +231,11 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
                 message.playerState.inventoryActor = sender;
                 SaveManager.Instance.UpdatePlayerCache(message.playerState);
                 awaitingPlayerStates.Remove(sender);
-                if (!IsRecoveringPlayerStates) SaveManager.Instance.SaveGame();
+                if (!IsRecoveringPlayerStates)
+                {
+                    SaveManager.Instance.SaveGame();
+                    GetComponent<RewardDeliveryService>()?.RequestProcessing();
+                }
                 break;
         }
     }
@@ -264,6 +269,7 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
         var state = new PlayerQuestState { saveId = CurrentSaveId(), playerId = LocalPlayerId, completed = progress.completed, active = progress.active, rewardClaims = manager.GetJobRewardClaims() };
         SaveManager.Instance.UpdatePlayerQuestCache(state);
         PhotonNetwork.LocalPlayer.SetCustomProperties(new Hashtable { [JobKey] = JsonUtility.ToJson(state) });
+        GetComponent<RewardDeliveryService>()?.RequestProcessing();
     }
 
     // 다른 플레이어의 직업 데이터는 자신의 퀘스트에 적용하지 않고 저장 캐시에만 반영합니다.
@@ -276,6 +282,7 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
             if (state == null || state.saveId != CurrentSaveId()) return;
             state.playerId = PlayerId(player);
             SaveManager.Instance.UpdatePlayerQuestCache(state);
+            GetComponent<RewardDeliveryService>()?.RequestProcessing();
         }
         catch (ArgumentException) { }
     }
@@ -286,6 +293,7 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
         if (manager == null || !manager.IsInitialized || !propertiesThatChanged.ContainsKey(StateKey)) return;
         var state = ReadRoomState(CurrentSaveId());
         if (state != null) { manager.ApplySharedState(state); RemoveConfirmedRequests(state); }
+        GetComponent<RewardDeliveryService>()?.RequestProcessing();
         PumpPublish();
     }
 
@@ -324,7 +332,11 @@ public class QuestNetworkBridge : MonoBehaviourPunCallbacks, IOnEventCallback
     {
         if (!PhotonNetwork.IsMasterClient) return;
         awaitingPlayerStates.Remove(otherPlayer.ActorNumber);
-        if (!IsRecoveringPlayerStates && manager != null && manager.IsInitialized) SaveManager.Instance.SaveGame();
+        if (!IsRecoveringPlayerStates && manager != null && manager.IsInitialized)
+        {
+            SaveManager.Instance.SaveGame();
+            GetComponent<RewardDeliveryService>()?.RequestProcessing();
+        }
     }
 }
 
