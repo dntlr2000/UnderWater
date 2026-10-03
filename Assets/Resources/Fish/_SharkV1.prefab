@@ -108,7 +108,7 @@ MonoBehaviour:
   usingPlayerID: 0
   moveSpeed: 5
   health: 100
-  atkPower: 5
+  atkPower: 20
   prefabPath: Fish/_SharkV1
   target: {fileID: 1260514553517511453, guid: 77e02d5ab299c54449bea4f64793d867, type: 3}
   stopDistance: 1.5
@@ -116,6 +116,11 @@ MonoBehaviour:
   avoidDistance: 5
   attackRange: 2
   attackCooldown: 1
+  verticalMoveSpeed: 0.6
+  swimBoundaryPadding: 0.3
+  swimmingObstacleLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
   waterAreaCenter: {fileID: 0}
   waterAreaRadius: 10
   dropItemID: 2
