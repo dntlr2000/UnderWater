@@ -1,5 +1,6 @@
 ﻿using Photon.Pun;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Condition : MonoBehaviour
@@ -57,6 +58,9 @@ public class Condition : MonoBehaviour
     private bool isResolvingFaint;
     private int normalPlayerLayer;
     private int faintPlayerLayer;
+
+    // 부활 뒤 늦게 도착한 중복 공격도 막도록 플레이어 인스턴스가 살아 있는 동안 유지합니다.
+    private readonly HashSet<System.Guid> receivedMonsterAttackIds = new HashSet<System.Guid>();
     #endregion
 
     #region UI
@@ -201,6 +205,68 @@ public class Condition : MonoBehaviour
         {
             healthBar.SetBarUI(health, MAX_HEALTH);
         }
+    }
+
+    // 방장이 확정한 공격을 대상 소유자에게 보내며 로컬·오프라인 대상은 즉시 적용합니다.
+    public bool RequestMonsterDamage(float damage, string attackId)
+    {
+        if (player == null || !IsValidMonsterDamage(damage, attackId)) return false;
+
+        if (!PhotonNetwork.InRoom)
+        {
+            return ApplyMonsterDamage(damage, attackId);
+        }
+
+        if (!PhotonNetwork.IsMasterClient) return false;
+
+        PhotonView playerView = player.photonView;
+        if (playerView == null || playerView.ViewID <= 0
+            || playerView.Owner == null || playerView.Owner.IsInactive) return false;
+
+        if (playerView.IsMine)
+        {
+            return ApplyMonsterDamage(damage, attackId);
+        }
+
+        // Owner 지정 RPC는 버퍼에 남지 않으므로 재접속 시 과거 피해가 재생되지 않습니다.
+        playerView.RPC(nameof(PunRPC_ReceiveMonsterDamage), playerView.Owner, damage, attackId);
+        return true;
+    }
+
+    // 현재 방장이 보낸 피해만 해당 플레이어의 소유자 클라이언트에서 수신합니다.
+    [PunRPC]
+    private void PunRPC_ReceiveMonsterDamage(float damage, string attackId, PhotonMessageInfo info)
+    {
+        if (!PhotonNetwork.InRoom || player == null || player.photonView == null
+            || !player.photonView.IsMine || PhotonNetwork.MasterClient == null
+            || info.Sender == null
+            || info.Sender.ActorNumber != PhotonNetwork.MasterClient.ActorNumber) return;
+
+        ApplyMonsterDamage(damage, attackId);
+    }
+
+    // 몬스터 피해 경로에서만 양수·유한 피해량과 유효한 공격 ID를 요구합니다.
+    private bool IsValidMonsterDamage(float damage, string attackId)
+    {
+        return damage > 0f && !float.IsNaN(damage) && !float.IsInfinity(damage)
+            && System.Guid.TryParseExact(attackId, "N", out _);
+    }
+
+    // 공격 ID를 한 번만 소비하고 기존 체력·UI·빈사 처리를 실행합니다.
+    private bool ApplyMonsterDamage(float damage, string attackId)
+    {
+        if (player == null || !isActiveAndEnabled || !player.isActiveAndEnabled
+            || !IsValidMonsterDamage(damage, attackId)
+            || (PhotonNetwork.InRoom && (player.photonView == null || !player.photonView.IsMine))) return false;
+
+        System.Guid parsedId = System.Guid.ParseExact(attackId, "N");
+        if (!receivedMonsterAttackIds.Add(parsedId)) return false;
+
+        // 빈사 중 받은 공격도 소비 처리하여 부활 후 같은 공격이 적용되지 않게 합니다.
+        if (isFainted || isFaintRequestPending || health <= 0f) return false;
+
+        Damaged(damage);
+        return true;
     }
 
     public IEnumerator getHungry()
@@ -602,7 +668,7 @@ public class Condition : MonoBehaviour
             return;
         }
 
-        if (player.photonView != null && !player.photonView.IsMine)
+        if (PhotonNetwork.InRoom && player.photonView != null && !player.photonView.IsMine)
         {
             return;
         }
