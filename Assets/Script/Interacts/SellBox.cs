@@ -8,6 +8,7 @@ public class SellBox : OpenableStorageBox
     public float sellTimer = 60f; //판매 대기 시간
     public float passedTime = 0f; //판매 경과 시간
 
+    // 기존 판매 주기를 유지하며 방장에서만 타이머를 진행합니다.
     void Update()
     {
         //방장만 연산 & 데이터 로드 전에는 대기 (Null 에러 방지)
@@ -36,25 +37,26 @@ public class SellBox : OpenableStorageBox
     // 출고 응답을 기다리는 물건은 판매하지 않고 확정 뒤 다음 판매 주기에 처리합니다.
     public void SellItems()
     {
-        if (!PhotonNetwork.IsMasterClient || storageData?.id == null ||
-            RewardDeliveryService.Instance?.HasReservedWithdrawals(boxName) == true) return;
-        int inventoryLength = storageData.id.Length;
+        var service = RewardDeliveryService.Instance;
+        if (!PhotonNetwork.IsMasterClient || service == null || service.HasReservedWithdrawals(boxName) ||
+            !service.TryGetBoxSnapshot(this, out var data, out int revision)) return;
+        int inventoryLength = data.id.Length;
 
         for (int i = 0; i < inventoryLength; i++)
         {
-            if (storageData.id[i] == -1) continue;
+            if (data.id[i] == -1) continue;
 
-            storageData.money += ItemDatabase.Instance.getPrice(storageData.id[i]) * storageData.quantity[i];
+            data.money += ItemDatabase.Instance.getPrice(data.id[i]) * data.quantity[i];
 
             //슬롯 초기화
-            storageData.id[i] = -1;
-            storageData.quantity[i] = 0;
-            storageData.durability[i] = -1f;
+            data.id[i] = -1;
+            data.quantity[i] = 0;
+            data.durability[i] = -1f;
         }
 
         //타이머 초기화 및 네트워크 동기화
+        if (!service.PublishBox(this, revision, data)) return;
         passedTime = 0f;
-        SyncDataToAll();
         Debug.Log($"[SellBox] 아이템 자동 판매 완료! 현재 창고 돈: {storageData.money}G");
     }
 }

@@ -1,385 +1,284 @@
-﻿using Photon.Pun;
+using Photon.Pun;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class StorageBox : InventoryFrame
 {
-    public int inventoryIndex = -1; // 슬롯 미선택 상태를 -1로 고정하여 잘못된 배열 접근 방지
-    public int boxIndex = -1; // 슬롯 미선택 상태를 -1로 고정하여 잘못된 배열 접근 방지
-
+    public int inventoryIndex = -1;
+    public int boxIndex = -1;
     public Inventory inventory;
-    public ItemUIManager boxUI; //박스의 아이템 UI, InventoryFrame의 itemUI는 사용자의 인벤토리의 UI에 할당
+    public ItemUIManager boxUI;
     public string boxName = "storageBox";
     public bool ifBoxOpen = false;
-
     public TMP_InputField inputField;
     public int exchangeMoney;
-
-    public int linkedViewID; // 현재 상호작용 중인 OpenableStorageBox의 PhotonView ID
+    public int linkedViewID;
     private PhotonView linkedPhotonView;
-
-    //public bool usingPhoton = false;
-
+    private OpenableStorageBox linkedBox;
+    private Inventory observedInventory;
     public ComfirmScreen depositScreen;
     public ComfirmScreen withdrawScreen;
 
+    // 최초 열기 이전/이후 어느 시점에 Start가 호출되어도 받은 내용을 초기화하지 않습니다.
     private void Start()
     {
         SetBox();
-        inventoryName = boxName;
-
-        if (depositScreen != null)
-        {
-            depositScreen.onConfirmAction = this.StorageItem;
-        }
-        if (withdrawScreen != null)
-        {
-            withdrawScreen.onConfirmAction = this.WithdrawItem;
-        }
+        if (depositScreen != null) depositScreen.onConfirmAction = StorageItem;
+        if (withdrawScreen != null) withdrawScreen.onConfirmAction = WithdrawItem;
     }
 
-    private void Awake()
+    // 화면이 켜질 때 로컬 인벤토리 변경을 구독합니다.
+    private void OnEnable()
     {
-        //UpdateMenu();
+        SetBox();
+        BindInventory();
     }
 
+    // 화면이 닫히면 이전 상자와 인벤토리에서 온 늦은 변경을 받지 않습니다.
+    private void OnDisable() => Unlink();
+
+    // 원격 인벤토리를 선택하지 않고 로컬 인벤토리에만 변경 알림을 연결합니다.
+    private void BindInventory()
+    {
+        var local = Inventory.Local;
+        if (local != null) inventory = local;
+        else if (inventory != null && inventory.player != Player.localPlayer) inventory = null;
+        if (observedInventory == inventory) return;
+        if (observedInventory != null) observedInventory.ContentsChanged -= OnInventoryChanged;
+        observedInventory = inventory;
+        if (observedInventory != null) observedInventory.ContentsChanged += OnInventoryChanged;
+    }
+
+    // 연결된 인벤토리의 실제 수령/잔액 변경 직후 플레이어 패널을 갱신합니다.
+    private void OnInventoryChanged(Inventory changed)
+    {
+        if (isActiveAndEnabled && changed == observedInventory) UpdateInventoryMenu();
+    }
+
+    // 연결 ID와 PhotonView가 모두 같은 상자에서 온 변경만 화면에 반영합니다.
+    private void OnStorageChanged(OpenableStorageBox changed)
+    {
+        if (!isActiveAndEnabled || changed != linkedBox || linkedPhotonView == null || changed.boxName != boxName ||
+            changed.GetComponent<PhotonView>() != linkedPhotonView || linkedPhotonView.ViewID != linkedViewID) return;
+        if (!HasValidBinding()) { CloseBox(); return; }
+        UpdateBoxUIFromData(changed.CaptureVisibleStorageData());
+        UpdateInventoryMenu();
+    }
+
+    // 거래 직전에도 활성 상태·준비 상태·상자 ID의 유일성을 확인합니다.
+    private bool HasValidBinding() => linkedBox != null && linkedPhotonView != null && linkedPhotonView.ViewID == linkedViewID &&
+        linkedBox.boxName == boxName && RewardDeliveryService.FindBox(boxName) == linkedBox;
+
+    // 구독과 선택 슬롯을 정리하여 다른 상자의 이벤트가 현재 화면에 남지 않게 합니다.
+    private void Unlink()
+    {
+        if (linkedBox != null) linkedBox.StorageChanged -= OnStorageChanged;
+        if (observedInventory != null) observedInventory.ContentsChanged -= OnInventoryChanged;
+        linkedBox = null;
+        linkedPhotonView = null;
+        observedInventory = null;
+        linkedViewID = 0;
+        ifBoxOpen = false;
+        if (inventoryIndex >= 0) ItemUI?.SetColors(inventoryIndex);
+        if (boxIndex >= 0) boxUI?.SetColors(boxIndex);
+        inventoryIndex = boxIndex = -1;
+    }
+
+    // 빈 슬롯의 아이콘·수량·내구도를 함께 지운 뒤 로컬 인벤토리 내용을 표시합니다.
     public void UpdateInventoryMenu()
     {
-        if (inventory == null)
+        BindInventory();
+        if (ItemUI == null || ItemUI.itemSlots == null) return;
+        for (int i = 0; i < ItemUI.itemSlots.Length; i++) ItemUI.ResetIcons(i);
+        if (inventory == null || !inventory.IsInventoryReady) return;
+        int length = Mathf.Min(ItemUI.itemSlots.Length, inventory.NormalSlotCount);
+        for (int i = 0; i < length; i++)
         {
-            inventory = FindAnyObjectByType<Inventory>(); //플레이어 인벤토리
-        }
-        int invLen = ItemUI.itemSlots.Length;
-        
-        for (int i = 0; i < invLen; i++)
-        {
-            ItemUI.ResetIcons(i);
-        }
-        
-
-        //인벤토리에서 로드
-        for (int i = 0; i < invLen; i++)
-        {
-            if (inventory.GetItemID(i) == -1)
-            {
-                //ItemUI.itemSlots[i].itemSlotIcon.gameObject.SetActive(false);
-                //ItemUI.itemSlots[i].quatitiy.gameObject.SetActive(false);
-                //ItemUI.itemSlots[i].durabilityRoot.gameObject.SetActive(false);
-                ItemUI.ResetIcons(i);
-                continue;
-            }
+            int id = inventory.GetItemID(i);
+            if (id < 0 || inventory.GetQuantity(i) <= 0) continue;
             ItemUI.SetQuantity(i, inventory.GetQuantity(i), inventory.GetSingularity(i));
-            ItemUI.LoadIcons(i, inventory.GetIcon(inventory.GetItemID(i)));
-            ItemUI.SetDurability(i, inventory.GetDurability(i), ItemDatabase.Instance.getMaxDurability(inventory.GetItemID(i)));
+            ItemUI.LoadIcons(i, inventory.GetIcon(id));
+            ItemUI.SetDurability(i, inventory.GetDurability(i), ItemDatabase.Instance.getMaxDurability(id));
         }
-
         ItemUI.UpdateMoney(inventory.GetMoneyData());
     }
 
+    // 모든 슬롯 표시를 지운 뒤 현재 상자 수량과 금액만 다시 그립니다.
     private void UpdateBoxMenu()
     {
-        if (inventoryData == null)
+        if (boxUI == null || boxUI.itemSlots == null) return;
+        for (int i = 0; i < boxUI.itemSlots.Length; i++) boxUI.ResetIcons(i);
+        if (inventoryData?.id == null) return;
+        int length = Mathf.Min(boxUI.itemSlots.Length, inventoryData.id.Length);
+        for (int i = 0; i < length; i++)
         {
-            inventoryData = new InventoryData();
-            GenerateData();
-        }
-        int invLen = boxUI.itemSlots.Length;
-
-        
-        for (int i = 0; i < invLen; i++)
-        {
-            //boxUI.itemSlots[i].itemSlotIcon.gameObject.SetActive(true);
-            //boxUI.itemSlots[i].quatitiy.gameObject.SetActive(true);
-            //boxUI.itemSlots[i].durabilityRoot.gameObject.SetActive(true);
-            boxUI.ResetIcons(i, true);
-        }
-        
-
-        //박스창에서 로드
-        //Debug.Log("박스창에서 로드를 시도합니다.");
-        for (int i = 0; i < invLen; i++)
-        {
-            if (GetItemID(i) == -1)
-            {
-                boxUI.itemSlots[i].itemSlotIcon.gameObject.SetActive(false);
-                boxUI.itemSlots[i].quatitiy.gameObject.SetActive(false);
-                boxUI.itemSlots[i].durabilityRoot.gameObject.SetActive(false);
-                continue;
-            }
-            boxUI.SetQuantity(i, GetQuantity(i), GetSingularity(i)  );
-            boxUI.LoadIcons(i, GetIcon(GetItemID(i)));
-            boxUI.SetDurability(i, GetDurability(i), ItemDatabase.Instance.getMaxDurability(GetItemID(i)));
+            int id = GetItemID(i);
+            if (id < 0 || GetQuantity(i) <= 0) continue;
+            boxUI.SetQuantity(i, GetQuantity(i), GetSingularity(i));
+            boxUI.LoadIcons(i, GetIcon(id));
+            boxUI.SetDurability(i, GetDurability(i), ItemDatabase.Instance.getMaxDurability(id));
         }
         boxUI.UpdateMoney(GetMoneyData());
-        //Debug.Log("박스창에서 로드를 마쳤습니다.");
     }
 
-    public void UpdateMenu()
+    // 양쪽 패널을 현재 표시 데이터로 갱신합니다.
+    public void UpdateMenu() { UpdateInventoryMenu(); UpdateBoxMenu(); }
+
+    // 이전 구독을 해제하고 실제 상자와 로컬 인벤토리를 새로 연결합니다.
+    public void LinkToPhysicalBox(int viewID)
     {
-        UpdateInventoryMenu();
+        Unlink();
+        var view = PhotonView.Find(viewID);
+        var source = view == null ? null : view.GetComponent<OpenableStorageBox>();
+        if (source == null || RewardDeliveryService.FindBox(source.boxName) != source) return;
+        linkedViewID = viewID;
+        linkedPhotonView = view;
+        linkedBox = source;
+        SetBoxName(source.boxName);
+        ifBoxOpen = true;
+        source.StorageChanged += OnStorageChanged;
+        BindInventory();
+        OnStorageChanged(source);
+    }
+
+    // 표시용 복사본을 사용하여 UI가 실제 공유 상자 데이터를 수정하지 않게 합니다.
+    public void UpdateBoxUIFromData(InventoryData data)
+    {
+        if (data?.id == null) return;
+        inventoryData = JsonUtility.FromJson<InventoryData>(JsonUtility.ToJson(data));
         UpdateBoxMenu();
     }
 
-
-    // OpenableStorageBox에서 호출하여 어떤 박스와 연결되었는지 알려주는 함수
-    public void LinkToPhysicalBox(int viewID)
-    {
-        linkedViewID = viewID;
-        linkedPhotonView = PhotonView.Find(viewID);
-        if (linkedPhotonView == null)
-        {
-            Debug.LogError($"ID {viewID}를 가진 PhotonView를 찾을 수 없습니다.");
-        }
-    }
-
-    // 마스터로부터 받은 데이터로 UI를 직접 업데이트하는 함수
-    public void UpdateBoxUIFromData(InventoryData data)
-    {
-        Debug.Log("UpdateBoxUIFromData 메서드 호출");
-        inventoryData = data; // 데이터 교체
-        UpdateBoxMenu(); // UI 새로고침
-    }
-
-
+    // 기존 수납 방식을 유지하며 유효한 상자와 보유 수량에 대해서만 요청합니다.
     public void StorageItem(int index, int amount)
     {
-        if (inventory.GetItemID(index) == -1 || inventory.GetQuantity(index) <= 0) return;
-        OpenableStorageBox linkedBox = linkedPhotonView.GetComponent<OpenableStorageBox>();
-        if (linkedBox.tag == "Mailbox")
-        {
-            Debug.Log("우체통에는 아이템을 보관할 수 없습니다.");
-            return;
-        }
-
-        int itemID = inventory.GetItemID(index);
-        int quantity = inventory.GetQuantity(index);
-        float durability = inventory.GetDurability(index);
-
-        int trueAmount = amount;
-
-        if (quantity < amount)
-        {
-            Debug.Log("보관하려는 개수가 소지 개수보다 많으므로 소지 개수로 재조정됩니다. ");
-            trueAmount = quantity;
-        };
-        if (quantity <= 0) return;
-
-        if (linkedPhotonView != null)
-        {
-            linkedPhotonView.RPC("PunRPC_RequestStoreItem", RpcTarget.MasterClient, index, itemID, trueAmount, durability);
-
-            inventory.RemoveItem(index, amount);
-            UpdateInventoryMenu(); // 인벤토리 UI 즉시 업데이트
-        }
-
-    }
-
-    public void StorageItem()
-    {
-        if (inventoryIndex == -1) return;
-        StorageItem(inventoryIndex, depositScreen.amount);
-    }
-
-    public void WithdrawItem(int index, int amount)
-    {
-        if (GetItemID(index) == -1 || GetQuantity(index) <= 0) return;
-
-        int quantity = GetQuantity(index);
-        int trueAmount = amount;
-
-        if (quantity < amount)
-        {
-            trueAmount= quantity;
-            Debug.Log("꺼내려는 개수가 실제로 보관되어 있는 아이템의 개수보다 많으므로 재조정됩니다.");
-        };
-
-        if (quantity <= 0) return;
-
-        if (linkedPhotonView != null)
-        {
-            // 자신의 플레이어 캐릭터(Inventory 스크립트가 있는)의 PhotonView를 찾습니다.
-            PhotonView playerPhotonView = inventory.GetComponent<PhotonView>();
-            if (playerPhotonView != null)
-            {
-                // 요청 시 플레이어의 PhotonView ID를 함께 넘겨줍니다.
-                linkedPhotonView.RPC("PunRPC_RequestWithdrawItem", RpcTarget.MasterClient, index, playerPhotonView.ViewID, trueAmount);
-            }
-            else
-            {
-                Debug.LogError("플레이어의 PhotonView를 찾을 수 없습니다! Inventory.cs와 같은 오브젝트에 PhotonView를 추가해주세요.");
-            }
-        }
-
+        if (!HasValidBinding() || inventory == null || index < 0 || index >= inventory.NormalSlotCount || amount <= 0 ||
+            inventory.GetItemID(index) < 0 || inventory.GetQuantity(index) <= 0 || linkedBox.CompareTag("Mailbox")) return;
+        int trueAmount = Mathf.Min(amount, inventory.GetQuantity(index));
+        linkedPhotonView.RPC(nameof(OpenableStorageBox.PunRPC_RequestStoreItem), RpcTarget.MasterClient,
+            index, inventory.GetItemID(index), trueAmount, inventory.GetDurability(index));
+        // 수납 승인/롤백 개편은 별도 범위이며 기존 로컬 차감 정책을 유지합니다.
+        inventory.RemoveItem(index, trueAmount);
         UpdateInventoryMenu();
     }
 
-    public void WithdrawItem()
+    // 수납 확인창의 선택 수량을 기존 입고 경로로 전달합니다.
+    public void StorageItem() { if (depositScreen != null) StorageItem(inventoryIndex, depositScreen.amount); }
+
+    // 표시된 가용 수량만 요청하고 실제 인벤토리 반영은 서버 확인을 기다립니다.
+    public void WithdrawItem(int index, int amount)
     {
-        if (boxIndex== -1) return;
-        WithdrawItem(boxIndex, withdrawScreen.amount);
+        if (!HasValidBinding() || inventory == null || inventoryData?.id == null || index < 0 ||
+            index >= inventoryData.id.Length || amount <= 0 || GetItemID(index) < 0 || GetQuantity(index) <= 0) return;
+        var playerView = inventory.GetComponent<PhotonView>();
+        if (playerView != null) linkedPhotonView.RPC(nameof(OpenableStorageBox.PunRPC_RequestWithdrawItem),
+            RpcTarget.MasterClient, index, playerView.ViewID, Mathf.Min(amount, GetQuantity(index)));
     }
 
+    // 출고 확인창의 선택 수량을 기존 출고 경로로 전달합니다.
+    public void WithdrawItem() { if (withdrawScreen != null) WithdrawItem(boxIndex, withdrawScreen.amount); }
 
-
-    // 처리 중인 상점 구매가 같은 잔액을 사용하지 못하도록 입금을 잠시 막습니다.
+    // 진행 중 결제와 우편함 입금을 제외하고 기존 돈 수납 방식을 유지합니다.
     public void StorageMoney()
     {
-        if (ShopPurchaseService.Instance?.IsBusy == true) return;
-        OpenableStorageBox linkedBox = linkedPhotonView.GetComponent<OpenableStorageBox>();
-        if (linkedBox.tag == "Mailbox")
-        {
-            Debug.Log("우체통에는 돈을 보관할 수 없습니다.");
-            return;
-        }
+        if (!HasValidBinding() || inventory == null || ShopPurchaseService.Instance?.IsBusy == true || linkedBox.CompareTag("Mailbox")) return;
         SetExchangeMoney();
-        int trueExchangeMoney = exchangeMoney;
-        if (exchangeMoney <= 0) return;
-        if (inventory.GetMoneyData() < exchangeMoney) trueExchangeMoney = inventory.GetMoneyData();
-
-        if (linkedPhotonView != null)
-        {
-            PhotonView playerPhotonView = inventory.GetComponent<PhotonView>();
-            if (playerPhotonView != null)
-            {
-                // 주석을 풀고 RPC를 호출합니다.
-                linkedPhotonView.RPC(nameof(linkedBox.PunRPC_RequestDepositMoney), RpcTarget.MasterClient, trueExchangeMoney, playerPhotonView.ViewID);
-
-                // 로컬 돈 즉시 차감 (반응성을 위해)
-                inventory.GetMoney(-trueExchangeMoney);
-                UpdateInventoryMenu();
-                inputField.text = "0";
-                exchangeMoney = 0;
-            }
-        }
+        int amount = Mathf.Min(exchangeMoney, inventory.GetMoneyData());
+        var playerView = inventory.GetComponent<PhotonView>();
+        if (amount <= 0 || playerView == null) return;
+        linkedPhotonView.RPC(nameof(OpenableStorageBox.PunRPC_RequestDepositMoney), RpcTarget.MasterClient, amount, playerView.ViewID);
+        inventory.GetMoney(-amount);
+        UpdateInventoryMenu();
+        inputField.text = "0";
+        exchangeMoney = 0;
     }
 
+    // 입력 금액을 검증된 돈 출고 요청으로 변환합니다.
     public void WithdrawMoney()
     {
-        
         SetExchangeMoney();
-        if (exchangeMoney <= 0) return;
-        int trueExchangeMoney = exchangeMoney;
-        // 로컬에서 미리 체크 (선택사항, 더 나은 UX를 위함)
-        if (GetMoneyData() < exchangeMoney)
-        {
-            Debug.Log("UI에 표시된 잔액이 부족합니다.");
-            trueExchangeMoney = GetMoneyData();
-        }
-
-        if (linkedPhotonView != null)
-        {
-            PhotonView playerPhotonView = inventory.GetComponent<PhotonView>();
-            if (playerPhotonView != null)
-            {
-                // 로컬 데이터를 직접 바꾸는 대신, 마스터에게 출금을 요청합니다.
-                linkedPhotonView.RPC("PunRPC_RequestWithdrawMoney", RpcTarget.MasterClient, trueExchangeMoney, playerPhotonView.ViewID);
-                inputField.text = "0";
-                exchangeMoney = 0;
-            }
-        }
+        WithdrawMoney(exchangeMoney);
+        if (inputField != null) inputField.text = "0";
+        exchangeMoney = 0;
     }
 
+    // 인자로 호출해도 로컬 잔액을 미리 바꾸지 않고 동일한 수령 확인 경로를 사용합니다.
     public void WithdrawMoney(int amount)
     {
-        if (GetMoneyData() < amount) return;
-        GetMoney(-amount);
-        inventory.GetMoney(amount);
-        UpdateMenu();
-
+        if (!HasValidBinding() || inventory == null || amount <= 0) return;
+        amount = Mathf.Min(amount, GetMoneyData());
+        var playerView = inventory.GetComponent<PhotonView>();
+        if (amount > 0 && playerView != null) linkedPhotonView.RPC(nameof(OpenableStorageBox.PunRPC_RequestWithdrawMoney),
+            RpcTarget.MasterClient, amount, playerView.ViewID);
     }
 
-    public void SetExchangeMoney()
+    // 잘못된 입력에는 이전 입력 금액이 남지 않게 합니다.
+    public void SetExchangeMoney() => exchangeMoney = inputField != null && int.TryParse(inputField.text, out int value) && value > 0 ? value : 0;
+
+    // 표시용 이름과 실제 거래 대상 ID를 함께 설정합니다.
+    public void SetBoxName(string name) { boxName = name; inventoryName = name; }
+
+    // 상자 슬롯 선택 시 플레이어 슬롯 선택을 해제합니다.
+    public void SetBoxIndex(int index)
     {
-        if (int.TryParse(inputField.text, out int result))
-        {
-            if (result <= 0) return;
-            exchangeMoney = result;
-
-        }
-        else
-        {
-            Debug.LogWarning("정수형 및 양수만 입력해주세요.");
-            exchangeMoney = 0;
-        }
-    }
-
-    public void SetBoxName(string name)
-    {
-        
-        inventoryName = name;
-    }
-
-    public void SetBoxIndex(int _index)
-    {
-        if (boxIndex != -1) boxUI.SetColors(boxIndex);
-        boxIndex = _index;
-        boxUI.SetColors(_index, 110, 123, 150);
-
-        if (inventoryIndex != -1) ItemUI.SetColors(inventoryIndex);
+        if (boxIndex >= 0) boxUI.SetColors(boxIndex);
+        boxIndex = index;
+        boxUI.SetColors(index, 110, 123, 150);
+        if (inventoryIndex >= 0) ItemUI.SetColors(inventoryIndex);
         inventoryIndex = -1;
     }
 
-    public void SetInventorytIndex(int _index)
+    // 플레이어 슬롯 선택 시 상자 슬롯 선택을 해제합니다.
+    public void SetInventorytIndex(int index)
     {
-        if (inventoryIndex != -1)ItemUI.SetColors(inventoryIndex);
-        inventoryIndex = _index;
-        ItemUI.SetColors(_index, 110, 123, 150);
-
-        if (boxIndex != -1) boxUI.SetColors(boxIndex);
+        if (inventoryIndex >= 0) ItemUI.SetColors(inventoryIndex);
+        inventoryIndex = index;
+        ItemUI.SetColors(index, 110, 123, 150);
+        if (boxIndex >= 0) boxUI.SetColors(boxIndex);
         boxIndex = -1;
     }
 
-
+    // 확인창과 화면을 닫고 모든 변경 구독을 해제합니다.
     public void CloseBox()
     {
-        UIController uIController = FindAnyObjectByType<UIController>();
         CloseComfirmScreen();
-        if (uIController != null) uIController.SetBoxScreen(false);
-
-        // 링크 해제
-        linkedViewID = 0;
-        linkedPhotonView = null;
+        Unlink();
+        FindAnyObjectByType<UIController>()?.SetBoxScreen(false);
     }
 
+    // UI 슬롯만 초기화하며 이미 받은 상자 내용과 실제 금액을 보존합니다.
     public void SetBox()
     {
-        inventoryData = new InventoryData();
-        inventoryData.GenerateData();
-
-        GetMoney(200);
-
-        ItemUI.SetSlotIDs();
-        boxUI.SetSlotIDs();
+        if (inventoryData == null) { inventoryData = new InventoryData(); inventoryData.GenerateData(); }
+        inventoryName = boxName;
+        ItemUI?.SetSlotIDs();
+        boxUI?.SetSlotIDs();
     }
 
-    public void LoadBox()
-    {
-        LoadData();
-        UpdateMenu();
-    }
+    // 열려 있는 상자의 최신 공유 데이터를 읽으며 과거 저장 파일을 화면에 덮지 않습니다.
+    public void LoadBox() { if (HasValidBinding()) linkedBox.RefreshSharedStorage(); }
 
+    // 유효한 선택 슬롯에 대해서만 기존 수납/출고 확인창을 엽니다.
     public void SetComfirmScreen(bool ifDeposit)
     {
-        //comfirmScreen 오브젝트가 활성화 되어야 스크립트를 사용할 수 있으므로 예외처리 후에 활성화, 그리고 보관/반출 모드 적용
-        if (ifDeposit) //보관 모드
+        if (!HasValidBinding()) return;
+        if (ifDeposit)
         {
-            if (inventory == null || inventoryIndex < 0) return; //인벤토리나 인덱스가 유효하지 않으면 예외처리
-            if (inventory.GetItemID(inventoryIndex) == -1 || inventory.GetQuantity(inventoryIndex) <= 0) return;
+            if (inventory == null || inventoryIndex < 0 || inventoryIndex >= inventory.NormalSlotCount ||
+                inventory.GetItemID(inventoryIndex) < 0 || inventory.GetQuantity(inventoryIndex) <= 0) return;
             depositScreen.gameObject.SetActive(true);
             depositScreen.ConstructComfirmScreen(inventory.GetItemID(inventoryIndex));
         }
-
-        else if (!ifDeposit) //반출 모드
+        else
         {
-            // 박스 인덱스/데이터가 유효하지 않으면 확인창을 열지 않고 중단 (IndexOutOfRange 방지)
-            if (boxIndex < 0 || inventoryData == null || inventoryData.id == null || boxIndex >= inventoryData.id.Length) return;
-            if (GetItemID(boxIndex) == -1 || GetQuantity(boxIndex) <= 0) return;
+            if (boxIndex < 0 || inventoryData?.id == null || boxIndex >= inventoryData.id.Length ||
+                GetItemID(boxIndex) < 0 || GetQuantity(boxIndex) <= 0) return;
             withdrawScreen.gameObject.SetActive(true);
             withdrawScreen.ConstructComfirmScreen(GetItemID(boxIndex));
         }
     }
 
+    // 수납과 출고 확인창을 모두 닫습니다.
     public void CloseComfirmScreen()
     {
         if (depositScreen != null) depositScreen.gameObject.SetActive(false);

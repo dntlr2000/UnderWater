@@ -397,7 +397,7 @@ MonoBehaviour:
   interactionId: 
   objectName: StorageBox
   player: {fileID: 0}
-  boxName: storageBox
+  boxName: legacy_submarine_storageBox
   interactable: 1
 --- !u!1001 &7295447634956273797
 PrefabInstance:
