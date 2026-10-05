@@ -970,7 +970,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sensorRadius: 0.03
   chestHeight: 1
-  headHeight: 2
+  headHeight: 2.45
   waterLayer:
     serializedVersion: 2
     m_Bits: 16
@@ -979,6 +979,13 @@ MonoBehaviour:
     m_Bits: 2048
   bobbingFrequency: 1
   bobbingAmplitude: 0.2
+  bobbingHeight: 0.03
+  surfaceClearance: 0.15
+  surfaceCaptureDepth: 0.1
+  surfaceReleaseDepth: 0.4
+  surfaceFollowGain: 5
+  maxSurfaceSpeed: 1
+  maxCaptureFallSpeed: 1
 --- !u!1 &5402255817681753600
 GameObject:
   m_ObjectHideFlags: 0

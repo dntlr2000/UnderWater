@@ -181,6 +181,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         }
 
     }
+    // 로컬 물리 위치의 물 감지를 먼저 갱신한 뒤 같은 틱에서 이동을 계산합니다.
     private void FixedUpdate()
     {
         if (!photonView.IsMine)
@@ -191,6 +192,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
         if (buoyancyController != null)
         {
+            buoyancyController.RefreshWaterState(rb.position);
             SetUnderwater(buoyancyController.IsInWater());
         }
 
@@ -205,6 +207,14 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
         HandlePlayerPushing();
         //condition.restoreBreath();
+    }
+
+    // 재활성화 시 상승/부유 이력을 이어 쓰지 않고 Photon 콜백도 정상적으로 해제합니다.
+    public override void OnDisable()
+    {
+        canContinueSwimUp = false;
+        buoyancyController?.ResetWaterState();
+        base.OnDisable();
     }
 
     public void StopPhysics()
@@ -281,6 +291,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
 
     }
 
+    // 수평 이동을 유지하면서 직접 상승, 잠수, 자동 부상, 수면 유지의 우선순위를 적용합니다.
     private void SwimMove()
     {
         // 1. 앞뒤좌우 (수평) 입력 계산
@@ -294,61 +305,10 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         Vector3 targetVelocity = moveDir * swimSpeed;
         targetVelocity.y = rb.linearVelocity.y;
 
-        // 2. 위아래 (수직) 입력 계산
-        bool spaceHeld = Input.GetKey(KeyCode.Space) || !condition.CanAct(false, true, false);
-        bool descendHeld = Input.GetKey(KeyCode.LeftControl) && condition.CanAct(false, true, false);
-        bool headInWater = buoyancyController != null && buoyancyController.IsHeadInWater();
-
-        // 상승 래치: 머리가 물속일 때 시작한 Space 입력만 수면을 통과할 때까지 유지합니다.
-        // 수면에서 새로 Space를 누르면 headInWater가 false라서 상승이 시작되지 않습니다.
-        if (!spaceHeld || descendHeld )
-        {
-            canContinueSwimUp = false;
-        }
-        else if (headInWater)
-        {
-            canContinueSwimUp = true;
-        }
-
-        float verticalInput = 0f;
-        if ((spaceHeld && canContinueSwimUp)) verticalInput += 1f;
-        if (descendHeld) verticalInput -= 1f;
-
-        if (verticalInput > 0)
-        {
-            // 래치가 통과한 상승 입력만 처리하므로, 머리가 수면 밖으로 나와도 계속 위로 헤엄칠 수 있습니다.
-            targetVelocity.y = swimUpForce;
-        }
-        else if (verticalInput < 0)
-        {
-            targetVelocity.y = -swimSpeed;  // 컨트롤: 아래로 헤엄쳐서 잠수함
-        }
-        else
-        {
-            // 3. 조작을 안 할 때 수면/수중 위치에 따른 처리
-            if (buoyancyController != null)
-            {
-                if (buoyancyController.IsHeadInWater())
-                {
-                    // 깊은 물 속이면 우리가 설정한 sinkSpeed 로 서서히 가라앉음
-                    targetVelocity.y = sinkSpeed;
-                }
-                else
-                {
-                    // 수면 근처라면 수면 유지 (가라앉지 않음)
-                    if (rb.linearVelocity.y < -1f)
-                    {
-                        // 다이빙해서 떨어지던 속도가 있다면 물의 저항을 받아 부드럽게 감속시킴
-                        targetVelocity.y = Mathf.Lerp(rb.linearVelocity.y, 0f, Time.fixedDeltaTime * 5f);
-                    }
-                    else
-                    {
-                        // 떨어지는 관성이 다 죽었거나, 헤엄치다 올라온 상태라면 Y축 속도를 0으로 만들어 수면에 띄움 (Bobbing)
-                        targetVelocity.y = buoyancyController.GetBobbingVelocity();
-                    }
-                }
-            }
-        }
+        bool automaticRise = !condition.CanAct(false, true, false);
+        targetVelocity.y = CalculateSwimVerticalVelocity(
+            Input.GetKey(KeyCode.Space), Input.GetKey(KeyCode.LeftControl), automaticRise,
+            Time.fixedDeltaTime, out float verticalInput);
 
         rb.linearVelocity = targetVelocity;
 
@@ -365,6 +325,56 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
     }
 
 
+    // 입력으로 인한 상승/잠수와 빈사 자동 부상을 분리하고, 무입력 수면 침강을 방지합니다.
+    private float CalculateSwimVerticalVelocity(bool spaceHeld, bool descendHeld, bool automaticRise,
+        float deltaTime, out float verticalInput)
+    {
+        verticalInput = 0f;
+        float currentSpeed = rb.linearVelocity.y;
+        bool headInWater = buoyancyController != null && buoyancyController.IsHeadInWater();
+        bool floating = buoyancyController != null && buoyancyController.IsSurfaceFloating();
+
+        if (automaticRise || !spaceHeld || descendHeld)
+            canContinueSwimUp = false;
+        else if (headInWater && !floating)
+            canContinueSwimUp = true;
+
+        if (!automaticRise && descendHeld)
+        {
+            buoyancyController?.StopSurfaceFloating(true);
+            verticalInput = -1f;
+            return -swimSpeed;
+        }
+
+        if (!automaticRise && spaceHeld && canContinueSwimUp)
+        {
+            buoyancyController?.StopSurfaceFloating(false);
+            verticalInput = 1f;
+            return swimUpForce;
+        }
+
+        // 빈사 상태는 잠수 이력을 해제하고 수면에 닿으면 상승 대신 부유합니다.
+        if (automaticRise)
+            buoyancyController?.AllowSurfaceCapture();
+
+        if (buoyancyController != null
+            && buoyancyController.TryGetSurfaceVelocity(currentSpeed, deltaTime, out float surfaceVelocity))
+            return surfaceVelocity;
+
+        if (automaticRise)
+        {
+            verticalInput = 1f;
+            return swimUpForce;
+        }
+
+        if (buoyancyController == null) return currentSpeed;
+        if (headInWater) return sinkSpeed;
+
+        // 수면 진입 전 낙하는 기존처럼 감속하고, 잠수 직후에는 부유 재진입 없이 하강합니다.
+        return currentSpeed < -1f ? Mathf.Lerp(currentSpeed, 0f, deltaTime * 5f) : sinkSpeed;
+    }
+
+    // 네트워크 생성 위치와 직업을 적용하고 이전 수면 및 상승 이력을 초기화합니다.
     public void OnPhotonInstantiate(PhotonMessageInfo info)
     {
         object[] data = photonView.InstantiationData;
@@ -378,6 +388,8 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         string jobType = (string)data[1];
 
         // 위치 초기화
+        canContinueSwimUp = false;
+        buoyancyController?.ResetWaterState();
         transform.position = spawnPos;
 
         if (rb != null)
@@ -439,6 +451,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         return condition.onGround;
     }
 
+    // 몸의 수중 상태를 애니메이션에 전달하고 물 밖에서는 수면 이동 이력을 해제합니다.
     private void SetUnderwater(bool underwater)
     {
         if (!photonView.IsMine || condition.isUnderwater == underwater) return;
@@ -449,6 +462,7 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
         {
             // 물 밖으로 완전히 나온 뒤에는 다음 상승 입력을 다시 물속에서 시작해야 합니다.
             canContinueSwimUp = false;
+            buoyancyController?.ResetWaterState();
         }
         /*
         if (underwater)
@@ -625,11 +639,13 @@ public class Player : MonoBehaviourPunCallbacks, IPunInstantiateMagicCallback
             QuestManager.Instance.RegisterLocalPlayer(this);
     }
 
-    // SaveManager가 위치를 로드할 때 호출하는 메서드
+    // 저장 위치 복원/리스폰 시 속도와 수면 이력을 초기화하여 이전 물 영역의 영향을 제거합니다.
     public void TeleportTo(Vector3 newPos)
     {
         if (!photonView.IsMine) return;
 
+        canContinueSwimUp = false;
+        buoyancyController?.ResetWaterState();
         rb.position = newPos;
         rb.linearVelocity = Vector3.zero; // 순간이동이므로 속도 초기화
         transform.position = newPos;
