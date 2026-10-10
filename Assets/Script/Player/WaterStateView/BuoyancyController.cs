@@ -15,7 +15,8 @@ public class BuoyancyController : MonoBehaviour
     [Min(0f)] public float bobbingHeight = 0.03f;
 
     [Header("Surface Floating")]
-    [Min(0f)] public float surfaceClearance = 0.15f;
+    [Tooltip("수면 위로 확보할 머리 높이입니다. 기본 카메라의 근거리 클리핑 면과 출렁임에 여유를 둡니다.")]
+    [Min(0f)] public float surfaceClearance = 0.5f;
     [Min(0f)] public float surfaceCaptureDepth = 0.1f;
     [Min(0f)] public float surfaceReleaseDepth = 0.4f;
     [Min(0.01f)] public float surfaceFollowGain = 5f;
@@ -115,7 +116,7 @@ public class BuoyancyController : MonoBehaviour
         suppressSurfaceCapture = false;
     }
 
-    // 진입/해제 깊이를 분리하고 수면 상대 높이 오차를 제한된 수직 속도로 복원합니다.
+    // 진입/해제 깊이를 분리하고, 머리보다 낮은 부유 기준점이 수면에 오도록 높이를 복원합니다.
     public bool TryGetSurfaceVelocity(float currentVerticalSpeed, float deltaTime, out float velocity)
     {
         velocity = 0f;
@@ -141,7 +142,9 @@ public class BuoyancyController : MonoBehaviour
         }
 
         float clearance = Mathf.Max(surfaceClearance, sensorRadius + bobbingHeight + 0.02f);
-        float targetY = surfaceY - headHeight + clearance
+        // 실제 머리 센서는 유지하고 부유 기준점만 낮춰 카메라 시야까지 수면 밖에 확보합니다.
+        float surfaceAnchorHeight = headHeight - clearance;
+        float targetY = surfaceY - surfaceAnchorHeight
             + Mathf.Sin(surfaceTime * bobbingFrequency) * bobbingHeight;
         velocity = Mathf.Clamp((targetY - sampledPosition.y) * surfaceFollowGain, -maxSurfaceSpeed, maxSurfaceSpeed);
         surfaceTime += Mathf.Max(0f, deltaTime);
