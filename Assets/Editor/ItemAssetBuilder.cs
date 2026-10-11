@@ -56,7 +56,7 @@ public static class ItemAssetBuilder
         importer.SaveAndReimport();
     }
 
-    // 원본 GLB를 자식으로 유지하고 모델 범위에 맞는 상호작용 루트를 만듭니다.
+    // 원본 GLB와 템플릿의 화면 윤곽선 설정을 유지하고 모델 범위에 맞는 상호작용 루트를 만듭니다.
     private static void BuildField(ItemData item, GameObject template)
     {
         var model = Resources.Load<GameObject>(item.modelPath);
@@ -90,7 +90,7 @@ public static class ItemAssetBuilder
             view.ObservedComponents = new List<Component> { movement };
             view.observableSearch = PhotonView.ObservableSearch.Manual;
             var overlay = CopyComponent<InvertedHullOverlay>(template, root);
-            overlay.shellOffset = Mathf.Min(0.004f, bounds.size.magnitude * 0.005f);
+            overlay.RebuildOverlay();
             PrefabUtility.SaveAsPrefabAsset(root, $"Assets/Resources/FieldItem/Object{item.itemId}.prefab");
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }

@@ -98,6 +98,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7b197a7671ae09a4d97d132d47785cd2, type: 3}
       insertIndex: -1
       addedObject: {fileID: -3106706355909716689}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7b197a7671ae09a4d97d132d47785cd2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1773709280486353574}
   m_SourcePrefab: {fileID: 100100000, guid: 7b197a7671ae09a4d97d132d47785cd2, type: 3}
 --- !u!1 &4407862751148028101 stripped
 GameObject:
@@ -125,6 +128,7 @@ MonoBehaviour:
   amount: 1
   durability: -1
   ifPool: 1
+  pickupId: 
 --- !u!54 &4495386029132529323
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -234,3 +238,28 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1773709280486353574
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4407862751148028101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c936aa65dff4dd343a968133dc466234, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  overlayMaterial: {fileID: 2100000, guid: f5f9dc03b9d948ccb77cffc656f99de7, type: 2}
+  depthMaskMaterial: {fileID: 2100000, guid: e097c0fb36e947e98cb2ce2055bfda62, type: 2}
+  useDepthMask: 1
+  shellOffset: 0.026
+  rimPower: 3
+  rimThreshold: 0
+  rimSoftness: 0.001
+  includeChildren: 1
+  buildOnStart: 1
+  rimColor: {r: 0.6627451, g: 1, b: 0.16470589, a: 0}
+  outlineWidth: 2
+  intensity: 2.99
+  alpha: 0.373
