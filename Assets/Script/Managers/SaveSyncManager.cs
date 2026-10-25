@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using Photon.Pun;
 using System;
 using System.Collections.Generic;
@@ -18,9 +17,7 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
 
     private AuthManager AuthMngr => AuthManager.Instance;
     private RoomManager RoomMngr => RoomManager.Instance;
-    private LobbyManager LobbyMngr => LobbyManager.Instance;
 
-    [HideInInspector] public string selectedSaveRoomName = null;
 
     #region SaveManager Initialization
     public void InitializeSaveManager()
@@ -93,56 +90,6 @@ public class SaveSyncManager : MonoBehaviourPunCallbacks
 
         // RoomManager의 상태 갱신 (선택적)
         RoomMngr.isLoadedFromSave = isLoaded;
-    }
-    #endregion
-
-    #region Save List UI
-    public void ToggleSaveList()
-    {
-        OutgameCanvasManager canvas = OutgameCanvasManager.Instance;
-        bool newState = !canvas.SaveListPanel.activeSelf;
-        canvas.SaveListPanel.SetActive(newState);
-
-        if (newState)
-        {
-            RefreshSaveList();
-            canvas.SaveSelectText.text = "선택된 저장: 없음";
-            selectedSaveRoomName = null;
-        }
-    }
-
-    public void RefreshSaveList()
-    {
-        if (SaveManager.Instance == null || string.IsNullOrEmpty(AuthMngr.currentUserId)) return;
-
-        // SaveListContent를 OutgameCanvasManager에서 가져옵니다.
-        Transform content = OutgameCanvasManager.Instance.SaveListContent;
-        foreach (Transform child in content) Destroy(child.gameObject);
-
-        var saves = SaveSystem.GetRoomNames(AuthMngr.currentUserId);
-        foreach (var roomName in saves)
-        {
-            // SaveBtnPrefab을 OutgameCanvasManager에서 가져옵니다.
-            GameObject btnObj = Instantiate(OutgameCanvasManager.Instance.SaveBtnPrefab, content);
-            btnObj.GetComponentInChildren<Text>().text = roomName;
-
-            string capturedRoomName = roomName;
-            btnObj.GetComponent<Button>().onClick.AddListener(() => OnClick_LoadGame(capturedRoomName));
-        }
-    }
-
-    /// <summary>
-    /// 저장 목록 버튼 클릭 시, 해당 저장 파일로 게임 로드를 시도합니다.
-    /// </summary>
-    public void OnClick_LoadGame(string roomName)
-    {
-        OutgameCanvasManager canvas = OutgameCanvasManager.Instance;
-
-        selectedSaveRoomName = roomName;
-        canvas.SaveSelectText.text = $"선택된 저장: {roomName} (클릭 시 로드)";
-
-        // 중요: 저장 목록 선택 시 바로 방을 생성하도록 로직 변경
-        LobbyMngr.LoadGame(roomName);
     }
     #endregion
 

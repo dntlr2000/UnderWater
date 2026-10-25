@@ -438,9 +438,6 @@ public class AuthManager : MonoBehaviour
             if (NetworkBootstrap.Instance != null) NetworkBootstrap.Instance.Connect();
             else Debug.LogError("[AuthManager] NetworkBootstrap 인스턴스가 없습니다.");
         }
-
-        if (SaveSyncManager.Instance != null)
-            SaveSyncManager.Instance.RefreshSaveList();
     }
 
     public void Logout()

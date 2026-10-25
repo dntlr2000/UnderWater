@@ -53,6 +53,14 @@ public class OutgameCanvasManager : MonoBehaviour
     public TMP_Text RegisterStatusText;
     [SerializeField] private TMP_InputField[] _registerFocusChain;
     private int _lastFocusedIndex = -1;
+
+    [Header("Register Password Toggle")]
+    public Button RegisterShowPasswordBtn;
+    [SerializeField] private Image _registerPasswordIcon;
+    public Button RegisterShowConfirmBtn;
+    [SerializeField] private Image _registerConfirmIcon;
+    private bool _isRegisterPasswordVisible;
+    private bool _isRegisterConfirmVisible;
     #endregion
 
     /*#region Nickname UI
@@ -216,6 +224,7 @@ public class OutgameCanvasManager : MonoBehaviour
 
         ApplyPasswordVisibility();
         EnforcePasswordFields();
+        ResetRegisterPasswordVisibility();
     }
 
     private void Update()
@@ -231,11 +240,7 @@ public class OutgameCanvasManager : MonoBehaviour
             // 2. Enter 키: 로그인 시도
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
-                // 엔터키 누르면 로그인 함수 호출
-                if (AuthManager.Instance != null && !AuthManager.Instance.isLoginProcessing)
-                {
-                    AuthManager.Instance.TryLogin(EmailInput.text, PasswordInput.text);
-                }
+                RequestLogin();
             }
             return;
         }
@@ -261,50 +266,68 @@ public class OutgameCanvasManager : MonoBehaviour
         btn.onClick.AddListener(action);
     }
 
+    private static void AddClick(Button btn, UnityEngine.Events.UnityAction action)
+    {
+        if (btn == null)
+        {
+            Debug.LogWarning("[OutgameCanvas] 버튼 참조가 비어 있습니다. Inspector 연결을 확인하세요.");
+            return;
+        }
+        btn.onClick.AddListener(action);
+    }
+
+    private void RequestLogin()
+    {
+        if (AuthManager.Instance == null) return;
+        if (EmailInput == null || PasswordInput == null) return;
+
+        AuthManager.Instance.TryLogin(EmailInput.text, PasswordInput.text);
+    }
+
+    private static void ClearSelection()
+    {
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
+    }
+
+    private static void BindMenu(Button btn, UnityEngine.Events.UnityAction action)
+    {
+        if (btn == null || action == null) return;
+        btn.onClick.AddListener(() =>
+        {
+            ClearSelection();
+            action();
+        });
+    }
+
     private void SetupButtonEvents()
     {
         // 로그인 / 회원가입
-        LoginBtn.onClick.AddListener(() =>
-        {
-            if (!AuthManager.Instance.isLoginProcessing)
-                AuthManager.Instance.TryLogin(EmailInput.text, PasswordInput.text);
-        });
-        RegisterBtn.onClick.AddListener(() => ShowRegisterPanel());
-        RegisterConfirmBtn.onClick.AddListener(() =>
+        AddClick(LoginBtn, RequestLogin);
+        AddClick(RegisterBtn, ShowRegisterPanel);
+        AddClick(RegisterConfirmBtn, () =>
         {
             if (RegisterPasswordInput.text != RegisterPasswordConfirmInput.text)
             {
                 SetRegisterStatus("비밀번호가 일치하지 않습니다.", true);
                 return;
             }
-            AuthManager.Instance.TryRegister(RegisterEmailInput.text, RegisterPasswordInput.text, RegisterNicknameInput.text);
+            AuthManager.Instance?.TryRegister(
+                RegisterEmailInput.text, RegisterPasswordInput.text, RegisterNicknameInput.text);
         });
         Bind(BackToLoginBtn, OnRegisterBack);
-
-        //비밀번호 보이기/숨기기 버튼 리스너
-        if (ShowPasswordBtn != null)
-        {
-            ShowPasswordBtn.onClick.AddListener(TogglePasswordVisibility);
-        }
-
-        /*// 닉네임
-        NicknameConfirmBtn.onClick.AddListener(() =>
-            AuthManager._instance.TrySetNickname(NicknameInput.text));
-        Bind(NicknameBackBtn, OnNicknameBack);*/
+        Bind(ShowPasswordBtn, TogglePasswordVisibility);
+        Bind(RegisterShowPasswordBtn, ToggleRegisterPassword);
+        Bind(RegisterShowConfirmBtn, ToggleRegisterConfirm);
 
         // 로비
         // 로비 메인 메뉴
-        Bind(JoinGameBtn, ShowRoomListPanel);
-        Bind(CreateRoomBtn, ShowCreateRoomPopup);
-        Bind(LoadGameBtn, ShowLoadGamePanel);
-        Bind(SettingsBtn, ShowSettingsPanel);
-        Bind(CreditsBtn, ShowCreditsPanel);
-        Bind(ExitGameBtn, QuitGame);
-
-        // 이관 예정
-        if (PreviousBtn != null) PreviousBtn.onClick.AddListener(() => LobbyManager.Instance.PagePrevious());
-        if (NextBtn != null) NextBtn.onClick.AddListener(() => LobbyManager.Instance.PageNext());
-        if (JoinRoomBtn != null) JoinRoomBtn.onClick.AddListener(() => LobbyManager.Instance.TryJoinRandomRoom());
+        BindMenu(JoinGameBtn, ShowRoomListPanel);
+        BindMenu(CreateRoomBtn, ShowCreateRoomPopup);
+        BindMenu(LoadGameBtn, ShowLoadGamePanel);
+        BindMenu(SettingsBtn, ShowSettingsPanel);
+        BindMenu(CreditsBtn, ShowCreditsPanel);
+        BindMenu(ExitGameBtn, QuitGame);
 
         Bind(RoomListBackBtn, ShowLobbyPanelFromList);
         Bind(RoomListSettingsBtn, ShowSettingsPanel);
@@ -347,23 +370,25 @@ public class OutgameCanvasManager : MonoBehaviour
         }
 
         // 방
-        ChatSendBtn.onClick.AddListener(() =>
+        AddClick(ChatSendBtn, () =>
         {
-            RoomManager.Instance.SendChat(ChatInput.text);
+            RoomManager.Instance?.SendChat(ChatInput.text);
             ChatInput.text = "";
         });
-        StartBtn.onClick.AddListener(() => RoomManager.Instance.TryStartGame());
+        AddClick(StartBtn, () => RoomManager.Instance?.TryStartGame());
 
         Bind(LeaveRoomBtn, LeaveRoom);
         Bind(JobInfoBtn, ShowJobInfoPopup);
         Bind(JobInfoCloseBtn, HideJobInfoPopup);
         Bind(ChatToggleBtn, ToggleChatLog);
 
-        // 5. 직업 선택 UI 누락된 직업 선택 로직 추가
-        for (int i = 0; i < JobBtns.Length; i++)
+        if (JobBtns != null)
         {
-            int jobIndex = i; // 클로저 문제 방지
-            JobBtns[i].onClick.AddListener(() => RoomManager.Instance.SelectJob(jobIndex));
+            for (int i = 0; i < JobBtns.Length; i++)
+            {
+                int jobIndex = i;
+                AddClick(JobBtns[i], () => RoomManager.Instance?.SelectJob(jobIndex));
+            }
         }
 
         // 팝업
@@ -375,10 +400,10 @@ public class OutgameCanvasManager : MonoBehaviour
         Bind(SettingsCloseBtn, HideAllPopups);
 
         // 세팅
-        LogoutBtn.onClick.AddListener(() => AuthManager.Instance.Logout());
-        ProfileBtn.onClick.AddListener(() => ShowProfilePanel());
-        ProfileSaveBtn.onClick.AddListener(() =>
-            AuthManager.Instance.TrySetNickname(ProfileNicknameInput.text));
+        AddClick(LogoutBtn, () => AuthManager.Instance?.Logout());
+        AddClick(ProfileBtn, ShowProfilePanel);
+        AddClick(ProfileSaveBtn, () =>
+            AuthManager.Instance?.TrySetNickname(ProfileNicknameInput.text));
 
         if (SettingsTabBtns != null)
         {
@@ -420,20 +445,45 @@ public class OutgameCanvasManager : MonoBehaviour
 
     private void ApplyPasswordVisibility()
     {
-        if (PasswordInput == null) return;
+        SetFieldVisibility(PasswordInput, _showPasswordIcon, isPasswordVisible);
+    }
 
-        int caret = PasswordInput.stringPosition;
-        PasswordInput.contentType = isPasswordVisible
+    private void SetFieldVisibility(TMP_InputField field, Image icon, bool visible)
+    {
+        if (field == null) return;
+
+        int caret = field.stringPosition;
+        field.contentType = visible
             ? TMP_InputField.ContentType.Standard
             : TMP_InputField.ContentType.Password;
-        PasswordInput.ForceLabelUpdate();
-        PasswordInput.stringPosition = Mathf.Clamp(caret, 0, PasswordInput.text.Length);
+        field.ForceLabelUpdate();
+        field.stringPosition = Mathf.Clamp(caret, 0, field.text.Length);
 
-        if (_showPasswordIcon == null) return;
+        if (icon == null) return;
 
-        Sprite target = isPasswordVisible ? _eyeOpenSprite : _eyeClosedSprite;
-        _showPasswordIcon.sprite = target;
-        _showPasswordIcon.enabled = target != null;
+        Sprite target = visible ? _eyeOpenSprite : _eyeClosedSprite;
+        icon.sprite = target;
+        icon.enabled = target != null;
+    }
+
+    private void ToggleRegisterPassword()
+    {
+        _isRegisterPasswordVisible = !_isRegisterPasswordVisible;
+        SetFieldVisibility(RegisterPasswordInput, _registerPasswordIcon, _isRegisterPasswordVisible);
+    }
+
+    private void ToggleRegisterConfirm()
+    {
+        _isRegisterConfirmVisible = !_isRegisterConfirmVisible;
+        SetFieldVisibility(RegisterPasswordConfirmInput, _registerConfirmIcon, _isRegisterConfirmVisible);
+    }
+
+    private void ResetRegisterPasswordVisibility()
+    {
+        _isRegisterPasswordVisible = false;
+        _isRegisterConfirmVisible = false;
+        SetFieldVisibility(RegisterPasswordInput, _registerPasswordIcon, false);
+        SetFieldVisibility(RegisterPasswordConfirmInput, _registerConfirmIcon, false);
     }
 
     private void EnforcePasswordFields()
@@ -496,8 +546,7 @@ public class OutgameCanvasManager : MonoBehaviour
         HideAllPanels();
         LoginPanel.SetActive(true);
         SetBackground(_authBackground);
-        SetCommonLogo(true);
-        SetCurrentTab(OutgameMessages.TabLogin);
+        SetCurrentTab(string.Empty);
 
         // 로그인 패널 열릴 때 비밀번호 초기화
         _lastFocusedIndex = 0;
@@ -513,13 +562,12 @@ public class OutgameCanvasManager : MonoBehaviour
         HideAllPanels();
         RegisterPanel.SetActive(true);
         SetBackground(_authBackground);
-        SetCommonLogo(true);
         SetCurrentTab(OutgameMessages.TabRegister);
 
         _lastFocusedIndex = 0;
         EnforcePasswordFields();
+        ResetRegisterPasswordVisibility();
         SetRegisterStatus(string.Empty);
-        if (RegisterEmailInput != null) RegisterEmailInput.ActivateInputField();
     }
 
     /*public void ShowNicknamePanel()
@@ -536,13 +584,12 @@ public class OutgameCanvasManager : MonoBehaviour
         SetBackground(_lobbyBackground);
         SetCommonLogo(false);
         SetCurrentTab(string.Empty);
-
-        if (WelcomeText != null)
-            WelcomeText.text = $"{nickname}님 환영합니다!";
+        ClearSelection();
     }
 
     public void ShowCreateRoomPopup()
     {
+        HideAllPopups();
         if (PopupLayer == null || CreateRoomPopup == null) return;
 
         PopupLayer.SetActive(true);
@@ -589,6 +636,7 @@ public class OutgameCanvasManager : MonoBehaviour
 
     public void ShowPasswordPopup(string roomName)
     {
+        HideAllPopups();
         if (PopupLayer == null || PasswordPopup == null) return;
 
         PopupLayer.SetActive(true);
@@ -697,8 +745,11 @@ public class OutgameCanvasManager : MonoBehaviour
         SetCurrentTab(string.Empty);
         ShowRoomNameSplash(roomName);
 
-        for (int i = 0; i < ChatText.Length; i++)
-            if (ChatText[i] != null) ChatText[i].text = string.Empty;
+        if (ChatText != null)
+        {
+            for (int i = 0; i < ChatText.Length; i++)
+                if (ChatText[i] != null) ChatText[i].text = string.Empty;
+        }
 
         if (ChatScrollView != null) ChatScrollView.SetActive(false);
         if (_chatToggleBtnRect != null) _chatToggleBtnRect.anchoredPosition = _togglePosClosed;
@@ -707,6 +758,7 @@ public class OutgameCanvasManager : MonoBehaviour
 
     public void ShowSettingsPanel()
     {
+        HideAllPopups();
         if (PopupLayer != null) PopupLayer.SetActive(true);
         if (SettingsPanel != null) SettingsPanel.SetActive(true);
 
@@ -797,6 +849,7 @@ public class OutgameCanvasManager : MonoBehaviour
 
     private void ShowJobInfoPopup()
     {
+        HideAllPopups();
         if (PopupLayer != null) PopupLayer.SetActive(true);
         if (JobInfoPopup != null) JobInfoPopup.SetActive(true);
     }
@@ -844,19 +897,9 @@ public class OutgameCanvasManager : MonoBehaviour
     public void SetStatus(string msg) { if (StatusText) StatusText.text = msg; }
     public void SetLoginStatus(string msg, bool isError = false)
     {
-        if (isError) SetLoginInteractable(true);
-
         if (LoginStatusText == null) return;
         LoginStatusText.text = msg;
         LoginStatusText.color = isError ? _statusErrorColor : _statusNormalColor;
-    }
-
-    private void SetLoginInteractable(bool value)
-    {
-        if (LoginBtn != null) LoginBtn.interactable = value;
-        if (RegisterBtn != null) RegisterBtn.interactable = value;
-        if (EmailInput != null) EmailInput.interactable = value;
-        if (PasswordInput != null) PasswordInput.interactable = value;
     }
 
     public void SetRegisterStatus(string msg, bool isError = false)
@@ -881,17 +924,19 @@ public class OutgameCanvasManager : MonoBehaviour
 
     public void UpdateNicknameUI(string nickname)
     {
-        if (WelcomeText != null)
-            WelcomeText.text = $"{nickname}님 환영합니다!";
-
         if (ProfileNicknameInput != null)
             ProfileNicknameInput.text = nickname;
     }
 
     public void UpdateChat(string[] chatLines)
     {
+        if (ChatText == null) return;
+
         for (int i = 0; i < ChatText.Length; i++)
+        {
+            if (ChatText[i] == null) continue;
             ChatText[i].text = (i < chatLines.Length) ? chatLines[i] : "";
+        }
     }
 
     public void UpdatePlayerSlots(List<PlayerInfo> players)
